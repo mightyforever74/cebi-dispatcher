@@ -138,3 +138,11 @@ Every major dependency (VRP solver, map widget, third-party telematics) is wrapp
 | Date       | Change                                                                      |
 | ---------- | --------------------------------------------------------------------------- |
 | 2026-05-13 | Initial roadmap. ADRs 0001–0007 accepted. Phase 1 (Architecture & Bootstrap) in progress. |
+
+
+
+Bundan sonra production sistemlerine her dokunuşta:
+
+Önce maskeli okuma
+Sonra iki seçenekten birini seç dedirtmek (bir alternatif sunduğumda sen onaylayana kadar komut vermek yok)
+Container memory vs disk ayrımını her zaman vurgulamak

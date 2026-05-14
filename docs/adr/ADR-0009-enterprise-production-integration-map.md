@@ -5,7 +5,7 @@
 | **Status**        | Accepted                                                               |
 | **Version**       | 1                                                                      |
 | **Date**          | 2026-05-14                                                             |
-| **Decision by**   | Cem Bakir (Founder / Lead Engineer)                                    |
+| **Decision by**   | Cem sahinkaya (Founder / Lead Engineer)                                    |
 | **Component**     | TulipFleet existing production ↔ TulipFleet Enterprise Dispatcher      |
 | **Related**       | ADR-0003 (Server topology), ADR-0004 v2 (Database strategy), ADR-0005 (Dispatch workflow), ADR-0007 (Telematics integration), ADR-0008 (Fastify v4) |
 
@@ -179,6 +179,35 @@ To preserve traceability between dispatcher plans and driver tasks:
 - Foreign key constraint is **deferred** to avoid blocking driver task creation if enterprise schema is temporarily unavailable; a soft reference instead.
 
 This addition is **a future migration**, not in scope for Phase 1 bootstrap. It will be tracked under ROADMAP Sıra 6.
+
+### 4.5.1 Compliance Engine inheritance (added 2026-05-14)
+
+ADR-0012 introduces the NL Compliance Layer as a Phase 1 internal module evolving toward a Phase 3 standalone product. To preserve architectural integrity, the Compliance Engine inherits the following ADR-0009 disciplines:
+
+**Schema authority.** All Compliance Engine migrations (e.g., `enterprise.nl_compliance_zones`) are written in `tulipfleet-backend/migrations/`. The Compliance module — regardless of which process or future server it runs on — never writes migrations directly. Schema authority remains `tulipfleet-backend` (ADR-0004 v3 §2).
+
+**Database role constraints.** Compliance Engine runs as a Fastify plugin within `enterprise-backend` in Phase 1, using a dedicated connection pool but the same PostgreSQL role (`enterprise_backend`). The role's `statement_timeout = '10s'` constraint (ADR-0003 §5.2) applies to compliance queries. In Phase 3, if Compliance Engine is extracted to a standalone service, it receives its own role `compliance_backend` with the same timeout policy and read-mostly grants on `enterprise.nl_compliance_zones` plus SELECT on `public.vehicles` (for plate lookups).
+
+**Database access matrix extension.** ADR-0009 §4.1 (PostgreSQL read/write access matrix) is extended:
+
+| Schema / Table                     | `enterprise_backend` (Phase 1-2) | `compliance_backend` (Phase 3) |
+| ---------------------------------- | -------------------------------- | ------------------------------ |
+| `enterprise.nl_compliance_zones`   | ALL                              | ALL (read+write own data)      |
+| `public.vehicles`                  | SELECT (already granted)         | SELECT (plate lookup)          |
+| `public.companies`                 | SELECT (already granted)         | SELECT (tenant resolution)     |
+| All other tables                   | per ADR-0009 §4.1                | (no access unless granted)     |
+
+**MQTT topic access.** Compliance Engine has **no MQTT access** in Phase 1-2. If future use cases require subscription (e.g., real-time vehicle location for live compliance check), the Compliance Engine receives its own `compliance-readonly` EMQX user; cross-cutting access via `enterprise_backend` user is not permitted (separation of concerns).
+
+**Redis key namespace.** Compliance Engine uses prefix `compliance:*` for any cached data (e.g., HERE Tour Planning compliance-aware route cache, ontheffing rule cache). No shared keys with `fleet:*` or `enterprise:*` prefixes.
+
+**Statement timeout discipline.** All compliance queries respect the 10-second statement timeout. Long-running compliance data updates (Phase 2 nightly sync) are implemented as separate worker processes (per ADR-0012 §4.4), not as in-request queries.
+
+**Tenant isolation.** Compliance Engine respects company-level tenant isolation: when a dispatcher queries "can vehicle X access Amsterdam ZE-zone today," the request includes the requesting company's `company_id` and the response is logged with that ID. In Phase 3 standalone product, the API key authentication maps to a customer ID that plays the same isolation role.
+
+**Audit logging.** Compliance queries (especially Phase 2-3 when external customers depend on them) generate audit log entries in a Phase 2 to-be-defined `enterprise.compliance_query_log` table (deferred — schema decision in ADR-0012 Phase 2 trigger).
+
+This addendum does not alter any other Section of ADR-0009. Schema authority (§7.1), shared infrastructure risks (Section 6), and integration boundaries (§4.4 task lifecycle, §4.6 mobile app no-change) all apply unchanged.
 
 ### 4.6 Mobile driver app — Phase 1 scope of changes
 
@@ -368,4 +397,5 @@ Each of these has explicit triggers and is **not** built speculatively.
 
 | Version | Date       | Author    | Change                                                |
 | ------- | ---------- | --------- | ----------------------------------------------------- |
-| 1       | 2026-05-14 | Cem Bakir | Initial integration map consolidating cross-ADR decisions. |
+| 1       | 2026-05-14 | Cem sahinkaya | Initial integration map consolidating cross-ADR decisions. |
+| 1.1 (addendum) | 2026-05-14 | Cem sahinkaya | Added §4.5.1 — Compliance Engine architectural inheritance (per ADR-0012). Schema authority, database role constraints, MQTT access, Redis namespace, statement timeout, tenant isolation, audit logging — all confirmed to apply to Compliance Engine in Phase 1, Phase 2, and Phase 3 standalone product. |

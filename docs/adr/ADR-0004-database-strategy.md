@@ -5,7 +5,7 @@
 | **Status**        | Accepted                                                               |
 | **Version**       | 2 (supersedes v1 dated 2026-05-13)                                     |
 | **Date**          | 2026-05-13                                                             |
-| **Decision by**   | Cem Bakir (Founder / Lead Engineer)                                    |
+| **Decision by**   | Cem sahinkaya (Founder / Lead Engineer)                                    |
 | **Component**     | TulipFleet Enterprise — Data Layer                                     |
 | **Supersedes**    | ADR-0004 v1 (proposed full vehicles/devices ideal model before inspecting production schema) |
 | **Related**       | ADR-0002 (VRP solver), ADR-0003 (Server topology), ADR-0007 (Telematics integration strategy) |
@@ -31,7 +31,7 @@ Adopt **one PostgreSQL instance, two-schema separation, and Phase 1 schema addit
 ### 2.1 Single instance, two schemas
 
 - One PostgreSQL 15 + TimescaleDB instance (existing `fleet-prod-01` host, port 5433).
-- **`public.*`** — existing tables; shared between the mobile driver app, the admin app, and the enterprise dispatcher. **No modifications in Phase 1.**
+- **`public.*`** — existing tables; shared between the mobile driver app, the admin app, and the enterprise dispatcher. **Bootstrap aşamasında (Mayıs 2026 enterprise schema migration ile birlikte) public.* tablolarının yapısı korunur. Bootstrap sonrası Phase 1 development süresince ise dispatcher entegrasyonu için gerekli olan eklemeli (additive) ve geriye dönük uyumlu (nullable veya CHECK constraint genişletmesi) değişikliklere izin verilir. Tüm bu değişiklikler tulipfleet-backend/migrations/ altında yazılır (schema authority değişmez). Bu Phase 1 boyunca planlanan değişiklikler Section 6 (yeni) altında listelenmiştir**
 - **`enterprise.*`** — new tables; used only by the enterprise dispatcher backend.
 
 ### 2.2 New enterprise tables (schema-only, no behavioral changes to existing system)
@@ -210,7 +210,108 @@ Two backup snapshot tables (`devices_backup_20251231`, `devices_backup_token_mig
 - **Shared instance risk.** A runaway dispatcher query can degrade the production driver app. Mitigation: separate Postgres role with `statement_timeout`, connection pool limits, monitoring.
 - **Single instance = single point of failure.** Acceptable for Phase 1. Streaming replica for the enterprise backend's reads is the obvious next step if contention is measured.
 
-## 6. Phase Gating — Critical Discipline (unchanged from v1)
+##   ## 6. Phase 1 — Authorized Additive Changes to `public.*`
+
+The following additive changes to `public.*` are pre-approved for Phase 1 development. Each is implemented as a migration in `tulipfleet-backend/migrations/` following standard process. All changes are **non-breaking** and **forward-compatible**.
+
+### 6.1 `public.users.role` — add 'dispatcher' value
+
+**Rationale:** ADR-0009 §5.1 introduces the `dispatcher` user role for the new dispatcher web UI. Existing roles (`super_admin`, `company_admin`, `driver`) are unaffected.
+
+**Migration sketch:**
+
+```sql
+ALTER TABLE public.users
+  DROP CONSTRAINT IF EXISTS users_role_check;
+
+ALTER TABLE public.users
+  ADD CONSTRAINT users_role_check
+  CHECK (role IN ('super_admin', 'company_admin', 'driver', 'dispatcher'));
+```
+
+**Timing:** First migration after dispatcher backend skeleton (ROADMAP Sıra 1).
+
+**Compatibility:** Existing rows unaffected. New role value optional.
+
+### 6.2 `public.tasks.enterprise_dispatch_task_id` — add nullable UUID column
+
+**Rationale:** ADR-0009 §4.5 — soft reference linking dispatcher-created tasks to their enterprise schema origin. Mobile-app-created tasks leave this NULL.
+
+**Migration sketch:**
+
+```sql
+ALTER TABLE public.tasks
+  ADD COLUMN enterprise_dispatch_task_id uuid;
+
+CREATE INDEX idx_tasks_enterprise_dispatch_task_id
+  ON public.tasks (enterprise_dispatch_task_id)
+  WHERE enterprise_dispatch_task_id IS NOT NULL;
+```
+
+**Timing:** When dispatcher's plan-approve endpoint (FEAT-006 per ADR-0011) is implemented — ROADMAP Sıra 6.
+
+**Compatibility:** Nullable, existing rows unaffected. No foreign key constraint in Phase 1 (soft reference per ADR-0009 §4.5); FK considered in Phase 2.
+
+### 6.3 `public.companies.dispatch_mode` — add NOT NULL column with default
+
+**Rationale:** ADR-0005 introduces three workflow modes (Mode 1 Advisory, Mode 2 Exception-based, Mode 3 Agentic). Per-company mode selection allows different customers to operate at different maturity levels simultaneously. Phase 1 default is `'advisory'`; Phase 2 enables `'exception'` for opt-in customers.
+
+**Migration sketch:**
+
+```sql
+ALTER TABLE public.companies
+  ADD COLUMN dispatch_mode text NOT NULL DEFAULT 'advisory';
+
+ALTER TABLE public.companies
+  ADD CONSTRAINT companies_dispatch_mode_check
+  CHECK (dispatch_mode IN ('advisory', 'exception', 'agentic'));
+```
+
+**Timing:** When dispatcher backend reads company-level configuration — ROADMAP Sıra 1 or shortly after.
+
+**Compatibility:** NOT NULL with default — existing rows automatically get `'advisory'`. No existing code reads this column; safe addition.
+
+### 6.4 `public.vehicles` — add capacity and class columns (Phase 1.1)
+
+**Rationale:** ADR-0011 FEAT-002 (Truck-Aware Routing) and FEAT-007 (Vehicle Capability Matching) require vehicle profile data passed as constraints to HERE Tour Planning.
+
+**Migration sketch:**
+
+```sql
+ALTER TABLE public.vehicles
+  ADD COLUMN capacity_volume_m3 numeric,
+  ADD COLUMN capacity_weight_kg numeric,
+  ADD COLUMN vehicle_class text,
+  ADD COLUMN hazmat_classes text[];
+```
+
+**Timing:** Phase 1.1 — after MVP launch when FEAT-002/007 capacity-aware routing is enabled.
+
+**Compatibility:** All new columns nullable. Existing vehicles continue to function; profile data populated as customers onboard.
+
+### 6.5 Disallowed changes — `public.*` modifications that require a new ADR
+
+These changes are **out of scope** for Phase 1 additive policy. If needed, they require a dedicated ADR:
+
+- Dropping or renaming any existing `public.*` column
+- Changing the type of any existing `public.*` column
+- Removing or narrowing existing CHECK constraints
+- Removing or modifying existing foreign keys
+- Schema-level renaming (e.g., `public` → `mobile`)
+
+### 6.6 Migration ordering
+
+The four changes above (6.1–6.4) are independent and can be applied in any order. Recommended sequence aligns with ROADMAP Sıra execution:
+
+1. `public.users.role` enum extension (Sıra 1, dispatcher role for backend skeleton)
+2. `public.companies.dispatch_mode` column (Sıra 1, read during backend bootstrap)
+3. `public.tasks.enterprise_dispatch_task_id` (Sıra 6, plan-approve endpoint)
+4. `public.vehicles` capacity columns (Phase 1.1, when FEAT-002/007 enabled)
+
+Each migration follows standard `node-pg-migrate` process (External Migration Tool pattern per ROADMAP).
+
+
+## 7. Phase Gating — Critical Discipline (unchanged from v1)
 
 This section is non-negotiable. It exists because the strategic value of telematics-agnostic schema is forfeited if Phase 1 expands into Phase 2 work.
 
@@ -246,11 +347,11 @@ Phase progression **is** triggered by:
 - A signed customer agreement with budget allocated to the connector work.
 - A demonstrated, measured constraint that cannot be addressed inside Phase 1.
 
-## 7. Migration Plan — Phase 1 Bootstrap
+## 8. Migration Plan — Phase 1 Bootstrap
 
 All migrations are **schema-only** and **additive**. No existing `public.*` tables are modified. No data is moved. The TimescaleDB hypertable `enterprise.locations_3p` is created empty; no INSERT to any hypertable is performed by this migration set.
 
-### 7.1 Sequence
+### 8.1 Sequence
 
 1. **Apply to staging first.** Target database: `fleet_tracking_staging` (separate database on the same Postgres instance, per DEMO_OLUSTURMA.md §3).
 2. **Smoke test on staging.** Verify schemas, tables, indexes, hypertable registration, and backfill row counts (Section 7.3).
@@ -259,7 +360,7 @@ All migrations are **schema-only** and **additive**. No existing `public.*` tabl
 5. **Verify on production** with the same smoke-test query set.
 6. **Commit migration files** to the `tulipfleet-backend` repository under whichever migration tool the backend already uses (to be confirmed). If no migration tool exists, adopt `node-pg-migrate` first.
 
-### 7.2 Files
+### 8.2 Files
 
 Three migration files, applied in order:
 
@@ -269,7 +370,7 @@ Three migration files, applied in order:
 
 The backfill is the only non-trivial part. Its query joins `public.vehicles` with `public.devices` (where `devices.vehicle_id = vehicles.id`) and emits one `telematics_source` row per vehicle. Vehicles without a device get a row with `config = '{}'`.
 
-### 7.3 Smoke tests
+### 8.3 Smoke tests
 
 After applying to staging:
 
@@ -300,20 +401,20 @@ SELECT COUNT(*) FROM enterprise.locations_3p;
 -- Expected: 0
 ```
 
-### 7.4 Rollback
+### 8.4 Rollback
 
 Each migration file has a corresponding `DROP` block in a `_rollback.sql` companion file. Rollback is fast (no data exists yet in Phase 1) and can be applied without production data loss.
 
 If `node-pg-migrate` is the adopted tool, the `down` migration handles rollback automatically.
 
-### 7.5 Hard rules (production safety)
+### 8.5 Hard rules (production safety)
 
 - **Production backup is mandatory** before any production migration.
 - **Staging must pass smoke tests** before production is touched.
 - **No INSERTs to TimescaleDB hypertables in migration files.** The DEMO_OLUSTURMA.md §4.5 hypertable INSERT blocker rule applies to migrations too: hypertable seeding (if ever needed) goes through the backend or `seed_locations.js` pattern, not direct migration INSERT.
 - **Migration is applied during low-traffic window** (target: outside Dutch business hours; verify with operational schedule).
 
-## 8. Implementation Plan — After Migration Lands
+## 9. Implementation Plan — After Migration Lands
 
 **Week 1**
 
@@ -333,7 +434,7 @@ If `node-pg-migrate` is the adopted tool, the `down` migration handles rollback 
 
 5. New `tulipfleet-enterprise-backend` Fastify project consumes the schema. **Enterprise backend never writes migrations of its own** — schema authority remains in `tulipfleet-backend` per this ADR.
 
-## 9. Known Risks and Mitigations
+## 10. Known Risks and Mitigations
 
 | Risk                                                  | Mitigation                                                       |
 | ----------------------------------------------------- | ---------------------------------------------------------------- |
@@ -346,7 +447,7 @@ If `node-pg-migrate` is the adopted tool, the `down` migration handles rollback 
 | Telematics provider auth credentials stored unsafely  | Encrypt `config.auth_token` fields at rest; audit access logs    |
 | `esp32_device_id` naming continues to mislead readers | Documented in Section 4; rename scheduled for Phase 2            |
 
-## 10. Open Questions
+## 11. Open Questions
 
 - **Migration tool selection.** Pending inspection of the existing `tulipfleet-backend` repo. If no tool is in use, adopt `node-pg-migrate`.
 - **PostgreSQL Row-Level Security (RLS).** Evaluate when customer count exceeds ~50 and the application-layer guard becomes a maintenance burden.
@@ -354,7 +455,7 @@ If `node-pg-migrate` is the adopted tool, the `down` migration handles rollback 
 - **Audit log.** Compliance-conscious customers (financial freight, pharma logistics) will eventually want a tamper-evident audit log. Defer to a future ADR.
 - **`primary_telematics_id` rename.** Schedule for Phase 2 ADR alongside the first non-TulipFleet connector.
 
-## 11. References
+## 12. References
 
 - ADR-0002 (VRP solver, defines `routing_jobs` consumers)
 - ADR-0003 (Server topology, defines DB sharing pattern)
@@ -365,9 +466,11 @@ If `node-pg-migrate` is the adopted tool, the `down` migration handles rollback 
 
 ---
 
-## 12. Change Log
+## 13. Change Log
 
 | Version | Date       | Author    | Change                                                                                       |
 | ------- | ---------- | --------- | -------------------------------------------------------------------------------------------- |
-| 1       | 2026-05-13 | Cem Bakir | Initial decision: one Postgres, two-schema, telematics-agnostic core, strict phase-gating.   |
-| 2       | 2026-05-13 | Cem Bakir | Revised after inspecting production schema. Accepts existing `vehicles.esp32_device_id` as-is (Option A). Documents naming debt in Section 4. Migration plan is schema-only and additive; no changes to `public.*` in Phase 1. |
+| 1       | 2026-05-13 | Cem sahinkaya| Initial decision: one Postgres, two-schema, telematics-agnostic core, strict phase-gating.   |
+| 2       | 2026-05-13 | Cem sahinkaya | Revised after inspecting production schema. Accepts existing `vehicles.esp32_device_id` as-is (Option A). Documents naming debt in Section 4. Migration plan is schema-only and additive; no changes to `public.*` in Phase 1. |
+| v3 (revision) | 2026-05-14 | Cem sahinkaya Clarified bootstrap-vs-Phase-1 distinction for `public.*` modifications. Added Section 6 listing four authorized additive changes (`users.role`, `tasks.enterprise_dispatch_task_id`, `companies.dispatch_mode`, `vehicles` capacity columns). No core decisions changed; schema authority remains in `tulipfleet-backend`. Triggered by NotebookLM consistency audit. |
+

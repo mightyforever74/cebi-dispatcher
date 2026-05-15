@@ -2,7 +2,7 @@
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 
-> **Status as of 2026-05-15:** Phase 1 (Architecture + Bootstrap) — **Sıra 1 in progress**. ADRs 0001–0012 accepted (with ADR-0004 revised to v3 and ADR-0009 §4.5.1 addendum). Enterprise schema, PostGIS extension, and Phase 1 additive `public.*` changes (users.role 'dispatcher', companies.dispatch_mode) all applied to staging and production. `tulipfleet-enterprise-backend` repo created, Fastify v4 skeleton in development.
+> **Status as of 2026-05-15 (evening):** Phase 1 (Architecture + Bootstrap) — **Sıra 1 in progress, Sıra 1.4 + 1.5 complete**. ADRs 0001–0012 accepted (with ADR-0004 revised to v3 and ADR-0009 §4.5.1 addendum). Enterprise schema, PostGIS extension, and Phase 1 additive `public.*` changes (users.role 'dispatcher', companies.dispatch_mode) all applied to staging and production. `tulipfleet-enterprise-backend` repo created, Fastify v4 skeleton running locally, health and vehicles endpoints verified against staging DB with `fleetadmin` superuser. Next: Sıra 1.3 (enterprise_backend role with grants scoped to observed access) → Sıra 1.6b (final smoke test with production-equivalent role).
 
 ---
 
@@ -50,7 +50,7 @@ The product is positioned **"TulipFleet — works best with TulipFleet"** in mar
 
 **Goal:** Ship a working Advisory-mode dispatcher for the first paying customer using TulipFleet's own telematics, with NL-specific compliance support (ZE-Zones, Vrachtwagenheffing-ready) and a forward-compatible architecture for Phase 2 customer-funded expansion.
 
-#### Completed (as of 2026-05-15)
+#### Completed (as of 2026-05-15 evening)
 
 **Strategic layer (ADRs):**
 
@@ -86,6 +86,54 @@ The product is positioned **"TulipFleet — works best with TulipFleet"** in mar
 - ✅ **May 11 production-only feature work preserved** — Vehicle DELETE protection (`DEVICE_ATTACHED` 409 response) and `company_name` in reports endpoints, both developed and deployed to production server on May 11 but never pushed, were rescued via feature branches (`feature/may11-prod-retroactive`) and merged into `main` during migration work. No regression to live service.
 - ✅ **Sıra 0 — Hygiene complete:** 3 `.bak` files removed from production; 2 operational scripts (`seed_demo_data.js`, `simulate_locations_keepalive.js`) committed and pushed; 2 feature branches deleted from GitHub after merge.
 
+**Enterprise backend (Sıra 1 in progress):**
+
+- ✅ **Repository created** — `tulipfleet-enterprise-backend` (GitHub private) initialized 2026-05-15.
+- ✅ **Fastify v4 skeleton operational (Sıra 1.4)** — `server.js` with plugin matrix per ADR-0008 §6 (sensible → cors → db → auth → routes). Verified locally with `npm start`: database connection to `fleet_tracking_staging` confirmed via `SELECT NOW(), current_user`, server listens on `http://0.0.0.0:3001`. Graceful shutdown handler for SIGINT/SIGTERM in place. Health endpoint (`GET /health`) returns 200 with `{status, timestamp, service, version, uptime, database}` shape.
+- ✅ **First protected endpoint working (Sıra 1.5)** — `GET /api/dispatcher/vehicles` returns 200 with vehicles scoped to JWT's `company_id` claim (per ADR-0009 §4.4 tenant isolation). Verified end-to-end: JWT-less request → 401, valid JWT → 200 with real staging data from Demo Fleet company (`00000000-0000-0000-0000-000000000001`). JWT verification uses `fast-jwt@6.2.4` (security-patched per dependency override).
+- ✅ **`public.vehicles` schema discovered and recorded** — see "Schema reference" section below. The dispatcher endpoint uses real column names (`plate_no`, `brand`, `model`, `year`, `status`, `vehicle_category`).
+- ✅ **Dependency security overrides applied** — `package.json` includes `overrides` block pinning `fast-jwt@^6.2.4` (resolves 6 CVEs including critical auth bypass) and `fast-uri@^3.1.2` (resolves 2 path-traversal/host-confusion CVEs). Fastify core itself retains 3 known CVEs unfixable without v5 upgrade (which would violate ADR-0008); these are accepted as low/moderate risk for Phase 1 because the affected code paths (Web Streams, restrictive trustProxy config, body-validation-as-security) are not used. To be reviewed Phase 2 with a fresh ADR.
+
+#### Schema reference — `public.vehicles` (discovered 2026-05-15)
+
+The `public.vehicles` table in production and staging contains the following columns. This reference is captured here because the dispatcher backend reads (and Phase 1.1 will extend) this table, and surprises in column naming have already caused at least one Sıra 1 incident.
+
+| Column                  | Type                          | Notes                                                              |
+| ----------------------- | ----------------------------- | ------------------------------------------------------------------ |
+| `id`                    | uuid (PK, default `gen_random_uuid()`) | Vehicle primary key                                       |
+| `plate_no`              | varchar(20) NOT NULL UNIQUE   | License plate (Dutch format e.g. `GV-082-B`). **Note: not `license_plate` despite that being a common name elsewhere.** |
+| `esp32_device_id`       | varchar(50) NOT NULL UNIQUE   | TulipFleet hardware device identifier; legacy naming, ADR-0009 §5.2 renames deferred to Phase 2 |
+| `model`                 | varchar(100)                  | Vehicle model name (e.g. "Actros")                                 |
+| `brand`                 | varchar(100)                  | Manufacturer (e.g. "Mercedes-Benz"). **Note: not `make`.**         |
+| `year`                  | integer                       | Model year                                                         |
+| `fuel_type`             | varchar(20)                   | Diesel/EV/HVO etc. — useful for ADR-0012 ZE-Zone enforcement       |
+| `fuel_capacity`         | numeric(5,2)                  | Tank/battery capacity (L or kWh)                                   |
+| `current_fuel_level`    | numeric(5,2)                  | Latest reading                                                     |
+| `total_km`              | numeric(10,2)                 | Odometer                                                           |
+| `last_maintenance_date` | date                          |                                                                    |
+| `next_maintenance_km`   | numeric(10,2)                 |                                                                    |
+| `status`                | varchar(20) DEFAULT 'available' | CHECK: `available` \| `in_use` \| `maintenance` \| `retired` — **dispatcher visibility filter; only `available` and `in_use` are candidates for new dispatch jobs** |
+| `vehicle_category`      | varchar(20) DEFAULT 'truck_heavy' | Used for VRP constraint mapping (HERE truck attributes) per ADR-0011 FEAT-002 |
+| `color`                 | varchar(30)                   |                                                                    |
+| `company_id`            | uuid FK → `companies(id)` ON DELETE CASCADE | **Tenant isolation key per ADR-0009 §4.4**           |
+| `threshold_accel`       | numeric(4,2) DEFAULT 0.25     | Driver behavior detection thresholds (g-force) — for harsh-driving alerts |
+| `threshold_brake`       | numeric(4,2) DEFAULT 0.35     |                                                                    |
+| `threshold_turn`        | numeric(4,2) DEFAULT 0.30     |                                                                    |
+| `threshold_impact`      | numeric(4,2) DEFAULT 2.50     | Collision detection threshold                                       |
+| `reprovision_required`  | boolean DEFAULT false         | Hardware provisioning flag, indexed partial                         |
+| `last_geofence_id`      | uuid FK → `geofences(id)` ON DELETE SET NULL | Latest geofence interaction                          |
+| `last_geofence_event`   | varchar(10)                   | Entry/exit type                                                    |
+| `last_geofence_at`      | timestamptz                   |                                                                    |
+| `created_at`            | timestamp                     |                                                                    |
+| `updated_at`            | timestamp                     |                                                                    |
+
+**Strategic observations about this schema** (recorded for future Phase 2 use case planning):
+
+- **The vehicles table is information-rich beyond what Sıra 1.5 currently exposes.** Phase 2 dispatcher endpoints can surface `status` (available/in-use filter for plan eligibility), `vehicle_category` (HERE truck profile selection per FEAT-002), `fuel_type` (ZE-Zone compatibility check per ADR-0012, EV range optimization per FEAT-103), `total_km` (maintenance scheduling input), and `last_geofence_*` (depot return detection).
+- **Driver behavior thresholds (`threshold_accel`, `threshold_brake`, `threshold_turn`, `threshold_impact`) are already per-vehicle configurable.** This is a hardware-side feature, but dispatcher Phase 2 can surface alerts when these are exceeded (FEAT-005 Live Fleet Map extension, or new "Driver behavior" panel).
+- **Phase 1.1 migration `vehicles` capacity columns** (per ADR-0004 v3 §6.4 — `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`) will join this rich set. `vehicle_category` already exists but is varchar(20); the new `vehicle_class` may overlap or supersede it — to be reconciled during the §6.4 migration design.
+- **Naming convention note for Phase 1.1 and beyond:** The existing schema uses snake_case with terse names (`plate_no`, `brand` rather than `license_plate`, `make`). New columns added in Phase 1.1 and Phase 2 should follow this convention.
+
 #### Architecture (target state)
 
 - Dispatcher web app (Material Dashboard 2 PRO React TS) — repo bootstrapped, branding and screens to follow.
@@ -102,17 +150,19 @@ The order below reflects the critical path; later items depend on earlier ones.
 **Sıra 1 — Enterprise backend repository (in progress, revised order 2026-05-15)**
 
 - ✅ Create `tulipfleet-enterprise-backend` repo (GitHub, private).
-- 🔄 Lokal init (`mkdir`, `git init`, `.gitignore`, `.env.example`).
-- 🔄 Fastify v4 skeleton (alignment with existing `tulipfleet-backend`, per ADR-0008).
-- 🔄 Plugins: `@fastify/postgres`, `@fastify/jwt`, MQTT subscriber (per ADR-0008 §6 plugin matrix).
-- 🔄 Connects to `enterprise.*` schema (read-mostly in Phase 1) and `public.*` (SELECT-only per ADR-0009 §4.1).
-- 🔄 **Does not write migrations** (schema authority remains in `tulipfleet-backend` per ADR-0004 v3).
-- 🔄 First endpoint: `GET /api/dispatcher/vehicles` for connectivity verification.
-- 🔄 **Initial smoke test** with `fleetadmin` superuser to validate code path independently of role configuration.
+- ✅ Lokal init (`mkdir`, `git init`, `.gitignore`, `.env.example`, `package.json`).
+- ✅ Fastify v4 skeleton (alignment with existing `tulipfleet-backend`, per ADR-0008).
+- ✅ Plugins: `@fastify/postgres`, `@fastify/jwt`, `@fastify/cors`, `@fastify/sensible` (per ADR-0008 §6 plugin matrix). MQTT subscriber deferred to Sıra 4.
+- ✅ Connects to `enterprise.*` schema (read-mostly in Phase 1) and `public.*` (SELECT-only per ADR-0009 §4.1).
+- ✅ **Does not write migrations** (schema authority remains in `tulipfleet-backend` per ADR-0004 v3).
+- ✅ Health endpoint (`GET /health`) returns DB connectivity status.
+- ✅ First protected endpoint: `GET /api/dispatcher/vehicles` returns vehicles scoped to JWT `company_id` claim.
+- ✅ **Initial smoke test** with `fleetadmin` superuser passed: 401 without JWT, 200 with valid JWT returning real staging data.
 - 🔄 **Then create Postgres `enterprise_backend` role** with grants scoped to observed access needs (per ADR-0009 §4.1):
   - `SELECT` on `public.vehicles`, `public.companies`, `public.users`, `public.drivers`, `public.tasks`
   - `ALL` on `enterprise.*`
   - `statement_timeout = '10s'`
+  - Default privileges on future `enterprise.*` tables (for ADR-0012 `nl_compliance_zones`, etc.)
 - 🔄 **Final smoke test** with `enterprise_backend` role to validate production-equivalent access.
 - 🔄 Commit + push, minimal README.
 
@@ -170,7 +220,7 @@ These items ship shortly after the Phase 1 MVP launch, not in the MVP itself:
 
 - **FEAT-008 — Vrachtwagenheffing route cost optimization.** Activated when Temmuz 2026 API goes live; ~3–5 days marginal effort. Per ADR-0011 and ADR-0012.
 - **FEAT-009 — Basic carbon footprint per route.** HERE Eco Routing already returns CO2/fuel data; UI display added. Distinct from Phase 2 CSRD-compliant export (FEAT-106).
-- **Apply ADR-0004 v3 §6.4 migration** (`public.vehicles` capacity columns: `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`) — enables FEAT-002 truck-aware routing and FEAT-007 capability matching.
+- **Apply ADR-0004 v3 §6.4 migration** (`public.vehicles` capacity columns: `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`) — enables FEAT-002 truck-aware routing and FEAT-007 capability matching. Note: existing `vehicle_category` varchar column overlaps semantically with the new `vehicle_class`; reconciliation design needed during §6.4 migration authoring.
 
 **Indicative timeline:** 6–9 weeks from completion of Sıra 1 to first-customer pilot, assuming single founder/developer pace. Phase 1.1 follow-ups extend ship period by ~1–4 weeks.
 
@@ -202,6 +252,7 @@ Per ADR-0011 §7, the following are bilinçli olarak Phase 1 dışında:
 - A paying customer demands AI agent for order parsing → FEAT-105 (third-party LLM API consumer per ADR-0010 §4).
 - HERE Tour Planning cost or capability constraints materialize → escape hatch in [ADR-0002 §8](docs/adr/ADR-0002-vrp-solver.md#8-escape-hatch--when-to-reconsider-or-tools) is invoked.
 - Leaflet performance ceiling is reached → Mapbox GL JS migration per [ADR-0006 §7](docs/adr/ADR-0006-map-widget.md#7-escape-hatch--when-to-reconsider-mapbox-gl-js).
+- **Fastify v4 known CVEs** (sendWebStream DoS, Content-Type tab bypass, X-Forwarded spoofing) require resolution before exposure to untrusted traffic → ADR for Fastify 5 migration vs. mitigation-via-reverse-proxy decision.
 
 **Phase 2 use case catalog:** FEAT-101 through FEAT-110 per [ADR-0011 §6](docs/adr/ADR-0011-dispatcher-use-case-scope.md). Each is forward-compatible with Phase 1 schema (`dispatch_tasks.capacity_required jsonb`, `source jsonb`).
 
@@ -266,14 +317,27 @@ Production database changes follow a strict sequence: staging-first → smoke te
 
 ### Migration authoring discipline (added 2026-05-15)
 
-Two failure modes observed during the public.* additive migrations require explicit guardrails:
+Three failure modes observed during the public.* additive migrations and Sıra 1.5 endpoint development require explicit guardrails:
 
-- **UTF-8 BOM encoding.** PowerShell editors and Out-File default to UTF-8 with BOM on some Windows versions. The PostgreSQL SQL parser rejects the BOM character (`U+FEFF`) with a generic syntax error that is difficult to diagnose. Required practice: SQL migrations created on Windows must be written with `[System.Text.UTF8Encoding]::new($false)` (no BOM), or saved via VS Code with explicit "UTF-8 without BOM" encoding. Verify with `head -c 6 file.sql | xxd` — the first three bytes must NOT be `ef bb bf`.
+- **UTF-8 BOM encoding.** PowerShell editors and Out-File default to UTF-8 with BOM on some Windows versions. The PostgreSQL SQL parser rejects the BOM character (`U+FEFF`) with a generic syntax error that is difficult to diagnose. Required practice: SQL migrations created on Windows must be written with `[System.Text.UTF8Encoding]::new($false)` (no BOM), or saved via VS Code with explicit "UTF-8 without BOM" encoding. Verify with `head -c 6 file.sql | xxd` — the first three bytes must NOT be `ef bb bf`. This same discipline applies to all `.js`, `.json`, and `.env` files created via PowerShell heredoc.
 - **Pattern-match false positives in constraint discovery.** Using `LIKE '%role%'` (or similarly loose patterns) to find a constraint to drop can match more than one constraint. Combined with `LIMIT 1`, the migration becomes non-deterministic and may drop the wrong constraint. Required practice: when the constraint name is known and stable (e.g., `users_role_check`), use `DROP CONSTRAINT IF EXISTS <exact_name>` directly. Reserve dynamic name discovery only for genuinely unknown schemas, and even then anchor the pattern tightly (e.g., match on constraint definition substring AND constraint name prefix).
+- **Schema column names must be inspected, not assumed.** During Sıra 1.5, the first attempt at `GET /api/dispatcher/vehicles` failed with `column "license_plate" does not exist` because the actual column is `plate_no`. The same pattern caught `brand` (not `make`). Required practice: before writing any SQL that touches an existing table, run `\d public.<table>` against the staging database and use the **real** column names. This is especially important for the dispatcher backend (which only reads `public.*`); schema authority remains in `tulipfleet-backend`, so changes to columns are out-of-scope for the dispatcher backend — it must adapt.
 
 ### Strategic moat through compliance data
 
 NL Compliance Layer (ADR-0012) starts as an internal Phase 1 module but is architected with Phase 3 standalone-product extraction in mind. The dispersion of NL regulatory data sources (vrachtwagenheffing.nl, evofenedex, TLN, RDW, 18 municipal `toegangsbeleid` systems) creates a defensible position: once TulipFleet consolidates this data and validates it operationally, the moat is hard for competitors to replicate. This is a long-term play — Phase 3 launch is at the earliest Temmuz 2027 — and the architectural disciplines codified in ADR-0012 §4 protect the future optionality without burdening Phase 1 delivery.
+
+### Known vulnerabilities — accepted-risk register
+
+Fastify v4 carries three known unpatched CVEs that the project accepts as low-impact for Phase 1 internal use:
+
+| CVE | Severity | Patched in | Why accepted Phase 1 |
+| --- | --- | --- | --- |
+| GHSA-mrq3-vjjr-p77c (sendWebStream DoS) | Low (3.7) | Fastify 5.7.3 | Dispatcher backend returns JSON; no Web Streams in any route. |
+| GHSA-jx2c-rxcm-jvmq (Content-Type tab bypass) | (moderate range) | Fastify 5.x | No security decision in dispatcher routes derives from body schema validation alone; authentication and tenant isolation are enforced separately. |
+| GHSA-444r-cwp2-x5xf (X-Forwarded spoofing) | Moderate (6.1) | Fastify 5.8.3 | Only exploitable with restrictive `trustProxy` config; Phase 1 uses `trustProxy: false` (direct connection). Sıra 2 reverse proxy will use `trustProxy: true` with Caddy/Nginx on a private network, or whitelist the proxy IP explicitly. |
+
+`fast-jwt` (6 CVEs) and `fast-uri` (2 CVEs) are mitigated via npm `overrides` block in `package.json` pinning patched versions while keeping Fastify 4 itself stable. Phase 2 will produce an ADR (revisiting ADR-0008) to decide between Fastify 5 migration and continued v4 use with reverse-proxy-level mitigation.
 
 ---
 
@@ -283,7 +347,7 @@ NL Compliance Layer (ADR-0012) starts as an internal Phase 1 module but is archi
 | ------------------------- | ----------------------------------------------------------------------------- |
 | `tulipfleet-dispatcher`   | This repo. Dispatcher web UI. Material Dashboard 2 PRO React TS based.        |
 | `tulipfleet-backend`      | Existing Fastify backend serving `api.tulipfleet.com` (mobile app + admin). **Also schema authority** — owns all migration files (`migrations/`), including `enterprise.*`, PostGIS extension, and `public.*` additive Phase 1 migrations. |
-| `tulipfleet-enterprise-backend` | New Fastify backend serving `enterprise-api.tulipfleet.com`. Consumes `enterprise.*` schema, does not write migrations. Hosts the NL Compliance Engine as a Fastify plugin in Phase 1-2. **Created 2026-05-15, skeleton in development.** |
+| `tulipfleet-enterprise-backend` | New Fastify backend serving `enterprise-api.tulipfleet.com`. Consumes `enterprise.*` schema, does not write migrations. Hosts the NL Compliance Engine as a Fastify plugin in Phase 1-2. **Created 2026-05-15, skeleton operational; health and `GET /api/dispatcher/vehicles` endpoints verified locally against staging DB.** |
 | `tulipfleet`              | Existing React Native (Expo) driver and admin app. **No changes required in Phase 1** per ADR-0009 §4.6. |
 | `tulipfleet-qa`           | QA documentation (`DEMO_OLUSTURMA.md`, infrastructure notes, schema conventions, dependency conflict history). |
 
@@ -306,3 +370,4 @@ NL Compliance Layer (ADR-0012) starts as an internal Phase 1 module but is archi
 | 2026-05-13 (post-migration) | Schema migration applied to staging and production. ADR-0004 revised to v2. External Migration Tool pattern documented. May 11 production-only feature work rescued via feature branches and merged into `main`. Sıra 0–7 execution order documented. Production safety protocol cross-cutting discipline added. |
 | 2026-05-14 (strategic layer complete) | ADRs 0008 (Fastify v4), 0009 (Integration map), 0010 (ML strategy), 0011 (Use case scope + HERE coverage), 0012 (NL Compliance Layer strategy) added. ADR-0004 revised to v3 (Phase 1 additive `public.*` changes legalized in Section 6). ADR-0009 §4.5.1 addendum added (Compliance Engine inheritance). Target customer segment refined to K/M-50–300 vehicles per Top 100 Logistiek Dienstverleners 2025. Strategic positioning enhanced with KOBİ digital readiness, ketenregie, and compliance moat insights. Phase 1.1 follow-ups defined (Vrachtwagenheffing optimization, basic carbon, vehicles capacity migration). PostGIS adoption planned for ADR-0012 compliance polygons. Pre-Sıra-1 preparation step added (revisions + extension test). |
 | 2026-05-15 (Sıra 1 in progress) | Three Phase 1 public.* migrations applied to staging and production: PostGIS extension activation (`1778900000000_enable-postgis`), `users.role` 'dispatcher' enum extension (`1778950000000_add-dispatcher-role`), `companies.dispatch_mode` column (`1778950000001_add-companies-dispatch-mode`). All migrations carried zero customer impact (production backend uptime maintained throughout). Sıra 1 order revised: code skeleton → smoke test with `fleetadmin` superuser → `enterprise_backend` role creation based on observed access patterns → final smoke test with production-equivalent role. Role definition moved from Sıra 2 into Sıra 1. New cross-cutting discipline added: "Migration authoring discipline" — codifies UTF-8 BOM avoidance and constraint-name discovery best practices learned from two rollback incidents during the public.* migrations. |
+| 2026-05-15 (evening — Sıra 1.4 + 1.5 complete) | `tulipfleet-enterprise-backend` repository created on GitHub (private). Fastify v4 skeleton operational (`server.js`, plugins/{db,auth}, routes/{health,vehicles}). `GET /health` and `GET /api/dispatcher/vehicles` verified locally against staging DB using `fleetadmin` superuser: 401 without JWT, 200 with valid JWT returning real Demo Fleet vehicle data. Dependency security overrides in place for `fast-jwt@^6.2.4` (resolves 6 CVEs) and `fast-uri@^3.1.2` (resolves 2 CVEs); 3 Fastify-core CVEs added to "known vulnerabilities — accepted-risk register" cross-cutting section with rationale. Schema discovery: `public.vehicles` column reference recorded (key naming: `plate_no` not `license_plate`, `brand` not `make`); strategic observations about the schema's information-richness (status, vehicle_category, fuel_type, behavior thresholds, geofence integration) captured for Phase 2 planning. Third migration authoring rule added: "Schema column names must be inspected, not assumed" — triggered by Sıra 1.5 endpoint failure when assumed column names did not match real schema. |

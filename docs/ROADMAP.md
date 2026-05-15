@@ -2,7 +2,7 @@
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 
-> **Status as of 2026-05-14:** Phase 1 (Architecture + Bootstrap) — **strategic layer complete**. ADRs 0001–0012 accepted (with ADR-0004 revised to v3 and ADR-0009 §4.5.1 addendum). Enterprise schema migration applied to staging and production. Use case scope, HERE coverage, ML boundaries, NL compliance layer strategy all documented. **Next: Sıra 1 — `tulipfleet-enterprise-backend` Fastify skeleton.**
+> **Status as of 2026-05-15:** Phase 1 (Architecture + Bootstrap) — **Sıra 1 in progress**. ADRs 0001–0012 accepted (with ADR-0004 revised to v3 and ADR-0009 §4.5.1 addendum). Enterprise schema, PostGIS extension, and Phase 1 additive `public.*` changes (users.role 'dispatcher', companies.dispatch_mode) all applied to staging and production. `tulipfleet-enterprise-backend` repo created, Fastify v4 skeleton in development.
 
 ---
 
@@ -50,7 +50,7 @@ The product is positioned **"TulipFleet — works best with TulipFleet"** in mar
 
 **Goal:** Ship a working Advisory-mode dispatcher for the first paying customer using TulipFleet's own telematics, with NL-specific compliance support (ZE-Zones, Vrachtwagenheffing-ready) and a forward-compatible architecture for Phase 2 customer-funded expansion.
 
-#### Completed (as of 2026-05-14)
+#### Completed (as of 2026-05-15)
 
 **Strategic layer (ADRs):**
 
@@ -65,13 +65,21 @@ The product is positioned **"TulipFleet — works best with TulipFleet"** in mar
 
 - ✅ **Enterprise schema migration applied to staging** (`fleet_tracking_staging`) — 10 vehicles backfilled with `provider='tulipfleet'`.
 - ✅ **Enterprise schema migration applied to production** (`fleet_tracking`) — 9 vehicles backfilled, zero downtime, fresh backup taken pre-migration.
+- ✅ **PostGIS extension activated** — migration `1778900000000_enable-postgis` applied to staging and production 2026-05-14. PostGIS 3.3.2 co-existence with TimescaleDB verified (alerts, locations_3p, and 5 other production hypertables remain functional). Foundation for `enterprise.nl_compliance_zones` GEOMETRY(POLYGON, 4326) per ADR-0012 §4.7.
+- ✅ **`public.users.role` extended with 'dispatcher'** — migration `1778950000000_add-dispatcher-role` applied to staging and production 2026-05-15 (per ADR-0004 v3 §6.1). Existing rows (super_admin, company_admin, driver) unaffected; `users_company_check` unchanged.
+- ✅ **`public.companies.dispatch_mode` column added** — migration `1778950000001_add-companies-dispatch-mode` applied to staging and production 2026-05-15. NOT NULL DEFAULT 'advisory', CHECK constraint ('advisory'|'exception'|'agentic') per ADR-0004 v3 §6.3 and ADR-0005. All existing companies automatically defaulted to 'advisory'.
 - ✅ **Schema enforcement in place:**
   - 4 enterprise tables (`telematics_source`, `locations_3p`, `routing_jobs`, `dispatch_tasks`)
   - `locations_3p` is a TimescaleDB hypertable (empty in Phase 1)
   - CHECK constraints on `dispatch_tasks.status` and `routing_jobs.status` (state machine, defense in depth)
   - Composite PRIMARY KEY on `locations_3p` for ETL idempotency
   - `update_timestamp()` triggers on tables with `updated_at`
-- ✅ **Migration tracking active** — `pgmigrations` table records `1778687553584_enterprise-schema-init` on both staging and production.
+  - PostGIS extension active in `public` schema, available for `enterprise.*` tables
+- ✅ **Migration tracking active** — `pgmigrations` table records 4 migrations on both staging and production:
+  - `1778687553584_enterprise-schema-init` (2026-05-13)
+  - `1778900000000_enable-postgis` (2026-05-14)
+  - `1778950000000_add-dispatcher-role` (2026-05-15)
+  - `1778950000001_add-companies-dispatch-mode` (2026-05-15)
 
 **Production state:**
 
@@ -82,7 +90,7 @@ The product is positioned **"TulipFleet — works best with TulipFleet"** in mar
 
 - Dispatcher web app (Material Dashboard 2 PRO React TS) — repo bootstrapped, branding and screens to follow.
 - New backend (`enterprise-api.tulipfleet.com`) on Hetzner CX32 — to be provisioned.
-- Shared PostgreSQL with `enterprise.*` schema — **applied**; PostGIS extension to be added (per ADR-0012 §4.7).
+- Shared PostgreSQL with `enterprise.*` schema — **applied**; PostGIS extension active.
 - HERE Tour Planning API integration via the `IRoutingProvider` interface — to be built.
 - Leaflet-based live fleet map subscribing to existing EMQX MQTT topics — to be built.
 - NL Compliance Layer as a Fastify plugin within `enterprise-backend`, architecturally microservice-ready for Phase 3 extraction.
@@ -91,28 +99,31 @@ The product is positioned **"TulipFleet — works best with TulipFleet"** in mar
 
 The order below reflects the critical path; later items depend on earlier ones.
 
-**Pre-Sıra 1 — One-time revision + extension prep (immediate)**
+**Sıra 1 — Enterprise backend repository (in progress, revised order 2026-05-15)**
 
-- Apply ADR-0004 v3 revision to local `docs/adr/ADR-0004-database-strategy.md` (Section 2 wording + new Section 6 with 4 authorized additive changes).
-- Apply ADR-0009 §4.5.1 addendum to local `docs/adr/ADR-0009-enterprise-production-integration-map.md` (Compliance Engine inheritance block).
-- Test PostGIS extension activation on staging (`CREATE EXTENSION postgis;` in `fleet_tracking_staging`), validate TimescaleDB co-existence, then apply to production (per ADR-0012 §4.7).
+- ✅ Create `tulipfleet-enterprise-backend` repo (GitHub, private).
+- 🔄 Lokal init (`mkdir`, `git init`, `.gitignore`, `.env.example`).
+- 🔄 Fastify v4 skeleton (alignment with existing `tulipfleet-backend`, per ADR-0008).
+- 🔄 Plugins: `@fastify/postgres`, `@fastify/jwt`, MQTT subscriber (per ADR-0008 §6 plugin matrix).
+- 🔄 Connects to `enterprise.*` schema (read-mostly in Phase 1) and `public.*` (SELECT-only per ADR-0009 §4.1).
+- 🔄 **Does not write migrations** (schema authority remains in `tulipfleet-backend` per ADR-0004 v3).
+- 🔄 First endpoint: `GET /api/dispatcher/vehicles` for connectivity verification.
+- 🔄 **Initial smoke test** with `fleetadmin` superuser to validate code path independently of role configuration.
+- 🔄 **Then create Postgres `enterprise_backend` role** with grants scoped to observed access needs (per ADR-0009 §4.1):
+  - `SELECT` on `public.vehicles`, `public.companies`, `public.users`, `public.drivers`, `public.tasks`
+  - `ALL` on `enterprise.*`
+  - `statement_timeout = '10s'`
+- 🔄 **Final smoke test** with `enterprise_backend` role to validate production-equivalent access.
+- 🔄 Commit + push, minimal README.
 
-**Sıra 1 — Enterprise backend repository**
-
-- Create `tulipfleet-enterprise-backend` repo (GitHub, private).
-- Fastify v4 skeleton (alignment with existing `tulipfleet-backend`, per ADR-0008).
-- Plugins: `@fastify/postgres`, `@fastify/jwt`, MQTT subscriber.
-- Connects to `enterprise.*` schema (read-mostly in Phase 1) and `public.*` (SELECT-only per ADR-0009 §4.1).
-- **Does not write migrations** (schema authority remains in `tulipfleet-backend` per ADR-0004 v3).
-- First endpoint: `GET /api/dispatcher/vehicles` for connectivity verification.
-- Apply ADR-0004 v3 §6.1 + §6.3 migrations (`public.users.role` enum extension, `public.companies.dispatch_mode` column) as part of Sıra 1 schema bootstrap.
+*Order rationale: defining the role **after** code is written produces a least-privilege grant set based on observed access patterns rather than guesses. Two smoke tests cost ~5 minutes each but eliminate misconfigured role risk on first deploy. Schema-level migrations for `public.users.role` and `public.companies.dispatch_mode` were applied separately during pre-Sıra-1 admin (see Completed list above).*
 
 **Sıra 2 — Hetzner CX32 provision + DNS + TLS**
 
 - Provision `fleet-enterprise-01` (Hetzner CX32, Falkenstein, ~16 EUR/mo) per ADR-0003.
 - DNS A record `enterprise-api.tulipfleet.com` → new server IP.
 - Caddy or Nginx + Let's Encrypt certificate.
-- Postgres `enterprise_backend` role with `SELECT` on `public.vehicles`, `public.companies`, `public.users`, `public.drivers`, `public.tasks`; `ALL` on `enterprise.*`; `statement_timeout = '10s'`.
+- Deploy `tulipfleet-enterprise-backend` to new server (`enterprise_backend` role already configured in Sıra 1).
 - Seed initial NL Compliance data: 18 ZE-Zone city polygons + rules + Vrachtwagenheffing static tariff table (per ADR-0012 §3.1).
 
 **Sıra 3 — HERE Tour Planning sandbox**
@@ -161,7 +172,7 @@ These items ship shortly after the Phase 1 MVP launch, not in the MVP itself:
 - **FEAT-009 — Basic carbon footprint per route.** HERE Eco Routing already returns CO2/fuel data; UI display added. Distinct from Phase 2 CSRD-compliant export (FEAT-106).
 - **Apply ADR-0004 v3 §6.4 migration** (`public.vehicles` capacity columns: `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`) — enables FEAT-002 truck-aware routing and FEAT-007 capability matching.
 
-**Indicative timeline:** 6–9 weeks from completion of pre-Sıra-1 preparation to first-customer pilot, assuming single founder/developer pace. Phase 1.1 follow-ups extend ship period by ~1–4 weeks.
+**Indicative timeline:** 6–9 weeks from completion of Sıra 1 to first-customer pilot, assuming single founder/developer pace. Phase 1.1 follow-ups extend ship period by ~1–4 weeks.
 
 #### Out of scope (explicitly)
 
@@ -253,6 +264,13 @@ Schema migrations are not a runtime concern. The migration tool (`node-pg-migrat
 
 Production database changes follow a strict sequence: staging-first → smoke test → fresh backup → production → smoke test. No migration runs without an immediate pre-migration backup. Container memory vs. disk synchronization is verified after any disk-level git operation (`git reset`, `git pull`, `git checkout`) on production, because Node.js processes cache `require`'d modules and a disk-level revert can create a silent regression window. New PostgreSQL extensions (such as PostGIS for ADR-0012) are tested on staging first to validate co-existence with TimescaleDB before production application.
 
+### Migration authoring discipline (added 2026-05-15)
+
+Two failure modes observed during the public.* additive migrations require explicit guardrails:
+
+- **UTF-8 BOM encoding.** PowerShell editors and Out-File default to UTF-8 with BOM on some Windows versions. The PostgreSQL SQL parser rejects the BOM character (`U+FEFF`) with a generic syntax error that is difficult to diagnose. Required practice: SQL migrations created on Windows must be written with `[System.Text.UTF8Encoding]::new($false)` (no BOM), or saved via VS Code with explicit "UTF-8 without BOM" encoding. Verify with `head -c 6 file.sql | xxd` — the first three bytes must NOT be `ef bb bf`.
+- **Pattern-match false positives in constraint discovery.** Using `LIKE '%role%'` (or similarly loose patterns) to find a constraint to drop can match more than one constraint. Combined with `LIMIT 1`, the migration becomes non-deterministic and may drop the wrong constraint. Required practice: when the constraint name is known and stable (e.g., `users_role_check`), use `DROP CONSTRAINT IF EXISTS <exact_name>` directly. Reserve dynamic name discovery only for genuinely unknown schemas, and even then anchor the pattern tightly (e.g., match on constraint definition substring AND constraint name prefix).
+
 ### Strategic moat through compliance data
 
 NL Compliance Layer (ADR-0012) starts as an internal Phase 1 module but is architected with Phase 3 standalone-product extraction in mind. The dispersion of NL regulatory data sources (vrachtwagenheffing.nl, evofenedex, TLN, RDW, 18 municipal `toegangsbeleid` systems) creates a defensible position: once TulipFleet consolidates this data and validates it operationally, the moat is hard for competitors to replicate. This is a long-term play — Phase 3 launch is at the earliest Temmuz 2027 — and the architectural disciplines codified in ADR-0012 §4 protect the future optionality without burdening Phase 1 delivery.
@@ -264,8 +282,8 @@ NL Compliance Layer (ADR-0012) starts as an internal Phase 1 module but is archi
 | Repository                | Purpose                                                                       |
 | ------------------------- | ----------------------------------------------------------------------------- |
 | `tulipfleet-dispatcher`   | This repo. Dispatcher web UI. Material Dashboard 2 PRO React TS based.        |
-| `tulipfleet-backend`      | Existing Fastify backend serving `api.tulipfleet.com` (mobile app + admin). **Also schema authority** — owns all migration files (`migrations/`), including `enterprise.*` and (future) `enterprise.nl_compliance_zones`. |
-| `tulipfleet-enterprise-backend` | (To be created — Sıra 1.) New Fastify backend serving `enterprise-api.tulipfleet.com`. Consumes `enterprise.*` schema, does not write migrations. Hosts the NL Compliance Engine as a Fastify plugin in Phase 1-2. |
+| `tulipfleet-backend`      | Existing Fastify backend serving `api.tulipfleet.com` (mobile app + admin). **Also schema authority** — owns all migration files (`migrations/`), including `enterprise.*`, PostGIS extension, and `public.*` additive Phase 1 migrations. |
+| `tulipfleet-enterprise-backend` | New Fastify backend serving `enterprise-api.tulipfleet.com`. Consumes `enterprise.*` schema, does not write migrations. Hosts the NL Compliance Engine as a Fastify plugin in Phase 1-2. **Created 2026-05-15, skeleton in development.** |
 | `tulipfleet`              | Existing React Native (Expo) driver and admin app. **No changes required in Phase 1** per ADR-0009 §4.6. |
 | `tulipfleet-qa`           | QA documentation (`DEMO_OLUSTURMA.md`, infrastructure notes, schema conventions, dependency conflict history). |
 
@@ -287,3 +305,4 @@ NL Compliance Layer (ADR-0012) starts as an internal Phase 1 module but is archi
 | 2026-05-13 (initial) | Initial roadmap. ADRs 0001–0007 accepted. Phase 1 (Architecture & Bootstrap) in progress. |
 | 2026-05-13 (post-migration) | Schema migration applied to staging and production. ADR-0004 revised to v2. External Migration Tool pattern documented. May 11 production-only feature work rescued via feature branches and merged into `main`. Sıra 0–7 execution order documented. Production safety protocol cross-cutting discipline added. |
 | 2026-05-14 (strategic layer complete) | ADRs 0008 (Fastify v4), 0009 (Integration map), 0010 (ML strategy), 0011 (Use case scope + HERE coverage), 0012 (NL Compliance Layer strategy) added. ADR-0004 revised to v3 (Phase 1 additive `public.*` changes legalized in Section 6). ADR-0009 §4.5.1 addendum added (Compliance Engine inheritance). Target customer segment refined to K/M-50–300 vehicles per Top 100 Logistiek Dienstverleners 2025. Strategic positioning enhanced with KOBİ digital readiness, ketenregie, and compliance moat insights. Phase 1.1 follow-ups defined (Vrachtwagenheffing optimization, basic carbon, vehicles capacity migration). PostGIS adoption planned for ADR-0012 compliance polygons. Pre-Sıra-1 preparation step added (revisions + extension test). |
+| 2026-05-15 (Sıra 1 in progress) | Three Phase 1 public.* migrations applied to staging and production: PostGIS extension activation (`1778900000000_enable-postgis`), `users.role` 'dispatcher' enum extension (`1778950000000_add-dispatcher-role`), `companies.dispatch_mode` column (`1778950000001_add-companies-dispatch-mode`). All migrations carried zero customer impact (production backend uptime maintained throughout). Sıra 1 order revised: code skeleton → smoke test with `fleetadmin` superuser → `enterprise_backend` role creation based on observed access patterns → final smoke test with production-equivalent role. Role definition moved from Sıra 2 into Sıra 1. New cross-cutting discipline added: "Migration authoring discipline" — codifies UTF-8 BOM avoidance and constraint-name discovery best practices learned from two rollback incidents during the public.* migrations. |

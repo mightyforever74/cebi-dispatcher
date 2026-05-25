@@ -5,7 +5,7 @@
 | **Status**        | Accepted                                                               |
 | **Version**       | 1                                                                      |
 | **Date**          | 2026-05-13                                                             |
-| **Decision by**   | Cem Bakir (Founder / Lead Engineer)                                    |
+| **Decision by**   | Cem Sahinkaya (Founder / Lead Engineer)                                    |
 | **Component**     | TulipFleet Enterprise — Infrastructure                                 |
 | **Related**       | ADR-0002 (VRP solver), ADR-0004 (Database strategy)                    |
 
@@ -188,8 +188,54 @@ Notes on the shared services:
 
 ---
 
-## 10. Change Log
+## 10. Implementation Notes
 
-| Version | Date       | Author    | Change                                                |
-| ------- | ---------- | --------- | ----------------------------------------------------- |
-| 1       | 2026-05-13 | Cem Bakir | Initial decision: CX32 + subdomain split.             |
+These notes record how this ADR was implemented in practice. The decisions in Section 2 stand. The notes document where the realized state diverged from the original wording, and why. No notes below constitute a revised decision.
+
+### 10.1 Server types (Sıra 2.4, 2026-05-25)
+
+The ADR text used "CX31 or current type" for `fleet-prod-01` and "CX32" for the new server. Both labels reference the CX series (Intel shared vCPU). The realized state uses the CPX series (AMD shared vCPU) on both sides:
+
+- `fleet-prod-01` is type **CPX 22** (2 vCPU AMD, 4 GB RAM, 80 GB disk). Provisioned this way before this ADR was written; the ADR's "CX31" was an approximate forward reference. No migration is planned.
+- `fleet-enterprise-01` is type **CPX 32** (4 vCPU AMD, 8 GB RAM, 160 GB NVMe disk, ~€13.99/month). Chosen for stack consistency with fleet-prod-01 (AMD/CPX line) and for headroom on Caddy + Node.js + the future MQTT subscriber.
+
+The architectural intent of Section 2 is unchanged: separate servers, shared private database, separate reverse proxy per side.
+
+### 10.2 Private network (Sıra 2.1, 2026-05-25)
+
+Section 4 specifies that PostgreSQL access uses the private Hetzner network. At the time this ADR was written, no private network existed; `fleet-prod-01` was deployed without one. The private network `tulipfleet-internal` was created in Sıra 2.1:
+
+- Range: `10.0.0.0/16`, subnet `10.0.0.0/24`, network zone `eu-central`.
+- `fleet-prod-01` attached as `10.0.0.2`.
+- `fleet-enterprise-01` attached as `10.0.0.3`.
+
+`pg_hba.conf` on `fleet-prod-01` was not modified; the existing broad rule (`host all all all md5`) already covers the private network. UFW on `fleet-prod-01` was extended with `5433/tcp on enp7s0 ALLOW IN 10.0.0.0/16` so traffic from the private interface reaches PostgreSQL. Narrowing `pg_hba.conf` itself is deferred future hardening; see `ENTERPRISE_INFRASTRUCTURE.md` §9.1.
+
+### 10.3 Reverse proxy choice (Sıra 2.6, 2026-05-25)
+
+Section 6 step 6 listed "Caddy (or Nginx + Certbot)". Caddy was chosen for `fleet-enterprise-01`:
+
+- Automatic Let's Encrypt issuance and renewal (no certbot cron).
+- Simpler Caddyfile compared to Nginx config.
+- HTTP/2 and HTTP/3 (QUIC) on by default.
+
+`fleet-prod-01` continues to use Nginx + Certbot. The two backends are independent in their reverse-proxy stack, consistent with Section 3.4 ("future independence").
+
+### 10.4 Runtime (Sıra 2.7, 2026-05-25)
+
+Section 7 of the Implementation Plan specifies Docker. The application image is built from a single-stage `node:20-alpine` base. `docker-compose.yml` publishes port 3001 to `127.0.0.1` only, so Caddy is the only path to the container. Details in `ENTERPRISE_INFRASTRUCTURE.md` §5.
+
+### 10.5 Open Questions — status update
+
+- **Read replica (Section 8):** Not yet needed. No measured contention.
+- **Staging (Section 8):** Phase 1 development uses `fleet_tracking_staging` database on the shared PostgreSQL. A dedicated `staging-enterprise-api.tulipfleet.com` host has not been created. Open.
+- **MQTT publish (Section 8):** Not started. Deferred to Mode 2 (per ADR-0005).
+
+---
+
+## 11. Change Log
+
+| Version | Date       | Author    | Change                                                                                                |
+| ------- | ---------- | --------- | ----------------------------------------------------------------------------------------------------- |
+| 1       | 2026-05-13 | Cem Sahinkaya | Initial decision: CX32 + subdomain split.                                                             |
+| 1.1     | 2026-05-25 | Cem Sahinkaya | Added Implementation Notes (Section 10) capturing realized state. No decision change.                 |

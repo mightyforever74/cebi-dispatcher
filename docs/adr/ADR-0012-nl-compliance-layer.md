@@ -74,6 +74,15 @@ Phase 1'de **mimari kısıt** şudur: Compliance Layer'ın kod ve veri yapısı,
 
 Bu kısıtlar Section 4'te detaylı.
 
+---
+
+**Addendum (2026-05-25 — minor consistency clarification):** Vrachtwagenheffing statik tarife tablosu (`enterprise.nl_vrachtwagenheffing_tariffs`) Phase 1.1 (ROADMAP FEAT-008) altına yeniden sınıflandırıldı.
+
+- **Sebep:** Tablonun tüketicisi olan FEAT-008 (Vrachtwagenheffing route cost optimization) ROADMAP Phase 1.1'de listelenmişti (MVP launch'tan 1–4 hafta sonra). Tablonun Phase 1, tüketicisinin Phase 1.1 olması belge tutarsızlığı yaratıyordu. Bu addendum tutarsızlığı tüketici fazına hizalayarak çözer.
+- **Schema migration:** `1779200000001_create-enterprise-nl-vrachtwagenheffing-tariffs` migration dosyası **yine Sıra 2.9.2'de uygulanır** (marjinal maliyet ~0; aynı staging+production migration penceresinde ek tablo yaratmak ileride compliance polygon seed'i sonrası schema-write disruption riskini önler).
+- **Ne ertelendi:** Statik tarife seed verisi (Temmuz 2026 yayınlanmış tarifeler) + tablonun consume edilmesi (route cost optimization logic).
+- **Pattern:** Bu addendum ADR-0009 §4.5.1 ile aynı pattern — minor consistency clarification, yeni ADR version'ı değil. ADR-0012'nin 3-aşamalı stratejik kararı aynen geçerlidir.
+
 ### 3.2 Phase 2 — Premium Tier Feature
 
 **Trigger:** Bir paying dispatcher customer şunlardan birini ister:
@@ -388,3 +397,4 @@ Eğer 3 şartın 2'si sağlanırsa, kalan 1 şart için **bekle**. Erken launch 
 | Version | Date       | Author    | Change                                                  |
 | ------- | ---------- | --------- | ------------------------------------------------------- |
 | 1       | 2026-05-14 | Cem Bakir | Initial decision: 3-phase strategy (Internal → Premium → Standalone). Architectural microservice-ready constraints. PostGIS adoption. Phase 3 trigger conjunction (Vrachtwagenheffing 12-month data + ZE-Zone exemption verification + 10 paying customers). |
+| 1 (Addendum) | 2026-05-25 | Cem Bakir | §3.1 Addendum: Vrachtwagenheffing statik tarife tablosu Phase 1'den Phase 1.1'e (FEAT-008) taşındı — tüketici fazına hizalama. Schema migration `1779200000001_create-enterprise-nl-vrachtwagenheffing-tariffs` yine Sıra 2.9.2'de uygulanır; seed verisi ve consuming logic Phase 1.1'e ertelendi. Minor consistency clarification per ADR-0009 §4.5.1 pattern; yeni ADR version'ı değil, stratejik karar değişmedi. |

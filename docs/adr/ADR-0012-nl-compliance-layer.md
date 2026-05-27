@@ -5,7 +5,7 @@
 | **Status**        | Accepted                                                               |
 | **Version**       | 1                                                                      |
 | **Date**          | 2026-05-14                                                             |
-| **Decision by**   | Cem Bakir (Founder / Lead Engineer)                                    |
+| **Decision by**   | Cem Sahinkaya (Founder / Lead Engineer)                                    |
 | **Component**     | NL Compliance Layer (yeni, ürün-içi modül + potansiyel standalone ürün) |
 | **Related**       | ADR-0002 (VRP solver), ADR-0003 (Server topology), ADR-0004 v3 (Database strategy), ADR-0007 (Telematics integration — customer-funded pattern), ADR-0009 (Integration map), ADR-0010 (ML strategy), ADR-0011 (Use case scope) |
 
@@ -54,6 +54,18 @@ Phase 1'de **mimari kısıt** şudur: Compliance Layer'ın kod ve veri yapısı,
 - Plan generation sırasında compliance check otomatik tetiklenir (FEAT-002, ADR-0011)
 - HERE Tour Planning'e zone'lar **avoidance area** olarak parametre geçilir
 
+**Addendum (2026-05-27 — vehicle-specific avoidance pattern):** §3.1'in "avoidance area olarak parametre geçilir" cümlesi **vehicle-specific** uygulanır, global değil. Pratik anlam:
+
+- Her araç için `checkCompliance` ayrı çalışır (DET, emission class, manuel ontheffing flag bazlı)
+- Bir aracın muafiyeti varsa → o bölge polygon'u o araç için avoid listesine **eklenmez**
+- Bir aracın muafiyeti yoksa → polygon o araç için avoid listesine **eklenir**
+- Compliance Layer bu kararı **request time'da** üretir (worker time'da değil); ham polygon'lar zaten DB'de hazır olduğu için cost düşük
+- HERE problem JSON'da `vehicleProfiles[].avoidAreas` veya `tour.constraints.avoidAreas` per-vehicle parametre kabul ediyorsa native; etmiyorsa **two-pass solve** pattern'i (önce muafiyet'siz araçlar zone-avoid, sonra muafiyet'liler zone-free) fallback
+
+**Önemli belirsizlik:** HERE Tour Planning'in per-vehicle avoidance area kabul edip etmediği henüz **doğrulanmadı** (§9 Open Questions'a yeni soru olarak eklendi). Phase 1 implementation öncesi HERE docs araştırması yapılır; two-pass fallback'in test maliyeti küçük (1 ek HERE çağrısı per plan).
+
+**Pattern:** Bu addendum ADR-0009 §4.5.1 ile aynı pattern — minor implementation clarification, yeni ADR version'ı değil. Karar değişmedi, sadece §3.1'in "avoidance area" cümlesi **per-vehicle** olarak netleşti.
+
 **Yapılmayanlar (Phase 1'de bilinçli olarak dışarıda):**
 
 - Real-time API consumption (RDW, belediye CVD)
@@ -73,15 +85,6 @@ Phase 1'de **mimari kısıt** şudur: Compliance Layer'ın kod ve veri yapısı,
 - Maintenance worker'lar **ayrı process** olarak çalışmalı (ileride ayrı container)
 
 Bu kısıtlar Section 4'te detaylı.
-
----
-
-**Addendum (2026-05-25 — minor consistency clarification):** Vrachtwagenheffing statik tarife tablosu (`enterprise.nl_vrachtwagenheffing_tariffs`) Phase 1.1 (ROADMAP FEAT-008) altına yeniden sınıflandırıldı.
-
-- **Sebep:** Tablonun tüketicisi olan FEAT-008 (Vrachtwagenheffing route cost optimization) ROADMAP Phase 1.1'de listelenmişti (MVP launch'tan 1–4 hafta sonra). Tablonun Phase 1, tüketicisinin Phase 1.1 olması belge tutarsızlığı yaratıyordu. Bu addendum tutarsızlığı tüketici fazına hizalayarak çözer.
-- **Schema migration:** `1779200000001_create-enterprise-nl-vrachtwagenheffing-tariffs` migration dosyası **yine Sıra 2.9.2'de uygulanır** (marjinal maliyet ~0; aynı staging+production migration penceresinde ek tablo yaratmak ileride compliance polygon seed'i sonrası schema-write disruption riskini önler).
-- **Ne ertelendi:** Statik tarife seed verisi (Temmuz 2026 yayınlanmış tarifeler) + tablonun consume edilmesi (route cost optimization logic).
-- **Pattern:** Bu addendum ADR-0009 §4.5.1 ile aynı pattern — minor consistency clarification, yeni ADR version'ı değil. ADR-0012'nin 3-aşamalı stratejik kararı aynen geçerlidir.
 
 ### 3.2 Phase 2 — Premium Tier Feature
 
@@ -272,6 +275,13 @@ CREATE TRIGGER trg_compliance_zones_updated_at
 }
 ```
 
+**Addendum (2026-05-27 — shared_rules / city_overlay precedence):** Pilot Amsterdam research (RESEARCH_Q1_Q2_RESULTS.md §F.4) ortaya koydu ki `rules` JSONB iki blok halinde organize edilir:
+
+- `shared_rules`: ulusal default (RVV 1990 + CVDR752146/1 §1+§2, ulusal harmonize tarifeler, Art 17 cross-zone ontheffing erkenning)
+- `city_overlay`: şehre özel sapmalar (örn. Amsterdam Art 14a kampeerwagen otomatik muafiyet, şehre özel Art 13/14 ücretleri)
+
+**Precedence kuralı:** `city_overlay` `shared_rules`'u **per-key** override eder. Bir field hem `shared_rules.exempt_categories`'de hem `city_overlay.exempt_categories`'de varsa, **`city_overlay` değeri kazanır**. Bu, JSONB merge'ün doğal sonucu DEĞİL — explicit application-layer kuralıdır (`{...shared_rules, ...city_overlay}` spread değil, deep-merge gerekir çünkü nested objects için override'lar key-bazlı olmalı). M2 (rules JSONB construct) implementation'ı bu kuralı zorlar.
+
 Tablonun **`tulipfleet-backend/migrations/`** klasörüne migration olarak yazılır (ADR-0004 v3 ile uyumlu — `enterprise.*` schema authority orada).
 
 ## 6. Risk Management
@@ -375,6 +385,7 @@ Eğer 3 şartın 2'si sağlanırsa, kalan 1 şart için **bekle**. Erken launch 
 - **Belçika ve Almanya LEZ Phase 3 kapsamı düşünülmeli mi?** Cross-border NL→DE/BE rotalar yaygın. ADR-0012 Phase 3 launch ADR'ında değerlendirilir.
 - **Compliance Pro tier 200–500 €/ay pricing range nasıl validate edilir?** Phase 2 ilk müşteri görüşmesinde competitive intelligence ile.
 - **Dutch hukuk firması seçimi — kim?** Phase 2 öncesi araştırılacak; logistics/tech specialty olan firmalar tercih.
+- **HERE Tour Planning per-vehicle avoidance area kabul ediyor mu?** (added 2026-05-27, §3.1 addendum kapsamında) Vehicle-specific avoidance pattern, HERE'nin `tour.constraints.avoidAreas` parametresinin per-vehicle scope kabul etmesine bağlı. Eğer sadece global avoidance varsa, `buildHereProblem` two-pass solve pattern'ine düşer (muafiyet'siz vs muafiyet'li araçlar ayrı çağrılar). HERE Tour Planning Developer Guide §5 (avoidance constraints) incelenecek. M1-M3 migration sprint öncesi cevaplanmalı.
 
 ## 10. References
 
@@ -398,3 +409,4 @@ Eğer 3 şartın 2'si sağlanırsa, kalan 1 şart için **bekle**. Erken launch 
 | ------- | ---------- | --------- | ------------------------------------------------------- |
 | 1       | 2026-05-14 | Cem Bakir | Initial decision: 3-phase strategy (Internal → Premium → Standalone). Architectural microservice-ready constraints. PostGIS adoption. Phase 3 trigger conjunction (Vrachtwagenheffing 12-month data + ZE-Zone exemption verification + 10 paying customers). |
 | 1 (Addendum) | 2026-05-25 | Cem Bakir | §3.1 Addendum: Vrachtwagenheffing statik tarife tablosu Phase 1'den Phase 1.1'e (FEAT-008) taşındı — tüketici fazına hizalama. Schema migration `1779200000001_create-enterprise-nl-vrachtwagenheffing-tariffs` yine Sıra 2.9.2'de uygulanır; seed verisi ve consuming logic Phase 1.1'e ertelendi. Minor consistency clarification per ADR-0009 §4.5.1 pattern; yeni ADR version'ı değil, stratejik karar değişmedi. |
+| 1 (Addendum) | 2026-05-27 | Cem Bakir | §3.1 Addendum: Vehicle-specific avoidance pattern — `checkCompliance` per-vehicle çalışır, avoid listesi per-vehicle dinamik kurulur. HERE per-vehicle avoidance area kabul ediyor mu §9'a yeni Open Question olarak eklendi. §5 Addendum: `shared_rules` / `city_overlay` precedence kuralı — `city_overlay` per-key override eder (application-layer deep-merge). Pilot Amsterdam research (RESEARCH §F.4) çıktısı. FEAT-001 spec'i (docs/functions/FEAT-001-multi-vehicle-vrp.md) ile uyumlu. Minor consistency clarifications per ADR-0009 §4.5.1 pattern; yeni ADR version'ı değil. |

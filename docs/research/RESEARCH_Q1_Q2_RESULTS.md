@@ -376,7 +376,7 @@ FROM filtered;
 | Polygon sayısı | 1 |
 | Alan | 7.8402 km² |
 | Çevre | 16.85 km |
-| Geometry type | MULTIPOLYGON (4326) |
+| Geometry type | POLYGON (4326) |
 | ST_IsValid | true |
 | Centroid | (4.900, 52.371) — Dam Square'a ~100 m |
 | Bounding box | lon 4.83-4.98, lat 52.33-52.42 |
@@ -416,7 +416,7 @@ Migration pattern:
 INSERT INTO enterprise.nl_compliance_zones (city, polygon, ...)
 VALUES (
   'Amsterdam',
-  ST_GeomFromText('MULTIPOLYGON(((4.9216 52.3908, ...)))', 4326),
+  ST_GeomFromText('POLYGON((4.9216 52.3908, ...))', 4326),
   ...
 );
 ```
@@ -522,14 +522,14 @@ RVV 1990 (Reglement verkeersregels en verkeerstekens) — Art 86c-86e, 87
 | M6 | Smoke test (point-in-polygon Dam Square + grid) | TODO |
 | M7 | Production apply (pre-backup + Cem onayı) | TODO |
 | P1 | NOTEBOOKLM_WORKFLOW_PROTOCOL güncelleme | TODO |
-| P2 | ADR-0012 §5 schema revision (POLYGON → MULTIPOLYGON + fees alanı) | TODO |
+| P2 | ADR-0012 §5 schema güncelleme (`ontheffing_fees_eur` alanı eklenmesi — POLYGON tipi zaten doğru, MULTIPOLYGON yanılgısı düzeltildi) | TODO |
 | P3 | ADR-0012 §3.1 "18 ZE-Zone" → "19 zone (18 + Schiphol)" | TODO |
 | P4 | Bu doc commit + dispatcher repo'ya push | TODO |
 | **P5** | **Amsterdam'ın spesifik Verordening leges CVDR ID'sini sonraki turda doğrula** (henüz indexlenmedi, Art 13 + Art 14 €250 Rotterdam proxy) | TODO |
 
 ### Önemli schema kararları (M1-M3 öncesi sabit)
 
-- `enterprise.nl_compliance_zones.polygon` kolonu: **`GEOMETRY(MULTIPOLYGON, 4326)`** (POLYGON değil — Amsterdam MultiPolygon, gelecek şehirler de aynı olabilir)
+- `enterprise.nl_compliance_zones.polygon` kolonu: **`GEOMETRY(POLYGON, 4326)`** (ADR-0012 §5 + Sıra 2.9.2 production migration ile uyumlu). Amsterdam pilot polygon recovery'sinde `ST_Difference + ST_Area > 1000m²` gürültü filtresinden sonra tek parça çıkıyor — POLYGON'a sığar. *(2026-05-27 düzeltme: Dünkü turda yanlışlıkla "MULTIPOLYGON" yazılmıştı, üretim şeması ve ADR ile çelişiyordu.)*
 - `rules` JSONB yapısı: `shared_rules` + `city_overlay` (denormalized, ADR-0012 §5)
 - **`rules.shared_rules.ontheffing_fees_eur`** — F.9.4'teki yapı (5 alan, ulusal harmonize: 100, 60, 25, 30, 0)
 - **`rules.city_overlay.ontheffing_fees_eur`** — Art 13 ve Art 14 için (Amsterdam doğrulanmamış, Rotterdam proxy €250)
@@ -546,5 +546,3 @@ RVV 1990 (Reglement verkeersregels en verkeerstekens) — Art 86c-86e, 87
 | Amsterdam'ın spesifik Verordening leges CVDR ID'si | ⚠️ Henüz indexlenmemiş | 1-2 hafta sonra CVDR keyword search tekrar dene |
 | Art 13/14 Amsterdam-spesifik rakamları | ⚠️ Rotterdam proxy (€250) | Amsterdam Verordening CVDR-indexed olunca doğrula |
 | Verkeersbesluit 2026 (zone polygon resmi metni) | ⚠️ Henüz aranmadı | Şehirde "verkeersbesluit nul-emissiezone 2024-06-18" hâlâ geçerli mi yoksa yenisi mi var? Düşük öncelik (polygon zaten elimde) |
-
-

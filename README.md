@@ -135,7 +135,19 @@ npm run build	Production build into /build
 npm test	Jest test runner
 Repository layout
 
-. ├── docs/ │ ├── adr/ # Architecture Decision Records │ │ └── ADR-0001-*.md │ └── template/ # Vendor template documentation (reference) ├── public/ # Static assets, index.html ├── src/ # Application source │ ├── components/ # Reusable UI building blocks │ ├── examples/ # Template-provided example components │ ├── layouts/ # Page-level layouts │ ├── assets/ # Theme tokens, images, fonts │ └── ... ├── package.json ├── tsconfig.json └── README.md
+├── docs/ 
+│ ├── adr/ # Architecture Decision Records │ 
+│ └── ADR-0001-*.md
+│ └── template/ # Vendor template documentation (reference) 
+├── public/ # Static assets, index.html 
+├── src/ # Application source 
+│├── components/ # Reusable UI building blocks 
+│├── examples/ # Template-provided example components
+│── layouts/ # Page-level layouts 
+│├── assets/ # Theme tokens, images, fonts 
+│└── ... ├── package.json 
+├── tsconfig.json 
+└── README.md
 
 Roadmap (high level)
 Phase 1 — Advisory Dispatcher MVP

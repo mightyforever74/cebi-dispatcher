@@ -182,6 +182,6 @@ This repository contains code derived from Creative Tim's Material Dashboard 2 P
 Application code, business logic, and brand assets added on top of the template are © TulipFleet and not distributed under an open-source license.
 
 Contact
-Owner: Cem Bakir (Founder / Lead Engineer)
+Owner: Cem Sahinkaya (Founder / Lead Engineer)
 Backend repository: tulipfleet-backend (private)
 Mobile app repository: tulipfleet-mobile (private)

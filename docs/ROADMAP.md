@@ -2,7 +2,7 @@
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 
-> **Status as of 2026-05-29:** Phase 1 (Architecture + Bootstrap) — **Sıra 2.9.3 complete** (NL Compliance Layer migrations applied to staging and production); **Sıra 2.9.5 + 6 FEAT pilots complete** (ZE-Zone Amsterdam seed research done, FEAT-001 through FEAT-006 function specs drafted in `docs/functions/`, plus `docs/strategy/STRATEGIC_ROADMAP_3PL_GIG.md` and three ADR addenda — ADR-0012 §3.1/§5, ADR-0002 §3.4). `fleet-enterprise-01` (CPX 32, Falkenstein) serves `https://enterprise-api.tulipfleet.com` via **Cloudflare proxy with Cloudflare Origin Certificate** (RSA 2048, 15-year validity, expires 2041-05-25); previous Let's Encrypt ACME setup retired 2026-05-29 in response to observed reconnaissance scans on the unprotected origin (see `ENTERPRISE_INFRASTRUCTURE.md` §4.2). Hetzner private network `tulipfleet-internal` (10.0.0.0/16) joins both servers (`fleet-prod-01` at `10.0.0.2`, `fleet-enterprise-01` at `10.0.0.3`); enterprise backend reaches PostgreSQL over the private network with the `enterprise_backend` role. `tulipfleet-enterprise-backend` Docker container behind Caddy is healthy (database connected, uptime stable across the 2026-05-28 Hetzner network maintenance). End-to-end smoke verified: JWT issued by `api.tulipfleet.com` validates on `enterprise-api.tulipfleet.com`, `GET /api/dispatcher/vehicles` returns company-scoped data, Cloudflare edge confirmed (`server: cloudflare`, `cf-ray`). Next: cross-spec sync (FEAT-001/005 future-evolution notes from FEAT-006) → Sıra 2.9.6 (Amsterdam ZE-Zone polygon seed M1-M7) → Sıra 3 (HERE Tour Planning sandbox).
+> **Status as of 2026-05-25:** Phase 1 (Architecture + Bootstrap) — **Sıra 2 complete**. `fleet-enterprise-01` (CPX 32, Falkenstein) is provisioned and serving `https://enterprise-api.tulipfleet.com` with a valid Let's Encrypt certificate via Caddy. Hetzner private network `tulipfleet-internal` (10.0.0.0/16) joins both servers (`fleet-prod-01` at `10.0.0.2`, `fleet-enterprise-01` at `10.0.0.3`); enterprise backend reaches PostgreSQL over the private network with the `enterprise_backend` role. `tulipfleet-enterprise-backend` is deployed as a Docker container behind Caddy (commit `c125f4c`). End-to-end smoke verified: JWT issued by `api.tulipfleet.com` validates on `enterprise-api.tulipfleet.com`, `GET /api/dispatcher/vehicles` returns company-scoped data. Operational documentation created (`ENTERPRISE_INFRASTRUCTURE.md`, `INTEGRATION_BOUNDARIES.md`); ADR-0003 carries Implementation Notes (Section 10) for realized state. Next: Sıra 2.9 — NL Compliance Layer seed (ADR-0012) → Sıra 3 — HERE Tour Planning sandbox.
 
 ---
 
@@ -41,6 +41,88 @@ The product is positioned **"TulipFleet — works best with TulipFleet"** in mar
 | **ML Strategy**   | No in-house ML in Phase 1-2; ML consumer relationship with HERE; customer-funded ML in Phase 3+ | [ADR-0010](docs/adr/ADR-0010-ml-strategy.md)               |
 | **Use Case Scope**| 7 Phase 1 MVP use cases, 10 Phase 2 trigger-based, 8 out-of-scope; HERE coverage matrix; target segment K/M-50–300 vehicles | [ADR-0011](docs/adr/ADR-0011-dispatcher-use-case-scope.md) |
 | **NL Compliance Layer** | 3-phase strategy: Internal use (Phase 1) → Premium tier (Phase 2) → Standalone CaaS product (Phase 3); PostGIS adoption | [ADR-0012](docs/adr/ADR-0012-nl-compliance-layer.md)       |
+
+---
+
+## Feature Wishlist Coverage Matrix
+
+The dispatcher wishlist (`Ben_bir_advisor_um-1.docx`) catalogs **31 industry use cases** synthesized from competitor product analysis and industry reports. This matrix maps **every wishlist item** to a TulipFleet feature ID, phase placement, and current spec status. Two TulipFleet-specific features (NL compliance trigger) are **added to the wishlist as appendix items** (W-A1, W-A2).
+
+**Legend:**
+- ✅ **Spec ready** — function spec authored in `docs/functions/`
+- 📋 **Spec pending** — wishlist target, no spec yet, candidate for next pilot
+- 🔵 **Phase 2 ADR-0011 §6** — customer-funded trigger required
+- 🚫 **Out-of-scope ADR-0011 §7** — explicit non-goal
+- 🌱 **TulipFleet-already-doing** — wishlist notes this is existing capability, no new spec needed
+
+### Wishlist coverage table
+
+| W# | Wishlist feature | Frequency | Cem note | FEAT ID | Phase | Status |
+|----|---|---|---|---|---|---|
+| W1 | AI-Powered Route Optimization | Very common | — | FEAT-001 | 1 | ✅ Spec v3 (FN-016 cross-spec sync hub) |
+| W2 | Dynamic In-Day Re-routing | Common | — | FEAT-002 | 1 | ✅ Spec v1 |
+| W3 | Smart Auto-Dispatch | Common | — | FEAT-003 | 1 | ✅ Spec v1 |
+| W4 | Hybrid Fleet Assignment | Common | — | FEAT-004 | 1 | ✅ Spec v1 (3PL/gig out-of-scope per ADR-0011 §7 OUT-002) |
+| W5 | Predictive ETA Estimation | Very common | — | FEAT-005 | 1 | ✅ Spec v2 (FEAT-006 cross-spec sync) |
+| W6 | Automated Appointment Scheduling | Common | drive + dock + rest + buffer | FEAT-006 | 1 | ✅ Spec v1 (FEAT-006⊂FEAT-108 scope) |
+| W7 | Driver Performance Coaching | Common | we do this via adxl345 | FEAT-007 | 1 | ✅ Spec v3 (4 UNCERTAINTIES kapatıldı) |
+| W8 | Automated Exception Handling | Common | — | FEAT-010 | 1.1 | 📋 Spec pending (atlanmış — sıra geldi) |
+| W9 | Proof of Delivery (PoD) Capture | Very common | last priority | FEAT-011 | 1 | 📋 Spec pending |
+| W10 | Multimodal Orchestration | Very common | — | — | — | 🚫 OUT-001 (Phase 3 ADR pending) |
+| W11 | Refrigerated Container Monitoring | Common | menu created, customer activates | FEAT-012 | 1 (skeleton) + 2 (activate) | 📋 Spec pending (schema forward-compat, kod path kapalı) |
+| W12 | Hazmat & Compliance Routing | Niche | expertise feature | FEAT-013 | 1.1 | 📋 Spec pending (ADR-0012 ile uyumlu) |
+| W13 | Multi-carrier Tender Management | Common | — | FEAT-014 | 2 | 🔵 Customer-funded trigger |
+| W14 | Automated Freight Audit and Payment | Very common | — | FEAT-015 | 2 | 🔵 Customer-funded trigger |
+| W15 | Cost-to-Serve Modeling | Common | — | FEAT-016 | 1.1 | 📋 Spec pending |
+| W16 | Electric Vehicle (EV) Range Planning | Common | — | FEAT-103 | 2 | 🔵 EV customer trigger (ADR-0011 §6) |
+| W17 | Locker and PUDO Management | Common | we do with geofence | FEAT-017 | 1.1 | 📋 Spec pending (mevcut geofence üzerine) |
+| W18 | Reverse Logistics Handling | Common | — | FEAT-109 | 2 | 🔵 Retail customer trigger (ADR-0011 §6) |
+| W19 | Multi-Day Long-Haul Planning | Niche | — | FEAT-110 | 2 | 🔵 Long-haul customer trigger (ADR-0011 §6) |
+| W20 | Autonomous Vehicle Integration | Niche | future, must include | — | 3 | 🚫 OUT-004 (Phase 3 ADR pending) |
+| W21 | Carbon Footprint Tracking | Common | we have already done but must learn subtleties | FEAT-009 | 1.1 | ✅ Spec v1 (CSRD-aware, distinct from FEAT-106) |
+| W22 | Driver Electronic Logging (ELD/IFTA) | Very common | decide whether increase db work | FEAT-018 | 1.1 or 2 | 📋 Karar bekliyor (NL geçerli mi? Tahograf var) |
+| W23 | Digital Document Management | Common | requires deep search | FEAT-019 | 2 | 🔵 Deep search → muhtemelen customer-funded |
+| W24 | Capacity-Aware Delivery Promising | Common | base feature of cargo mgmt (kanban approach) | FEAT-020 | 1.1 | 📋 Spec pending |
+| W25 | Breadcrumbs Trail Analysis | Common | — | FEAT-021 | 1.1 | 📋 Spec pending (planned vs actual route) |
+| W26 | Workload Balancing | Common | requires deep search | FEAT-022 | 1.1 or 2 | 📋 Karar bekliyor |
+| W27 | Cross-Docking Orchestration | Common | — | FEAT-023 | 2 | 🔵 Muhtemelen 3PL customer trigger |
+| W28 | Predictive Failure Detection | Common | — | FEAT-024 | 2 | 🔵 Customer-funded (ML risk modeling, ADR-0010 §3.5 trigger) |
+| W29 | Mobile Status Updates | Very common | tulipfleet | — | — | 🌱 Already done in TulipFleet mobile app |
+| W30 | Freight Spend Benchmarking | Common | — | FEAT-025 | 2 | 🔵 Customer-funded (data aggregation feature) |
+| W31 | AI Agent Task Automation | Niche | important | FEAT-105 | 2 | 🔵 Customer-funded LLM consumer (ADR-0010 §4) |
+
+### TulipFleet-specific appendix (added to wishlist)
+
+| W# | Feature | Source | FEAT ID | Phase | Status |
+|----|---|---|---|---|---|
+| W-A1 | Vrachtwagenheffing Route Cost Optimization | NL regulatory trigger (Temmuz 2026), ADR-0012 | FEAT-008 | 1.1 | ✅ Spec v1 (9.5/10 pilot zirvesi) |
+| W-A2 | CSRD-Compliant Carbon Report Export | EU regulatory layer, Large 3PL trigger | FEAT-106 | 2 | 🔵 Customer-funded (Heineken/Picnic level trigger) |
+
+### Coverage summary
+
+| Status | Count | % |
+|---|---|---|
+| ✅ Spec ready (9 FEAT) | 9 | 27% |
+| 📋 Spec pending (Phase 1 / 1.1 candidates) | 12 | 36% |
+| 🔵 Phase 2 customer-funded trigger | 9 | 27% |
+| 🚫 Out-of-scope (Phase 3 ADR pending) | 2 | 6% |
+| 🌱 TulipFleet-already-doing | 1 | 3% |
+| **Toplam** | **33** | **100%** |
+
+**Pilot pipeline öncelik sırası:**
+
+1. **FEAT-010** Automated Exception Handling (W8, common, atlanmış) — wishlist sırasını yeniden hizalama
+2. **FEAT-011** PoD Capture (W9, Very common, Cem "last priority" demiş — sona kalabilir)
+3. **FEAT-012** Refrigerated Container Monitoring (W11, menu/skeleton paterni — ilginç mimari)
+4. **FEAT-013** Hazmat & Compliance Routing (W12, ADR-0012 ile sinerjili)
+5. **FEAT-016** Cost-to-Serve Modeling (W15, common)
+6. **FEAT-017** Locker/PUDO (W17, mevcut geofence üstüne)
+7. **FEAT-020** Capacity-Aware Delivery Promising (W24, cargo management base)
+8. **FEAT-021** Breadcrumbs Trail Analysis (W25, planned vs actual)
+9. **FEAT-022** Workload Balancing (W26, deep search gerek — Cem kararı)
+10. **FEAT-018** ELD/IFTA (W22, NL'de gerekli mi? Cem kararı)
+
+Tüm Phase 1 / 1.1 specs tamamlandıktan sonra NotebookLM ilişki haritası çıkarır; **bottleneck önceden görülmesi** bu mimari haritalandırma egzersizinin amacıdır (function-level shared infrastructure analysis).
 
 ---
 
@@ -174,7 +256,7 @@ The order below reflects the critical path; later items depend on earlier ones.
 - ✅ **DNS A record** `enterprise-api.tulipfleet.com` → `49.12.246.212` (Cloudflare, DNS only / proxy off so Caddy handles ACME directly).
 - ✅ **Caddy + Let's Encrypt** — Caddy chosen over Nginx for automatic ACME issuance and renewal. ECDSA certificate obtained via TLS-ALPN-01 challenge. HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy security headers active; HTTP→HTTPS 308 redirect.
 - ✅ **Deployed `tulipfleet-enterprise-backend`** (commit `c125f4c`) as Docker container behind Caddy. End-to-end smoke verified: JWT from `api.tulipfleet.com` validates on `enterprise-api.tulipfleet.com`; `GET /api/dispatcher/vehicles` returns company-scoped data. PostgreSQL access via private network with `enterprise_backend` role (UFW rule `5433/tcp on enp7s0 ALLOW IN 10.0.0.0/16` on fleet-prod-01).
-- ⏳ **Sıra 2.9 — Seed initial NL Compliance data** — 18 ZE-Zone city polygons + rules (per ADR-0012 §3.1, as revised by 2026-05-25 addendum). Vrachtwagenheffing static tariff table relocated to Phase 1.1 (FEAT-008) to align with its consumer's phase; the table's schema migration is still authored in Sıra 2.9.1 and applied in Sıra 2.9.2 (low marginal cost), but seed and consuming logic deferred. Deferred to its own session because of dataset preparation scope.
+- ⏳ **Sıra 2.9 — Seed initial NL Compliance data** — 18 ZE-Zone city polygons + rules + Vrachtwagenheffing static tariff table (per ADR-0012 §3.1). Deferred to its own session because of ADR-0012 §3.1 dataset preparation scope.
 
 **Sıra 3 — HERE Tour Planning sandbox**
 
@@ -216,11 +298,32 @@ The order below reflects the critical path; later items depend on earlier ones.
 
 **Phase 1.1 — Quick follow-up (1–4 weeks after MVP launch)**
 
-These items ship shortly after the Phase 1 MVP launch, not in the MVP itself:
+These items ship shortly after the Phase 1 MVP launch, not in the MVP itself. Detaylı sıralama yukarıda **Feature Wishlist Coverage Matrix**'te.
 
-- **FEAT-008 — Vrachtwagenheffing route cost optimization.** Scope: (a) `enterprise.nl_vrachtwagenheffing_tariffs` static tariff seed once Temmuz 2026 published rates are available — schema itself is authored in Sıra 2.9.1 and applied in Sıra 2.9.2 (relocated from Phase 1 per 2026-05-25 addendum to ADR-0012 §3.1); (b) route cost optimization logic in dispatcher backend that joins this table during plan generation. Activated when Temmuz 2026 API goes live; ~3–5 days marginal effort because schema is already in place. Per ADR-0011 and ADR-0012.
-- **FEAT-009 — Basic carbon footprint per route.** HERE Eco Routing already returns CO2/fuel data; UI display added. Distinct from Phase 2 CSRD-compliant export (FEAT-106).
-- **Apply ADR-0004 v3 §6.4 migration** (`public.vehicles` capacity columns: `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`) — enables FEAT-002 truck-aware routing and FEAT-007 capability matching. Note: existing `vehicle_category` varchar column overlaps semantically with the new `vehicle_class`; reconciliation design needed during §6.4 migration authoring.
+**Implementation-ready (spec hazır):**
+
+- **FEAT-008 — Vrachtwagenheffing route cost optimization (W-A1).** Activated when Temmuz 2026 API goes live; ~3–5 days marginal effort. Per ADR-0011 and ADR-0012.
+- **FEAT-009 — Basic carbon footprint per route (W21).** HERE Eco Routing already returns CO2/fuel data; UI display added. **CSRD-aware** (FEAT-009) vs **CSRD-compliant** (FEAT-106 Phase 2) ayrımı per FEAT-009 §1.2.
+
+**Spec pending — sıraya alındı (Phase 1.1 hedefi):**
+
+- **FEAT-010 — Automated Exception Handling (W8).** Wishlist'in atlanmış common feature'ı. Detection (FEAT-005 ETA deviation) + decision (ADR-0005 Mode 1 advisory) + action (FEAT-002 re-route, FEAT-003 reassign). Phase 1.1 sıradaki pilot.
+- **FEAT-013 — Hazmat & Compliance Routing (W12).** ADR-0012 NL Compliance Layer ile sinerjili — niche ama expertise feature.
+- **FEAT-016 — Cost-to-Serve Modeling (W15).** Per-route/driver/address profitability — FEAT-008 cost_breakdown JSONB üstüne.
+- **FEAT-017 — Locker/PUDO Management (W17).** Mevcut geofence altyapısı üstüne — Cem notu "we do with geofence".
+- **FEAT-020 — Capacity-Aware Delivery Promising (W24).** Cargo management base feature, kanban approach.
+- **FEAT-021 — Breadcrumbs Trail Analysis (W25).** Planned vs actual route deviation.
+
+**Spec pending — Cem kararı bekliyor:**
+
+- **FEAT-011 — PoD Capture (W9).** Very common ama Cem "last priority" işaretledi.
+- **FEAT-012 — Refrigerated Container Monitoring (W11).** Phase 1: menu/skeleton/schema (kod path kapalı). Customer activation Phase 2.
+- **FEAT-018 — Driver ELD/IFTA (W22).** Cem notu "decide whether increase db work, requires db table". NL'de zaten tahograf zorunlu, geçerli mi?
+- **FEAT-022 — Workload Balancing (W26).** Cem notu "requires deep search".
+
+**Infrastructure migration:**
+
+- **Apply ADR-0004 v3 §6.4 migration** (`public.vehicles` capacity columns: `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`, `emission_class`) — FEAT-002 truck-aware routing, FEAT-007 capability matching, FEAT-008 toll calculation, FEAT-013 hazmat routing ön koşulu.
 
 **Indicative timeline:** 6–9 weeks from completion of Sıra 1 to first-customer pilot, assuming single founder/developer pace. Phase 1.1 follow-ups extend ship period by ~1–4 weeks.
 
@@ -234,7 +337,8 @@ Per ADR-0011 §7, the following are bilinçli olarak Phase 1 dışında:
 - Driver drowsiness / DMS computer vision (separate business line; ADR pending).
 - Custom VRP engine / OR-Tools (escape hatch only, ADR-0002 §8).
 - Mapbox GL JS migration (escape hatch only, ADR-0006 §7).
-- Multimodal orchestration (rail/sea/road) — Phase 3 ADR.
+- Multimodal orchestration (rail/sea/road) — Phase 3 ADR. Wishlist W10 (Very common), OUT-001 per ADR-0011 §7.
+- **Autonomous Vehicle Integration** — Phase 3 ADR. Wishlist W20 (Niche, "future foreseen"), OUT-004 added 2026-05-30 (per ROADMAP Feature Wishlist Coverage Matrix).
 - SiLK federated load pooling — separate product, not in dispatcher scope.
 - In-house ML training/hosting — per ADR-0010.
 - Yard/Ramp WMS connector — Phase 2 customer-funded (FEAT-108).
@@ -255,6 +359,16 @@ Per ADR-0011 §7, the following are bilinçli olarak Phase 1 dışında:
 - **Fastify v4 known CVEs** (sendWebStream DoS, Content-Type tab bypass, X-Forwarded spoofing) require resolution before exposure to untrusted traffic → ADR for Fastify 5 migration vs. mitigation-via-reverse-proxy decision.
 
 **Phase 2 use case catalog:** FEAT-101 through FEAT-110 per [ADR-0011 §6](docs/adr/ADR-0011-dispatcher-use-case-scope.md). Each is forward-compatible with Phase 1 schema (`dispatch_tasks.capacity_required jsonb`, `source jsonb`).
+
+**Additional wishlist Phase 2 candidates** (mapped via Feature Wishlist Coverage Matrix above; customer-funded triggers per ADR-0011 §6 pattern):
+
+- **FEAT-014 — Multi-carrier Tender Management (W13).** Freight quote automation across carriers.
+- **FEAT-015 — Automated Freight Audit and Payment (W14).** Very common Phase 2 feature, invoice/contract verification.
+- **FEAT-019 — Digital Document Management (W23).** Bill of lading, invoice OCR — possibly LLM-consumer.
+- **FEAT-023 — Cross-Docking Orchestration (W27).** Most likely 3PL customer trigger.
+- **FEAT-024 — Predictive Failure Detection (W28).** ML risk modeling — ADR-0010 §3.5 trigger (Phase 3+ ML candidate if baseline noisy).
+- **FEAT-025 — Freight Spend Benchmarking (W30).** Cross-customer data aggregation.
+- **FEAT-106 — CSRD-Compliant Carbon Report Export (W-A2).** Large 3PL trigger (Heineken/Picnic level); distinct from FEAT-009 Phase 1.1 CSRD-aware display.
 
 **Out of scope:**
 
@@ -339,22 +453,6 @@ Fastify v4 carries three known unpatched CVEs that the project accepts as low-im
 
 `fast-jwt` (6 CVEs) and `fast-uri` (2 CVEs) are mitigated via npm `overrides` block in `package.json` pinning patched versions while keeping Fastify 4 itself stable. Phase 2 will produce an ADR (revisiting ADR-0008) to decide between Fastify 5 migration and continued v4 use with reverse-proxy-level mitigation.
 
-### Optional hardening — Cloudflare proxy follow-ups (added 2026-05-29)
-
-These are deferred hardening steps recorded so they are not forgotten. None is required for current operation; the Cloudflare proxy enablement of 2026-05-29 (see `ENTERPRISE_INFRASTRUCTURE.md` §4.2) already closes the largest exposure (~95% of the attack surface).
-
-| Extra hardening | Effort | Gain |
-| --- | --- | --- |
-| Narrow Hetzner firewall / UFW 80/443 to Cloudflare IP ranges only | ~10 min | Direct origin probes blocked even if VPS IP leaks |
-| Cloudflare WAF custom rule (country block, suspicious-path patterns) | ~15 min | Twint-style endpoint reconnaissance rejected at edge |
-| Caddy `trusted_proxies` so real client IP is taken from `CF-Connecting-IP` | ~5 min | Logs show real visitor IP instead of Cloudflare edge IP |
-
-These are **not required today** — Cloudflare proxy alone closes ~95% of the attack surface. Apply when convenient.
-
-### Hetzner abuse policy — IP block resilience (added 2026-05-29)
-
-After enabling the Cloudflare proxy, hostile traffic to `enterprise-api.tulipfleet.com` reaches the Cloudflare edge, not the VPS public IP. This makes the VPS IP **less likely to appear on threat-intelligence lists** (Spamhaus, Shadowserver, etc.) for issues caused by visitor behavior. The IP-block incident of 2026-05-29 (caused by an overdue invoice, not abuse) demonstrated that recovery from a Hetzner-side block also takes manual unblock requests and CET business-hour latency; minimizing the chance of any block being raised in the first place protects future operational availability.
-
 ---
 
 ## Repository Map
@@ -389,9 +487,5 @@ After enabling the Cloudflare proxy, hostile traffic to `enterprise-api.tulipfle
 | 2026-05-15 (evening — Sıra 1.4 + 1.5 complete) | `tulipfleet-enterprise-backend` repository created on GitHub (private). Fastify v4 skeleton operational (`server.js`, plugins/{db,auth}, routes/{health,vehicles}). `GET /health` and `GET /api/dispatcher/vehicles` verified locally against staging DB using `fleetadmin` superuser: 401 without JWT, 200 with valid JWT returning real Demo Fleet vehicle data. Dependency security overrides in place for `fast-jwt@^6.2.4` (resolves 6 CVEs) and `fast-uri@^3.1.2` (resolves 2 CVEs); 3 Fastify-core CVEs added to "known vulnerabilities — accepted-risk register" cross-cutting section with rationale. Schema discovery: `public.vehicles` column reference recorded (key naming: `plate_no` not `license_plate`, `brand` not `make`); strategic observations about the schema's information-richness (status, vehicle_category, fuel_type, behavior thresholds, geofence integration) captured for Phase 2 planning. Third migration authoring rule added: "Schema column names must be inspected, not assumed" — triggered by Sıra 1.5 endpoint failure when assumed column names did not match real schema. | 
 | 2026-05-24 (Sıra 1 complete) | `enterprise_backend` Postgres role created with least-privilege grants
 | 2026-05-25 (Sıra 2 4/5 complete) | `fleet-enterprise-01` provisioned (Hetzner **CPX 32** — note: ADR-0003 v1 said "CX32"; ADR-0003 §10 Implementation Notes records the divergence). Ubuntu 24.04 LTS, cloud-init bootstrapped UFW/fail2ban/Docker/Caddy. Hetzner private network `tulipfleet-internal` (10.0.0.0/16) created and both servers attached (10.0.0.2 + 10.0.0.3). Enterprise backend accesses PostgreSQL over the private network via `enterprise_backend` role (UFW `5433/tcp on enp7s0 ALLOW IN 10.0.0.0/16` on fleet-prod-01). Cloudflare DNS A record (DNS only). Caddy serving `enterprise-api.tulipfleet.com` with Let's Encrypt ECDSA cert. `tulipfleet-enterprise-backend` deployed as Docker container (commit `c125f4c`); end-to-end smoke (login on `api.tulipfleet.com` → JWT-protected call on `enterprise-api.tulipfleet.com`) returns 6 company-scoped vehicles. Operational docs created: `docs/ENTERPRISE_INFRASTRUCTURE.md`, `docs/INTEGRATION_BOUNDARIES.md`. ADR-0003 §10 Implementation Notes added. Initial snapshot: `fleet-enterprise-01-initial-cloudinit-done`. **Sıra 2.5 (NL Compliance seed) deferred to its own session** — Sıra 2 is 4/5 in this entry. Next: Sıra 2.9. |
-| 2026-05-25 (Sıra 2.9.1 — migration design complete, scope realignment) | Two `enterprise.*` migration files designed and authored for application in Sıra 2.9.2: `1779200000000_create-enterprise-nl-compliance-zones` (per ADR-0012 §5) and `1779200000001_create-enterprise-nl-vrachtwagenheffing-tariffs` (new schema designed during this session — categorization aligned with EU Eurovignette/Viapass conventions: 3 weight classes `12_18t`/`18_32t`/`32_plus_t`, 8 emission classes `euro_0..6`/`zero_emission`, 3 road types `motorway`/`n_road`/`all_other`; UNIQUE index on `(weight_class, emission_class, road_type, effective_from)` enforces tariff-row uniqueness at DB level). Migration authoring disciplines applied throughout (BOM-free UTF-8, LF line endings, idempotent pre-condition guards for PostGIS / `update_timestamp` / `enterprise` schema, defense-in-depth GRANTs to `enterprise_backend`, human-readable TEXT primary keys per ADR-0012 §4.6 audit trail). **Scope realignment:** the Vrachtwagenheffing tariffs table — originally listed under Sıra 2.9 (per ADR-0012 §3.1) — was reclassified to Phase 1.1 (FEAT-008) during this session. Rationale: the table's only consumer (FEAT-008 — Vrachtwagenheffing route cost optimization) is already Phase 1.1; aligning the data and its consumer in the same phase removes a doc-cross-reference inconsistency. The schema migration file itself still applies in Sıra 2.9.2 (marginal cost ~0; avoids a future schema-write disruption against production once compliance polygons are seeded), but the static tariff seed data and route-cost optimization logic are explicitly deferred to FEAT-008. ROADMAP Sıra 2.9 + Phase 1.1 FEAT-008 descriptions updated; ADR-0012 §3.1 carries a 2026-05-25 Addendum recording the reclassification (per ADR-0009 §4.5.1 minor-clarification pattern, not a new ADR version). Next: Sıra 2.9.2 (apply migrations to staging → smoke → production). |
-| 2026-05-26 (Sıra 2.9.2 + 2.9.3 — staging then production apply) | Both Sıra 2.9.1 migrations applied to staging (`fleet_tracking_staging`, ids 7+10 with sequence drift from dry-runs) and production (`fleet_tracking`, ids 5+6 clean) on fleet-prod-01. Apply pattern: manual `psql -f` with `ON_ERROR_STOP` and `--single-transaction` (repo has no `node-pg-migrate`); dry-run with `ROLLBACK` validated UP SQL plus six independent CHECK/UNIQUE constraint tests via `SAVEPOINT` per constraint; real apply with `COMMIT` for each migration; tracking inserts written to `public.pgmigrations` manually. Bonus: a Sıra 1.5 ACL drift was discovered in production (default privileges on `enterprise` schema absent; staging had them via Sıra 1.5 setup) and corrected before migration apply with `ALTER DEFAULT PRIVILEGES IN SCHEMA enterprise GRANT ALL ON TABLES/SEQUENCES TO enterprise_backend`. Both new tables now show 7 privileges to `enterprise_backend` in both environments (staging-equivalence restored). Pre-backup snapshot saved at `/opt/fleet/backups/pre_sira_2_9_3_20260526_055234.sql.gz` (887 bytes; `enterprise` schema + `public.pgmigrations` only). Hash-equivalent SQL applied to both environments (`sha256` verified before container copy). Sıra 2.9 nominally complete; remaining work (18 ZE-Zone polygon manual seed per ADR-0012 §3.1, plus compliance plugin scaffolding in `tulipfleet-enterprise-backend`) is explicitly out of scope for Sıra 2.9 and folded into separate future sessions. Next: Sıra 2.9.5 (18 ZE-Zone seed) → Sıra 3 (HERE Tour Planning sandbox). |
 (`SELECT` on five `public.*` tables, `ALL` on `enterprise.*`, `statement_timeout = '10s'`, default privileges for future `enterprise.*` tables). Final smoke test with production-equivalent role passed against staging DB. `tulipfleet-enterprise-backend` initial commit (`71c5260`) pushed to GitHub `main`: 10 files, 2046 insertions, Fastify v4 skeleton with health and dispatcher/vehicles endpoints. `.env` and `node_modules/` properly excluded via `.gitignore` (verified pre-commit). Sıra 1 closed. Next session: Sıra 2 — Hetzner CX32 provisioning. |
-| 2026-05-27 (Sıra 2.9.5 + 6 FEAT pilots) | Sıra 2.9.5 NL ZE-Zone Amsterdam research complete (7.84 km² POLYGON, CVDR752146/1, ulusal harmonize tarife €100/60/25/30/0 + €250 city). RESEARCH document POLYGON correction applied (was MULTIPOLYGON). Six feature function specs drafted in `docs/functions/` via NotebookLM cowork: FEAT-001 (Multi-Vehicle VRP), FEAT-002 (Dynamic Re-routing), FEAT-003 (Smart Auto-Dispatch), FEAT-004 (Hybrid Fleet Assignment — internal + carrier scope; 3PL/gig out-of-scope per ADR-0011 §7 OUT-002), FEAT-005 (Predictive ETA HERE-consumer pattern), FEAT-006 (Automated Appointment Scheduling — FEAT-108 subset, task duration 4-component model). `docs/strategy/STRATEGIC_ROADMAP_3PL_GIG.md` drafted as pre-ADR-0013 material. Three ADR addenda: ADR-0012 §3.1 (vehicle-specific avoidance pattern), ADR-0012 §5 (shared_rules / city_overlay precedence), ADR-0002 §3.4 (constraint hierarchy hard/soft). Cross-spec sync TODO: FEAT-001:FN-016 and FEAT-005:FN-03 need future-evolution notes from FEAT-006 schema/signature extensions. |
-| 2026-05-28 (Hetzner network maintenance) | Hetzner router nbg1-core12 maintenance, both fleet-prod-01 (46.224.1.192) and fleet-enterprise-01 (49.12.246.212) unreachable for ICMP/SSH from external networks. Production resumed without action after maintenance window. Resolved per Hetzner status timeline. |
-| 2026-05-29 (Cloudflare proxy + Origin Certificate) | Production health audit after Hetzner maintenance + payment-overdue IP block resolution. **Cloudflare proxy enabled** for `enterprise-api.tulipfleet.com` (DNS only → Proxied / orange cloud). Caddy TLS switched from Let's Encrypt ACME to manual **Cloudflare Origin Certificate** (RSA 2048, 15-year validity, expires 2041-05-25). Cloudflare SSL/TLS mode confirmed **Full (strict)**. Trigger: backend logs revealed reconnaissance scans against unprotected origin (`/js/twint_ch.js`, `/assets/js/auth.js` and similar). End-to-end verified: `server: cloudflare` + `cf-ray` in response headers. `ENTERPRISE_INFRASTRUCTURE.md` updated (§3.1, §3.3, §4.2, §6.2; new §9.6 firewall narrowing and §9.7 trusted_proxies as deferred hardening). ROADMAP cross-cutting disciplines extended with **Optional hardening — Cloudflare proxy follow-ups** and **Hetzner abuse policy — IP block resilience** sections. |
+| 2026-05-30 (Feature Wishlist Coverage Matrix added) | **New top-level section "Feature Wishlist Coverage Matrix"** added between Decision Summary and Phase Plan. Maps all 31 items of the dispatcher wishlist (`Ben_bir_advisor_um-1.docx`) to FEAT IDs, phase placements, and current spec status. Two TulipFleet-specific features added as appendix items (W-A1 Vrachtwagenheffing FEAT-008, W-A2 CSRD-Compliant FEAT-106). Coverage summary: 9 specs ready (FEAT-001..009, 27%), 12 specs pending (Phase 1/1.1 candidates, 36%), 9 Phase 2 customer-funded triggers (27%), 2 out-of-scope (W10 Multimodal OUT-001, W20 Autonomous Vehicle OUT-004 newly added 6%), 1 TulipFleet-already-doing (W30 Mobile Status Updates 3%). Phase 1.1 section expanded with implementation-ready (FEAT-008, 009) + spec pending sıraya alındı (FEAT-010 Exception Handling, FEAT-013 Hazmat, FEAT-016 Cost-to-Serve, FEAT-017 Locker/PUDO, FEAT-020 Capacity-Aware Delivery, FEAT-021 Breadcrumbs) + Cem decision pending (FEAT-011 PoD, FEAT-012 Refrigerated, FEAT-018 ELD/IFTA, FEAT-022 Workload Balancing). Phase 2 use case catalog expanded with additional wishlist Phase 2 candidates (FEAT-014, 015, 019, 023, 024, 025). Out-of-scope section: W20 Autonomous Vehicle Integration added as OUT-004 (Phase 3 ADR pending). Pilot pipeline öncelik sırası belgelendi — FEAT-010 next. Goal: tüm Phase 1/1.1 spec'leri tamamlandıktan sonra NotebookLM ilişki haritası bottleneck analysis çıkarır (function-level shared infrastructure). |

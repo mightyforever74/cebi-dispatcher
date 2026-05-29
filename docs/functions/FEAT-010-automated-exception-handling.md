@@ -98,7 +98,7 @@ Wishlist "AI agents" diyor — bu **TulipFleet için yanıltıcı okuma.** ADR-0
 | 3 | FEAT-010-FN-03 | worker | `monitorDriverPresence` | driverId, taskId | Exception? | public.locations, enterprise.dispatch_tasks | enterprise.exception_events | — | ADR-belirsiz (driver no-show detection — UNCERTAINTIES #1) | 1 | — |
 | 4 | FEAT-010-FN-04 | worker | `monitorDockConflicts` | facilityId, window | Exception? | enterprise.dock_appointments | enterprise.exception_events | — | ADR-belirsiz (dock slip warning — UNCERTAINTIES #2) | 1 | **FEAT-006:FN-03** refreshTaskEtas |
 | 5 | FEAT-010-FN-05 | worker | `monitorComplianceZones` (**KONSOLIDASYONDA EKLENDİ**) | vehicleId, currentLocation | Exception? | enterprise.nl_compliance_zones, public.locations | enterprise.exception_events | HERE Routing (predicted path) | ADR-0012 §4 — zone breach prediction discipline | 1 | FEAT-001:FN-012 compliance check |
-| 6 | FEAT-010-FN-06 | backend | `logExceptionEvent` | eventData | { eventId } | — | enterprise.exception_events | — | ADR-0005 §5.3 — "If rules trigger an exception, system marks the task `needs_dispatcher` and notifies the dispatcher." | 1 | — |
+| 6 | FEAT-010-FN-06 | backend | `logExceptionEvent` | eventData | { eventId } | — | enterprise.exception_events | — | ADR-0005 §5.3 — "If rules trigger an exception, system marks the task `needs_dispatcher` and notifies the dispatcher." | 1 | **FEAT-014:FN-04, FN-13** + **FEAT-017:FN-12** + **FEAT-018:FN-08, FN-13** (cross-spec sync 2026-05-30) |
 | 7 | FEAT-010-FN-07 | shared_library | `deduplicateException` (**KONSOLIDASYONDA EKLENDİ**) | rawException, cooldownMinutes | Exception? | enterprise.exception_events (son 10 dk) | — | — | FEAT-007:FN-11 deduplicateBehaviorEvents paterni | 1 | **FEAT-007:FN-11** (dedup pattern) |
 | 8 | FEAT-010-FN-08 | backend | `evaluateExceptionPolicy` | exceptionId | Decision | public.companies (dispatch_mode), enterprise.exception_events | — | — | ADR-0005 §7 — "policy module structure in the enterprise backend (`src/dispatch/policy.ts`) that reads the mode and currently always returns 'advisory'." | 1 (stub) | **FEAT-003:FN-08** policyModule |
 | 9 | FEAT-010-FN-09 | backend | `notifyDispatcherException` | exceptionId | void | enterprise.exception_events | — | EMQX MQTT | ADR-0009 §8 — "MQTT publish from enterprise backend — for direct vehicle commands in Mode 2/3 dispatch (per ADR-0005)." | 1 | — |
@@ -225,6 +225,13 @@ UNCERTAINTIES #4'te belirsizdi — konsolidasyonda netleştirildi:
 | **Compliance breach imminent** | 30-15 dk önceden | medium |
 | **Compliance breach imminent** | 15-0 dk önceden | high |
 | **Compliance breach** | araç ZE-zone'a hatalı emission ile girdi | critical |
+| **Locker pickup expired** | 72 saat geçti, customer paketi almadı | medium |
+| **Locker pickup expired** | + customer SLA breach | high |
+| **Tender withdrawn** | awarded carrier çekildi | high |
+| **Tender no quotes** | deadline geçti, hiç quote yok | medium |
+| **Returns pickup failed** | RMA SLA breach (approve→pickup 48h) | medium |
+| **Returns pickup failed** | RMA in_transit > 7 gün | high |
+| **RTS warehouse unreachable** | failed delivery, RTS destination resolution failed | high |
 
 **Karar mantığı:** Severity hesaplama deterministic, threshold-based (ML değil). Severity → notification channel mapping:
 
@@ -284,14 +291,20 @@ CREATE TABLE enterprise.exception_events (
     driver_id           UUID REFERENCES public.drivers(id),
 
     -- Exception classification
-    exception_type      TEXT NOT NULL
-                        CHECK (exception_type IN (
-                          'eta_delay',
-                          'traffic_impact',
-                          'driver_no_show',
-                          'dock_conflict',
-                          'compliance_zone_breach'
-                        )),
+   exception_type      TEXT NOT NULL
+                    CHECK (exception_type IN (
+                      'eta_delay',
+                      'traffic_impact',
+                      'driver_no_show',
+                      'dock_conflict',
+                      'compliance_zone_breach',
+                      -- Cross-spec sync (2026-05-30): FEAT-014, 017, 018 entegrasyonu
+                      'locker_pickup_expired',         -- FEAT-017:FN-12
+                      'tender_withdrawn',              -- FEAT-014:FN-13
+                      'tender_no_quotes',              -- FEAT-014:FN-04
+                      'returns_pickup_failed',         -- FEAT-018:FN-13 (RMA SLA)
+                      'rts_warehouse_unreachable'      -- FEAT-018:FN-08 (RTS destination)
+                    )),
     severity            TEXT NOT NULL
                         CHECK (severity IN ('low','medium','high','critical')),
     status              TEXT NOT NULL DEFAULT 'open'
@@ -553,4 +566,5 @@ Cem kararı.
 
 | Version | Date | Author | Change |
 |---|---|---|---|
-| 1 | 2026-05-30 | Cem Bakir (with Claude + NotebookLM cowork) | İlk konsolide function spec. Onuncu pilot — automated exception handling, wishlist W8 (atlanmıştı, ROADMAP Coverage Matrix güncellemesi sonrası sıraya alındı). **Yeni paradigma: Orkestratör feature** — 4-5 FEAT'in detection'ını consume edip action'ına route ediyor. 15 fonksiyon (FN-01..FN-15), Phase 1: 14, Phase 2: 1 (executeAutoResolution Mode 2 trigger). ML disipline check ADR-0010 §3.3 + §3.4 + §4 birebir uyumlu — "AI agent" terminolojisi sızmadı, rule-based detection Phase 1, policy-based action Phase 2, anomaly detection Phase 3+. Konsolidasyon eklemeleri: (a) FN-05 monitorComplianceZones (ADR-0012 §4 zone breach prediction — 5. detection monitor), (b) FN-07 deduplicateException (FEAT-007:FN-11 paterni, 10 dk cooldown), (c) §4 Severity classification matrix (deterministic, threshold-based — ML değil), (d) FN-11 audit trail fields detaylandı (resolved_at, resolved_by, resolution_type, resolution_action, resolution_comment). FN-01 alıntı düzeltmesi — ADR-0005 §5.2 parafraz birleşimi → 4 tip enum (No match / Ambiguous match / Rule violation / High-impact event). Schema kararı: `enterprise.exception_events` TimescaleDB hypertable (FEAT-007:behavior_events paterniyle simetrik), 90 gün retention, dedup index. Per-company override: `public.companies.settings.exception_thresholds` JSONB. NotebookLM kalite trend: §number fabrikasyon = 0 ✅ (F9 §188 hatasından toparlandı). Kısaltılmış prompt kaliteyi etkilemedi — temel disiplinler (ML, ADR ref, Phase ayrımı) korundu. |
+| 1 | 2026-05-30 | Cem Sahinkaya (with Claude + NotebookLM cowork) | İlk konsolide function spec. Onuncu pilot — automated exception handling, wishlist W8 (atlanmıştı, ROADMAP Coverage Matrix güncellemesi sonrası sıraya alındı). **Yeni paradigma: Orkestratör feature** — 4-5 FEAT'in detection'ını consume edip action'ına route ediyor. 15 fonksiyon (FN-01..FN-15), Phase 1: 14, Phase 2: 1 (executeAutoResolution Mode 2 trigger). ML disipline check ADR-0010 §3.3 + §3.4 + §4 birebir uyumlu — "AI agent" terminolojisi sızmadı, rule-based detection Phase 1, policy-based action Phase 2, anomaly detection Phase 3+. Konsolidasyon eklemeleri: (a) FN-05 monitorComplianceZones (ADR-0012 §4 zone breach prediction — 5. detection monitor), (b) FN-07 deduplicateException (FEAT-007:FN-11 paterni, 10 dk cooldown), (c) §4 Severity classification matrix (deterministic, threshold-based — ML değil), (d) FN-11 audit trail fields detaylandı (resolved_at, resolved_by, resolution_type, resolution_action, resolution_comment). FN-01 alıntı düzeltmesi — ADR-0005 §5.2 parafraz birleşimi → 4 tip enum (No match / Ambiguous match / Rule violation / High-impact event). Schema kararı: `enterprise.exception_events` TimescaleDB hypertable (FEAT-007:behavior_events paterniyle simetrik), 90 gün retention, dedup index. Per-company override: `public.companies.settings.exception_thresholds` JSONB. NotebookLM kalite trend: §number fabrikasyon = 0 ✅ (F9 §188 hatasından toparlandı). Kısaltılmış prompt kaliteyi etkilemedi — temel disiplinler (ML, ADR ref, Phase ayrımı) korundu. |
+| 1.1 (cross-spec sync) | 2026-05-30 | Cem Bakir + Claude | Cross-spec sync — 5 yeni exception_type enum (`locker_pickup_expired` FEAT-017:FN-12, `tender_withdrawn` FEAT-014:FN-13, `tender_no_quotes` FEAT-014:FN-04, `returns_pickup_failed` FEAT-018:FN-13, `rts_warehouse_unreachable` FEAT-018:FN-08). §4 Severity matrix 5 yeni entry. §2 FN-06 logExceptionEvent shared kolonuna FEAT-014, 017, 018 eklendi. Schema değişikliği additive (CHECK constraint ALTER) — Phase 1 production deployment için forward-compatible (eski 5 enum aynen kalır). FEAT-017 + FEAT-014 + FEAT-018 spec'lerindeki cross-spec sync TODO'lar kapatıldı. |

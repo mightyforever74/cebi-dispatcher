@@ -2,7 +2,7 @@
 
 Operational reference for `fleet-enterprise-01`, the Hetzner server that hosts the TulipFleet Enterprise Dispatcher backend.
 
-Last updated: 2026-05-25 (created at the close of Sıra 2)
+Last updated: 2026-05-29 (Cloudflare proxy + Origin Certificate enabled)
 
 ---
 
@@ -10,7 +10,8 @@ Last updated: 2026-05-25 (created at the close of Sıra 2)
 
 This document describes the operational runtime of **fleet-enterprise-01** only:
 - Server provisioning, network, firewall, OS-level services
-- Caddy reverse proxy and Let's Encrypt TLS
+- Caddy reverse proxy with Cloudflare Origin Certificate TLS
+- Cloudflare proxy + WAF in front of the origin
 - Docker deployment of `tulipfleet-enterprise-backend`
 - Smoke tests, observability, snapshot strategy
 
@@ -45,7 +46,7 @@ If a question concerns "who owns what between the two servers" it belongs to `IN
 
 ### 3.1 Public network
 
-Public IPv4 + IPv6 both attached. IPv4 is required (Cloudflare A record points here). IPv6 is enabled but not yet used.
+Public IPv4 + IPv6 both attached. **As of 2026-05-29 the DNS record `enterprise-api.tulipfleet.com` is Cloudflare-proxied** (orange cloud), so the apparent host to internet visitors is a Cloudflare edge IP (e.g. `172.67.x.x`, `104.21.x.x`), not `49.12.246.212`. The VPS public IP is no longer surfaced by `dig`/`nslookup` for this hostname. IPv6 is enabled on the server but the Cloudflare proxy fronts both stacks. Cloudflare → origin handshake uses TLS with the Cloudflare Origin Certificate installed on the Caddy server (see §4.2).
 
 ### 3.2 Private network
 
@@ -59,10 +60,12 @@ Cloud-level firewall, attached to the server. Inbound rules:
 |------|----------|--------|-------------|
 | 22 | TCP | Any IPv4 + IPv6 | SSH |
 | ICMP | ICMP | Any IPv4 + IPv6 | ICMP ping (monitoring) |
-| 80 | TCP | Any IPv4 + IPv6 | HTTP (Caddy + Let's Encrypt) |
-| 443 | TCP | Any IPv4 + IPv6 | HTTPS (enterprise-api) |
+| 80 | TCP | Any IPv4 + IPv6 | HTTP (Caddy) — see §9.6 for planned narrowing to Cloudflare IPs |
+| 443 | TCP | Any IPv4 + IPv6 | HTTPS (enterprise-api) — see §9.6 for planned narrowing to Cloudflare IPs |
 
 Outbound: default Hetzner "allow all" (Docker, Caddy, git, apt etc. all need outbound).
+
+**Note:** With Cloudflare proxy enabled (2026-05-29), legitimate traffic to 80/443 should originate only from Cloudflare's published IP ranges. Narrowing 80/443 to those ranges is planned hardening — see §9.6.
 
 ### 3.4 UFW (host-level firewall)
 
@@ -98,39 +101,73 @@ Installed by cloud-init from Caddy's official Cloudsmith repository.
 - Config: `/etc/caddy/Caddyfile`
 - systemd unit: `caddy.service` (runs as user `caddy`, not root)
 - Hardening: `ProtectSystem=full`, `PrivateTmp=true` in the official unit
-- TLS storage: `/var/lib/caddy/.local/share/caddy/certificates/`
-- Auto-renewal: Caddy handles ACME renewal on its own (no cron, no certbot)
+- **TLS mode (2026-05-29):** Manual TLS using a **Cloudflare Origin Certificate** (RSA 2048, 15-year validity, expires 2041-05-25). ACME / Let's Encrypt is **disabled** for `enterprise-api.tulipfleet.com` because Cloudflare proxy terminates TLS at the edge and the origin handshake uses Cloudflare's own CA.
+- Cert files:
+  - `/etc/caddy/origin/enterprise-api.crt` — mode `644`, owner `root:caddy`
+  - `/etc/caddy/origin/enterprise-api.key` — mode `640`, owner `root:caddy`
+- Backup files: `/etc/caddy/Caddyfile.backup-<timestamp>` (taken before 2026-05-29 TLS change)
 
-#### Caddyfile structure
+#### TLS topology (as of 2026-05-29)
+
+```
+Browser ──HTTPS──▶ Cloudflare edge ──HTTPS (Origin cert)──▶ Caddy ──HTTP (loopback)──▶ Backend :3001
+        TLS 1.2/1.3                  TLS 1.2/1.3                                     127.0.0.1
+       (Universal SSL)             (Full strict mode)
+```
+
+- **Cloudflare SSL/TLS mode:** Full (strict). Cloudflare validates the origin certificate against its own CA.
+- **Edge protections active:** Universal SSL, Always Use HTTPS, HSTS (12 months, includeSubDomains, preload), Minimum TLS 1.2, TLS 1.3, Automatic HTTPS Rewrites, Certificate Transparency Monitoring.
+- **HTTP/3 (QUIC):** still served by Caddy (`alt-svc` header present); Cloudflare also advertises h3 to the browser.
+- **Universal SSL (browser ↔ Cloudflare):** auto-renewing, currently issued by Let's Encrypt via Cloudflare, expires 2026-07-29 (managed by Cloudflare).
+
+#### Caddyfile structure (current)
+
+```
 enterprise-api.tulipfleet.com {
-reverse_proxy localhost:3001
-encode gzip zstd
-log {
-output stderr
-format json
-level INFO
-}
-header {
-Strict-Transport-Security "max-age=31536000; includeSubDomains"
-X-Content-Type-Options "nosniff"
-X-Frame-Options "DENY"
-Referrer-Policy "no-referrer-when-downgrade"
--Server
-}
-}
-:80 {
-@health {
-path /health
-}
-respond @health "Caddy OK" 200
-respond "Not Found" 404
+    tls /etc/caddy/origin/enterprise-api.crt /etc/caddy/origin/enterprise-api.key
+    reverse_proxy localhost:3001
+    encode gzip zstd
+    log {
+        output stderr
+        format json
+        level INFO
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer-when-downgrade"
+        -Server
+    }
 }
 
-The `:80` block exists so domain-less IP-based health probes (uptime monitors, internal checks) get a clean answer instead of being mishandled.
+# Health check on HTTP (no domain) - useful for monitoring
+:80 {
+    @health {
+        path /health
+    }
+    respond @health "Caddy OK" 200
+    respond "Not Found" 404
+}
+```
+
+The `:80` block exists so domain-less IP-based health probes (uptime monitors, internal checks) get a clean answer instead of being mishandled. With Cloudflare proxy ON, public HTTP requests for `enterprise-api.tulipfleet.com` are upgraded to HTTPS by Cloudflare before reaching Caddy.
+
+#### Why no ACME for this domain
+
+Switching from Let's Encrypt to Cloudflare Origin Certificate removes Caddy's automatic ACME renewal for `enterprise-api.tulipfleet.com`. This is intentional:
+
+- Cloudflare Origin Certificate is **valid for 15 years** (until 2041-05-25), so no renewal pressure.
+- Cloudflare proxy makes ACME HTTP-01 challenge unworkable anyway (Cloudflare terminates TLS at the edge).
+- A future DNS-01 ACME challenge (with Cloudflare API token) is possible but not required for this validity horizon.
+
+If the Origin Certificate is ever revoked or compromised, Cloudflare has a Backup Certificate (ECDSA SHA384, Let's Encrypt CA) auto-deployed in the event of revocation. Origin cert regeneration takes ~5 minutes (Cloudflare dashboard → SSL/TLS → Origin Server → Create Certificate).
 
 #### Log strategy
 
 Caddy logs to **stderr**, which systemd captures into the journal. View with `journalctl -u caddy -f`. File-based logging into `/var/log/caddy/` was attempted and rejected by Caddy's systemd hardening; deferred as future work (see Section 9).
+
+**Client IP note:** With Cloudflare proxy enabled, Caddy's access log shows the **Cloudflare edge IP** as `client_ip` (e.g. `162.158.x.x`, `172.68.x.x`, `108.162.x.x`). The real visitor IP is in the `CF-Connecting-IP` request header. Configuring Caddy to use that header as `client_ip` requires the `trusted_proxies` directive — see §9.7.
 
 ### 4.3 PostgreSQL client (psql)
 
@@ -257,13 +294,21 @@ curl -i http://localhost:3001/health
 
 Expected: `HTTP/1.1 200 OK` and JSON `{"status":"ok","database":"connected",...}`.
 
-### 6.2 Via Caddy (HTTPS, end-to-end)
+### 6.2 Via Caddy through Cloudflare (HTTPS, end-to-end)
 
 ```bash
 curl -i https://enterprise-api.tulipfleet.com/health
 ```
 
-Expected: `HTTP/2 200`, security headers present (`strict-transport-security`, `x-content-type-options`, `x-frame-options`, `referrer-policy`), `via: 1.1 Caddy` indicating proxy hop, and the same JSON body.
+Expected: `HTTP/2 200`, the same JSON body, **and the request must traverse Cloudflare**. Required headers indicating end-to-end correctness:
+
+- `server: cloudflare` — confirms the request hit a Cloudflare edge
+- `cf-ray: <hash>-<datacenter>` — Cloudflare request ID + nearest datacenter (e.g. `a03256b48f472879-AMS`)
+- `via: 1.1 Caddy` — confirms the request was also proxied by the origin Caddy (not served from Cloudflare cache)
+- Caddy security headers: `strict-transport-security`, `x-content-type-options`, `x-frame-options`, `referrer-policy`
+- Cloudflare added headers: `nel`, `report-to`, `cf-cache-status: DYNAMIC`
+
+If `server: cloudflare` is missing, Cloudflare proxy is OFF (or DNS not yet propagated) — the request bypassed the WAF and hit the origin directly. This is a security regression and must be corrected (Cloudflare DNS panel → enterprise-api → Proxy status → Proxied).
 
 ### 6.3 JWT-protected endpoint
 
@@ -376,6 +421,18 @@ Phase 1 scope explicitly accepts this. Phase 2 plans include either a warm stand
 
 Docker Engine version 29.5.2 was installed (more recent than the major version expected at this writing). The Docker Compose plugin reports version v5.1.4. Both work; the high numbers are simply Docker's recent release cadence. No action required, recorded here as a "no surprise" reference.
 
+### 9.6 Hetzner firewall / UFW not narrowed to Cloudflare IPs
+
+With Cloudflare proxy ON (2026-05-29), legitimate public traffic to ports 80/443 only arrives from Cloudflare's edge IP ranges. The Hetzner cloud firewall and UFW still allow 80/443 from `Any IPv4 + IPv6`. An attacker who learns the VPS public IP (e.g., from historical DNS, certificate transparency logs, or out-of-band leakage) could still send traffic directly to the origin, bypassing the WAF.
+
+Future hardening: narrow 80/443 to Cloudflare's published IP ranges (`https://www.cloudflare.com/ips/`). Both IPv4 (~15 ranges) and IPv6 (~7 ranges) must be added. Hetzner firewall supports per-rule source lists; UFW supports per-CIDR allow rules. Renew quarterly (Cloudflare IP list is stable but not immutable). Estimated effort: 10 minutes for first apply, 5 minutes per quarterly refresh. Trade-off: blocking direct origin access means uptime monitors (e.g., direct-IP probes from a third-party monitoring service) need to be whitelisted explicitly or moved to Cloudflare-via.
+
+### 9.7 Caddy logs Cloudflare edge IP, not the real visitor
+
+Since Cloudflare proxy was enabled (2026-05-29), Caddy's access log records the Cloudflare edge IP (e.g. `162.158.x.x`) as the request `client_ip`. The real visitor IP is in the `CF-Connecting-IP` request header. Without `trusted_proxies`, abuse correlation, rate-limit decisions, and audit logging at the Caddy level are blinded.
+
+Future hardening: add `trusted_proxies` to Caddy's `reverse_proxy` block (or global `servers` block) listing Cloudflare's IP ranges. Caddy will then trust `CF-Connecting-IP` and rewrite `client_ip` accordingly. Estimated effort: 5 minutes. Same trade-off as §9.6 on Cloudflare IP list staleness.
+
 ---
 
 ## 10. References
@@ -398,3 +455,4 @@ Docker Engine version 29.5.2 was installed (more recent than the major version e
 | Date | Change |
 |------|--------|
 | 2026-05-25 | Document created at the close of Sıra 2. Captures server provisioning, network, Caddy, Docker deployment, and smoke tests as actually performed. |
+| 2026-05-29 | **Cloudflare proxy + Origin Certificate enabled** for `enterprise-api.tulipfleet.com`. Caddy switched from Let's Encrypt ACME to a manual Cloudflare Origin Certificate (RSA 2048, 15-year validity, expires 2041-05-25). DNS record changed from "DNS only" to "Proxied" (orange cloud). Cloudflare SSL/TLS mode set to "Full (strict)". Origin VPS IP no longer surfaced in public DNS for this hostname. Triggered by observed reconnaissance scans (`/js/twint_ch.js`, `/assets/js/auth.js`) hitting the unprotected origin. §3.1, §3.3, §4.2, §6.2 updated; §9.6 and §9.7 added (firewall narrowing and trusted_proxies as future hardening). |

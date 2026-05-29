@@ -670,17 +670,19 @@ Tek prompt + 0 follow-up. Konsolidasyonda 4 yeni fonksiyon eklendi (NotebookLM k
 
 ## 12. Next steps
 
-### 12.1 Cross-spec sync — toplu commit önerisi
+### 12.1 Cross-spec sync — toplu commit (✅ TAMAMLANDI 2026-05-30)
 
-3 birikmiş cross-spec sync:
-1. **FEAT-010** `exception_type` CHECK:
-   - `'locker_pickup_expired'` (FEAT-017)
+FEAT-018 sonrası toplu cross-spec sync commit ile uygulandı:
+1. ✅ **FEAT-010** `exception_type` CHECK 5 yeni enum:
+   - `'locker_pickup_expired'` (FEAT-017:FN-12)
    - `'tender_withdrawn'` (FEAT-014:FN-13)
    - `'tender_no_quotes'` (FEAT-014:FN-04)
-2. **FEAT-010** §5 Severity matrix entries (3 yeni)
-3. **FEAT-010** §2 Function catalog FN-06 shared kolonuna FEAT-017 + FEAT-014 eklenmeli
+   - `'returns_pickup_failed'` (FEAT-018:FN-13 — RMA SLA)
+   - `'rts_warehouse_unreachable'` (FEAT-018:FN-08 — RTS destination)
+2. ✅ **FEAT-010** §4 Severity matrix 5 yeni entry (medium/high)
+3. ✅ **FEAT-010** §2 FN-06 logExceptionEvent shared kolonu — FEAT-014, 017, 018 eklendi
 
-**Karar:** FEAT-018 commit sonrası **toplu cross-spec sync** (FEAT-018'in muhtemelen 4. exception type'ı olacak — `'returns_pickup_failed'`).
+**Atomik commit:** 3 spec dosyası tek commit (`docs(functions): cross-spec sync after FEAT-018`).
 
 ### 12.2 Phase 2 implementation backlog (customer-funded trigger)
 
@@ -746,3 +748,4 @@ Yeni paradigma: forward-delivery flow tersine + customer returns + warehouse re-
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 1 | 2026-05-30 | Cem Bakir (with Claude + NotebookLM cowork) | İlk konsolide function spec. On ikinci pilot — multi-carrier tender management, wishlist W13. Phase 2 customer-funded (Yorum B: etiket korunur, spec şimdi yazılır). 16 fonksiyon (FN-01..FN-16), NotebookLM 12 önerdi + konsolidasyonda 4 ek (FN-13 withdrawal, FN-14 rating UPDATE, FN-15 equipment matching, FN-16 token generation). **Yeni paradigma: External Carrier Ecosystem** — TulipFleet'in ilk dış oyuncu içeren feature'ı. FEAT-004 schema yeniden kullanılır (carriers, carrier_contracts), 3 yeni tablo eklenir (tenders, tender_invitations, tender_quotes). State machine: draft → open → pending_award → awarded/closed. Public endpoint + token paterni (FEAT-005:FN-09 reuse). Composite scoring weighted sum (ADR-0010 §3.4 — price/eta/rating konfigürasyon, ML değil). Carrier rating manuel 1-5 yıldız + auto metrics (ML Phase 3+ candidate). ML disipline kusursuz — AI quote generation yok, customer preference learning Phase 3+. 3PL/gig OUT-002 sınırı korundu (federated load pooling kapsam dışı). ADR-0011 §6 customer-funded trigger pattern. Konsolidasyon düzeltmeleri: FN-07 ADR-0005 §4.1 → §2 (section misattribution — yeni hata sınıfı, alıntı gerçek ama §2 Mode 1 Advisory tanımında, §4.1'de değil). Cross-spec sync TODO: FEAT-010 exception_type CHECK genişletilmeli (`tender_withdrawn`, `tender_no_quotes`, `locker_pickup_expired` ile birlikte 3 yeni enum). §number fabrikasyon = 0 ✅ (F8-F10-F17-F14 zinciri stable), ama section misattribution yeni hata sınıfı (F14'te ilk). |
+| 1.1 (cross-spec sync close) | 2026-05-30 | Cem Bakir + Claude | §12.1 cross-spec sync TODO kapatıldı — FEAT-010 spec'inde 2 yeni enum (`tender_withdrawn` FN-13, `tender_no_quotes` FN-04) + §4 Severity matrix entries + FN-06 shared kolonu eklendi (toplu commit FEAT-017 + FEAT-018 ile birlikte, toplam 5 enum). FEAT-014 spec'inde değişiklik YOK, sadece TODO işaretleme. |

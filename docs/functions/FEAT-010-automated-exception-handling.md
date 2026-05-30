@@ -232,6 +232,17 @@ UNCERTAINTIES #4'te belirsizdi — konsolidasyonda netleştirildi:
 | **Returns pickup failed** | RMA SLA breach (approve→pickup 48h) | medium |
 | **Returns pickup failed** | RMA in_transit > 7 gün | high |
 | **RTS warehouse unreachable** | failed delivery, RTS destination resolution failed | high |
+| **Invoice discrepancy** | within tolerance | low |
+| **Invoice discrepancy** | rate_mismatch / quantity / unauthorized | medium-high |
+| **Invoice audit deadline expired** | dispute response > 7 gün | medium |
+| **Rest violation** | EU 561 daily/continuous limit imminent (30dk buffer) | high |
+| **Rest violation** | EU 561 limit aşıldı | critical |
+| **Border crossing compliance breach** | predicted zone breach | high |
+| **Border crossing compliance breach** | araç zone'a yanlış emission ile girdi | critical |
+| **Range anxiety breach** | SoC < min_soc_at_destination | medium |
+| **Range anxiety breach** | SoC < emergency_reserve_percent | critical |
+| **CSRD data quality breach** | completeness < %95 | medium |
+| **CSRD data quality breach** | outlier or missing baseline | high |
 
 **Karar mantığı:** Severity hesaplama deterministic, threshold-based (ML değil). Severity → notification channel mapping:
 
@@ -298,12 +309,19 @@ CREATE TABLE enterprise.exception_events (
                       'driver_no_show',
                       'dock_conflict',
                       'compliance_zone_breach',
-                      -- Cross-spec sync (2026-05-30): FEAT-014, 017, 018 entegrasyonu
+                      -- Cross-spec sync (2026-05-30 sabah): FEAT-014, 017, 018 entegrasyonu
                       'locker_pickup_expired',         -- FEAT-017:FN-12
                       'tender_withdrawn',              -- FEAT-014:FN-13
                       'tender_no_quotes',              -- FEAT-014:FN-04
                       'returns_pickup_failed',         -- FEAT-018:FN-13 (RMA SLA)
-                      'rts_warehouse_unreachable'      -- FEAT-018:FN-08 (RTS destination)
+                      'rts_warehouse_unreachable',     -- FEAT-018:FN-08 (RTS destination)
+                      -- Mega cross-spec sync (2026-05-30 akşam): FEAT-015, 019, 103, 106 entegrasyonu
+                      'invoice_discrepancy',           -- FEAT-015:FN-05 (audit reconciliation)
+                      'invoice_audit_deadline_expired',-- FEAT-015:FN-08 (audit SLA)
+                      'rest_violation',                -- FEAT-019:FN-07 (EU 561/2006 breach)
+                      'border_crossing_compliance_breach', -- FEAT-019:FN-12 (multi-country zone)
+                      'range_anxiety_breach',          -- FEAT-103:FN-07 (EV SoC critical)
+                      'csrd_data_quality_breach'       -- FEAT-106:FN-05 (CSRD report validation)
                     )),
     severity            TEXT NOT NULL
                         CHECK (severity IN ('low','medium','high','critical')),

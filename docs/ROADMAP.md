@@ -389,6 +389,81 @@ Per ADR-0011 §7, the following are bilinçli olarak Phase 1 dışında:
 
 ---
 
+## Implementation Bottleneck Analysis
+
+**Status as of 2026-05-30 evening:** 17 pilot + mega cross-spec sync sonrası function-level shared infrastructure analizi tamamlandı. Detaylı bulgular: [`docs/analysis/bottleneck-analysis-2026-05-30.md`](docs/analysis/bottleneck-analysis-2026-05-30.md). Aşağıda özet.
+
+### Critical bottleneck'ler (Top 5)
+
+| Bileşen | Tip | Consumer | Severity | Mitigation |
+|---|---|---|---|---|
+| **FEAT-001:FN-016 buildHereProblem** | FUNCTION | 6 extension FEAT | HIGH | Options object refactor (Phase 1.1 sprint) |
+| **enterprise.dispatch_tasks** | TABLE | 15+ FEAT | HIGH | Phase 3 table splitting (ADR-0013 candidate) |
+| **HERE Tour Planning API** | EXTERNAL | ~9 FEAT | CRITICAL | Internal RoutingProvider interface (ADR-0014 candidate) |
+| **FEAT-010:FN-06 logExceptionEvent** | FUNCTION | 7 FEAT | MEDIUM | Exception_type category prefix |
+| **public.geofences.location_type enum** | TABLE | 4 FEAT (12 değer) | HIGH | PostGIS index strategy |
+
+### Critical path (Phase 2 customer-funded FEAT'ler)
+
+Phase 2 customer trigger geldiğinde, **önceki tüm halka production'da olmalı**:
+
+| Hedef FEAT (Phase 2) | Önceki zincir | Zincir uzunluğu |
+|---|---|---|
+| FEAT-106 CSRD | F009 + F103 + F014 + F008 | 4 |
+| FEAT-103 EV | F001 + F005 + F017 + F009 | 4 |
+| FEAT-015 Audit | F014 + F004 + F008 | 3 |
+| FEAT-019 Long-haul | F001 + F008 + F017 | 3 |
+| FEAT-018 Reverse | F001 + F003 + F017 | 3 |
+| FEAT-014 Tender | F004 + F001 | 2 |
+
+### Yeni ADR adayları (NotebookLM stratejik önerileri)
+
+- **ADR-0013** — `enterprise.dispatch_tasks` Phase 3 schema strategy (table splitting + metadata offloading). 15+ consumer = JSONB metadata explosion riski.
+- **ADR-0014** — Internal RoutingProvider interface (HERE abstraction layer). Vendor lock-in mitigation, Phase 1.1 sprint öncesi yazılmalı.
+
+### Phase 1.1 sprint foundation öncelik
+
+Phase 1.1 implementation kickoff için **bottleneck-aware** sprint sırası:
+
+1. **FEAT-001 foundation** — buildHereProblem options object refactor (5 extension consumer mitigation)
+2. **FEAT-005 base components** — MQTT subscriber + Leaflet map widget shared
+3. **FEAT-010 exception orchestrator** — 7 FEAT consumer foundation
+4. **FEAT-017 geofence type extension** — PostGIS index strategy (12 enum value)
+5. **FEAT-008 Vrachtwagenheffing** — Phase 1.1 toll baseline
+6. **FEAT-009 Carbon footprint** — Phase 1.1 baseline + FEAT-106 prerequisite
+
+### Cross-cutting concerns (5 mimari sıcak nokta)
+
+Disciplined evolution kanıtı — 3+ FEAT'in aynı altyapı paterni paylaşması:
+
+- **Geofence type extension** (F017 → F019 → F103) — 12 enum value
+- **Cross-spec sync FN-016** (F006+008+009+019+103) — 8 parametre imza
+- **Exception event writer** (FEAT-010:FN-06) — 7 FEAT consumer, 16 enum
+- **Weighted sum scoring** (ADR-0010 §3.4) — 6 FEAT
+- **MQTT subscriber + map widget** (F005:FN-02 + FN-06) — 5+4 consumer
+
+### Strategic insights
+
+NotebookLM 4 prensip + Claude eklemesi:
+
+1. **Disciplined Evolution** — FN-016 8 parametre breaking-change'siz büyüdü (ADR-0004 v3 §6 başarısı)
+2. **Pattern Reuse** — ~%40-60 kod tekrarı azalması (NotebookLM tahmini)
+3. **ML Discipline** — Vendor consumer, in-house training yok (avantaj + lock-in trade-off)
+4. **Schema Stability** — dispatch_tasks Phase 3 risk (ADR-0013 candidate)
+5. **Critical Path Awareness** — Phase 2 trigger gelmeden Phase 1.1 foundation tamamlanmalı
+
+### Risk mitigation summary
+
+| Risk | Severity | Mitigation timing |
+|---|---|---|
+| HERE outage | CRITICAL | ADR-0014 RoutingProvider interface (Phase 1.1) |
+| FN-016 imza | HIGH | Options object refactor (FEAT-001 sprint) |
+| dispatch_tasks bloat | HIGH | ADR-0013 (Phase 3) |
+| LLM rate limit | MEDIUM | Caching + retry exponential (FEAT-015 sprint) |
+| Weighted scoring explosion | MEDIUM | Centralized weight registry (Phase 2) |
+
+Detaylı analiz, UNCERTAINTIES kategorize (~80+), aksiyon listesi: [`docs/analysis/bottleneck-analysis-2026-05-30.md`](docs/analysis/bottleneck-analysis-2026-05-30.md).
+
 ## Non-Goals
 
 What TulipFleet Enterprise will **not** become, by explicit decision:
@@ -489,3 +564,4 @@ Fastify v4 carries three known unpatched CVEs that the project accepts as low-im
 | 2026-05-25 (Sıra 2 4/5 complete) | `fleet-enterprise-01` provisioned (Hetzner **CPX 32** — note: ADR-0003 v1 said "CX32"; ADR-0003 §10 Implementation Notes records the divergence). Ubuntu 24.04 LTS, cloud-init bootstrapped UFW/fail2ban/Docker/Caddy. Hetzner private network `tulipfleet-internal` (10.0.0.0/16) created and both servers attached (10.0.0.2 + 10.0.0.3). Enterprise backend accesses PostgreSQL over the private network via `enterprise_backend` role (UFW `5433/tcp on enp7s0 ALLOW IN 10.0.0.0/16` on fleet-prod-01). Cloudflare DNS A record (DNS only). Caddy serving `enterprise-api.tulipfleet.com` with Let's Encrypt ECDSA cert. `tulipfleet-enterprise-backend` deployed as Docker container (commit `c125f4c`); end-to-end smoke (login on `api.tulipfleet.com` → JWT-protected call on `enterprise-api.tulipfleet.com`) returns 6 company-scoped vehicles. Operational docs created: `docs/ENTERPRISE_INFRASTRUCTURE.md`, `docs/INTEGRATION_BOUNDARIES.md`. ADR-0003 §10 Implementation Notes added. Initial snapshot: `fleet-enterprise-01-initial-cloudinit-done`. **Sıra 2.5 (NL Compliance seed) deferred to its own session** — Sıra 2 is 4/5 in this entry. Next: Sıra 2.9. |
 (`SELECT` on five `public.*` tables, `ALL` on `enterprise.*`, `statement_timeout = '10s'`, default privileges for future `enterprise.*` tables). Final smoke test with production-equivalent role passed against staging DB. `tulipfleet-enterprise-backend` initial commit (`71c5260`) pushed to GitHub `main`: 10 files, 2046 insertions, Fastify v4 skeleton with health and dispatcher/vehicles endpoints. `.env` and `node_modules/` properly excluded via `.gitignore` (verified pre-commit). Sıra 1 closed. Next session: Sıra 2 — Hetzner CX32 provisioning. |
 | 2026-05-30 (Feature Wishlist Coverage Matrix added) | **New top-level section "Feature Wishlist Coverage Matrix"** added between Decision Summary and Phase Plan. Maps all 31 items of the dispatcher wishlist (`Ben_bir_advisor_um-1.docx`) to FEAT IDs, phase placements, and current spec status. Two TulipFleet-specific features added as appendix items (W-A1 Vrachtwagenheffing FEAT-008, W-A2 CSRD-Compliant FEAT-106). Coverage summary: 9 specs ready (FEAT-001..009, 27%), 12 specs pending (Phase 1/1.1 candidates, 36%), 9 Phase 2 customer-funded triggers (27%), 2 out-of-scope (W10 Multimodal OUT-001, W20 Autonomous Vehicle OUT-004 newly added 6%), 1 TulipFleet-already-doing (W30 Mobile Status Updates 3%). Phase 1.1 section expanded with implementation-ready (FEAT-008, 009) + spec pending sıraya alındı (FEAT-010 Exception Handling, FEAT-013 Hazmat, FEAT-016 Cost-to-Serve, FEAT-017 Locker/PUDO, FEAT-020 Capacity-Aware Delivery, FEAT-021 Breadcrumbs) + Cem decision pending (FEAT-011 PoD, FEAT-012 Refrigerated, FEAT-018 ELD/IFTA, FEAT-022 Workload Balancing). Phase 2 use case catalog expanded with additional wishlist Phase 2 candidates (FEAT-014, 015, 019, 023, 024, 025). Out-of-scope section: W20 Autonomous Vehicle Integration added as OUT-004 (Phase 3 ADR pending). Pilot pipeline öncelik sırası belgelendi — FEAT-010 next. Goal: tüm Phase 1/1.1 spec'leri tamamlandıktan sonra NotebookLM ilişki haritası bottleneck analysis çıkarır (function-level shared infrastructure). |
+| 2026-05-30 (evening — bottleneck analysis) | **Implementation Bottleneck Analysis özet bölümü eklendi.** NotebookLM tek prompt + Claude konsolidasyon (sayısal hata düzeltmeleri: FN-016 consumer 8→6, location_type enum 18→12, HERE consumer 12+→~9, UNCERTAINTIES toplam 14→~80). 5 kritik bottleneck belirlendi (FN-016 imza karmaşıklığı, dispatch_tasks schema bloat, HERE vendor lock-in, exception orchestrator, location_type enum). 2 yeni ADR adayı: **ADR-0013** (dispatch_tasks Phase 3 schema strategy — table splitting + metadata offloading) + **ADR-0014** (Internal RoutingProvider interface — HERE abstraction layer, Phase 1.1 sprint öncesi yazılmalı). Phase 1.1 sprint foundation öncelik haritası 6 FEAT belirlendi (F001 foundation, F005 base components, F010 exception orchestrator, F017 geofence, F008 toll, F009 carbon). 5 cross-cutting concern belgelendi (mimari sıcak noktalar). 4 stratejik prensip + 1 Claude eklemesi (Critical Path Awareness). Detaylı analiz `docs/analysis/bottleneck-analysis-2026-05-30.md` ayrı dosyada. NEXT: ADR-0014 RoutingProvider interface candidate yazımı + Phase 1.1 sprint plan. |

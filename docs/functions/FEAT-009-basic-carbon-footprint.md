@@ -42,6 +42,12 @@ CSRD farkındalığı Phase 1.1'de **bilinçli olarak içeride** — `CSRD_COMPL
 | Trigger | ROADMAP Phase 1.1 marginal effort | ADR-0011 §6 customer-funded |
 
 **FEAT-009 felsefesi:** "CSRD ile uyumlu çalışmayı kolaylaştır, formal compliance yapma." Customer FEAT-106'ya geçmek istediğinde FEAT-009 verisi temel veri seti olur (no breaking change, additive).
+**FEAT-106 evolution (cross-spec sync, 2026-05-30 mega sync):** FEAT-106 Phase 2 customer-funded spec yayınlandı. FEAT-009 → FEAT-106 migration path:
+- **FEAT-009 dispatch_tasks.carbon_footprint_kg** → FEAT-106 Scope 1 aggregation baseline (FEAT-106:FN-01 reads)
+- **FEAT-009 methodology disclaimer (UI)** → FEAT-106 narrative_disclosure JSONB structured (FEAT-106:FN-08)
+- **FEAT-009 per-vehicle aggregate** → FEAT-106 audit evidence chain (FEAT-106:FN-06 traceability)
+
+Migration trigger: Large 3PL customer (Heineken/Picnic seviyesi) CSRD-compliance ihtiyacı. FEAT-009 verisi **mevcut kalır**, FEAT-106 üstüne kurulur (no breaking change). Phase 2 implementation backlog FEAT-106 spec §12.2'de.
 
 ### 1.3 Kapsam — içeride
 
@@ -252,6 +258,22 @@ Phase 2 FEAT-106 trigger geldiğinde (Heineken/Picnic level customer) aggregator
 - §4.5 "Future evolution" bölümünde FEAT-009 entry'si eklenir
 - v2 → v3 Change Log
 
+### EV well-to-wheel branch (cross-spec sync, FEAT-103, 2026-05-30 mega sync)
+
+ICE araç (Diesel/Petrol) için FEAT-009 direkt egzoz emisyonu (Scope 1). **EV araç için emisyon hesabı farklı:**
+
+- **Direct emission (Scope 1):** EV için 0 kg CO2 (egzoz yok)
+- **Well-to-Wheel (WTW):** Elektrik üretiminden gelen emisyon → **Scope 2** (FEAT-103 charging_sessions baseline)
+- **FEAT-009 vehicle.fuel_type='electric' davranışı:** Phase 1.1 carbon_footprint_kg = 0 (direct emission). FEAT-103 ayrı Scope 2 tracking sağlar.
+
+**FEAT-106 entegrasyonu:** CSRD-compliant rapor için:
+- Scope 1 total = FEAT-009 ICE vehicles only (EV = 0)
+- Scope 2 total = FEAT-103 charging_sessions × electricity_grid_mix_factor
+- FEAT-106 ayrı `aggregateScope2Emissions` (FN-02) FEAT-103 kullanır, FEAT-009 değil
+
+**Mimari karar:** FEAT-009 sadece ICE vehicles için aktive. EV detection: `vehicle.fuel_type='electric'` early-exit. Phase 2 FEAT-106 multi-scope aggregation handle eder.
+
+**Schema kontrolü:** `public.vehicles.fuel_type` mevcut kolonu kullanılır (manuel veya OBD-II inferred). Phase 1 EV fleet için NULL fallback (legacy data).
 ---
 
 ## 7. UNCERTAINTIES (Cem onayı bekleyen)
@@ -417,3 +439,4 @@ FEAT-009 verisi FEAT-106 trigger geldiğinde temel veri seti olur:
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 1 | 2026-05-30 | Cem Bakir (with Claude + NotebookLM cowork) | İlk konsolide function spec. Dokuzuncu pilot — basic carbon footprint per route. 7 fonksiyon (FN-01..FN-07), Phase 1: 3, Phase 1.1: 4. **CSRD positioning:** CSRD-aware Phase 1.1 (display + methodology disclosure + aggregate report) vs CSRD-compliant Phase 2 FEAT-106 (XBRL export + audit + customer-funded). Cem CSRD_COMPLIANCE_ANALYSIS dokümanını NotebookLM defterine bilinçli yükledi. ML disipline check ADR-0010 §3.4 + §4 birebir uyumlu — HERE consumer, custom hesaplama yok. Cross-spec sync TODO: FEAT-001 v3 (FN-016 `routingMode?` parametresi + §4.5 üçüncü alt-bölüm). Konsolidasyon düzeltmeleri: FN-01 ADR-0010 §188 fabrikasyon → §3.4 + ROADMAP çift ref, FN-02 ADR-0011 §5 → ADR-0010 §4 (daha güçlü ref), schema kararı netleştirildi (`dispatch_tasks` ek kolon, `cost_breakdown` JSONB merger reddedildi), aggregator tablo (`enterprise.vehicle_emissions`) Phase 2 FEAT-106 trigger'a ertelendi. Üç-yönlü gerilim spec edildi (eco mode vs time-window vs toll). Per-company opt-out `public.companies.settings.carbon_display_enabled` JSONB key. NotebookLM kalitesi F8 zirvesinden geri çekildi (1 §number fabrikasyon vs F8'in 0), trend hâlâ sağlıklı. Sonraki pilotlarda "ADR-0010 §3.4'ten yüksek section yok" hard guard rail önerildi. |
+| 1.1 (mega cross-spec sync) | 2026-05-30 | Cem Bakir + Claude | **FEAT-106 migration path belgelendi + EV well-to-wheel branch eklendi**. §1.2 CSRD-aware vs CSRD-compliant ayrım tablosuna FEAT-106 evolution paragrafı eklendi (dispatch_tasks.carbon_footprint_kg → FEAT-106 Scope 1 baseline; methodology disclaimer → narrative_disclosure JSONB structured; per-vehicle aggregate → audit evidence chain). EV well-to-wheel branch alt-bölümü eklendi — ICE direct emission (Scope 1) vs EV WTW (Scope 2 FEAT-103 charging_sessions baseline). FEAT-009 vehicle.fuel_type='electric' davranışı: carbon_footprint_kg=0, Scope 2 FEAT-103 handle eder. Mega cross-spec sync atomic commit FEAT-010 + FEAT-001 + FEAT-017 + FEAT-008 ile birlikte. Schema değişikliği yok (sadece dokumentasyon). 17 pilot toplam. |

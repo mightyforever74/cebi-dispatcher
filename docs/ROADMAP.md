@@ -79,11 +79,10 @@ The dispatcher wishlist (`Ben_bir_advisor_um-1.docx`) catalogs **31 industry use
 | W16 | Electric Vehicle (EV) Range Planning | Common | — | FEAT-103 | 2 | 🔵 EV customer trigger (ADR-0011 §6) |
 | W17 | Locker and PUDO Management | Common | we do with geofence | FEAT-017 | 1.1 | 📋 Spec pending (mevcut geofence üzerine) |
 | W18 | Reverse Logistics Handling | Common | — | FEAT-109 | 2 | 🔵 Retail customer trigger (ADR-0011 §6) |
-| W19 | Multi-Day Long-Haul Planning | Niche | — | FEAT-110 | 2 | 🔵 Long-haul customer trigger (ADR-0011 §6) |
+| W19 | Multi-Day Long-Haul Planning | Niche | — | FEAT-019 | 2 | ✅ Spec v1 (Phase 2 customer-funded trigger) |
 | W20 | Autonomous Vehicle Integration | Niche | future, must include | — | 3 | 🚫 OUT-004 (Phase 3 ADR pending) |
 | W21 | Carbon Footprint Tracking | Common | we have already done but must learn subtleties | FEAT-009 | 1.1 | ✅ Spec v1 (CSRD-aware, distinct from FEAT-106) |
 | W22 | Driver Electronic Logging (ELD/IFTA) | Very common | decide whether increase db work | FEAT-018 | 1.1 or 2 | 📋 Karar bekliyor (NL geçerli mi? Tahograf var) |
-| W23 | Digital Document Management | Common | requires deep search | FEAT-019 | 2 | 🔵 Deep search → muhtemelen customer-funded |
 | W24 | Capacity-Aware Delivery Promising | Common | base feature of cargo mgmt (kanban approach) | FEAT-020 | 1.1 | 📋 Spec pending |
 | W25 | Breadcrumbs Trail Analysis | Common | — | FEAT-021 | 1.1 | 📋 Spec pending (planned vs actual route) |
 | W26 | Workload Balancing | Common | requires deep search | FEAT-022 | 1.1 or 2 | 📋 Karar bekliyor |
@@ -366,7 +365,7 @@ Per ADR-0011 §7, the following are bilinçli olarak Phase 1 dışında:
 
 - **FEAT-014 — Multi-carrier Tender Management (W13).** Freight quote automation across carriers.
 - **FEAT-015 — Automated Freight Audit and Payment (W14).** Very common Phase 2 feature, invoice/contract verification.
-- **FEAT-019 — Digital Document Management (W23).** Bill of lading, invoice OCR — possibly LLM-consumer.
+- **FEAT-019 — Multi-Day Long-Haul Planning (W19).** Multi-day VRP + EU 561/2006 driver hours + cross-border toll (NL Vrachtwagenheffing + BE Viapass + DE Maut + FR péage) + tachograph DDD ingestion. ✅ Spec v1 hazır (16 FN, 4 yeni tablo). Phase 2 trigger: long-haul customer signs contract.
 - **FEAT-023 — Cross-Docking Orchestration (W27).** Most likely 3PL customer trigger.
 - **FEAT-024 — Predictive Failure Detection (W28).** ML risk modeling — ADR-0010 §3.5 trigger (Phase 3+ ML candidate if baseline noisy).
 - **FEAT-025 — Freight Spend Benchmarking (W30).** Cross-customer data aggregation.

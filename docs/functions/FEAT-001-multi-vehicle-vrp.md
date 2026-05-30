@@ -135,10 +135,25 @@ HERE Tour Planning sonuçları 30 saniye-birkaç dakika sürebilir. Request thre
 2. FN-010 worker process polling yapar, sonucu enterprise.routing_jobs'a yazar
 3. FN-015 useRoutingPoll hook'u UI'da polling yapar (TanStack Query)
 
-### 4.5 Future evolution from FEAT-006 + FEAT-008 + FEAT-009 (2026-05-29, 2026-05-30)
+### 4.5 Future evolution from FEAT-006 + FEAT-008 + FEAT-009 + FEAT-019 + FEAT-103 (cross-spec sync, 2026-05-30)
 
-FN-016 `buildHereProblem` Phase 1 implementation'ında **forward-compatible** olarak yazılır — gelecekteki üç feature implementation'ı tarafından genişletilecek inputs imzasıyla:
+FN-016 `buildHereProblem` imzası 6 yeni optional parametre kabul edecek şekilde forward-compatible şekilde tasarlandı:
 
+| Parametre | Source | Phase | Aktivasyon |
+|---|---|---|---|
+| `appointments?` | FEAT-006 | 1 | Phase 1 — dock appointment scheduling |
+| `tollCostMatrix?` | FEAT-008 | 1.1 | Phase 1.1 — Vrachtwagenheffing aktif |
+| `routingMode?` | FEAT-009 | 1.1 | Phase 1.1 — HERE Eco Routing |
+| `daysHorizon?` | FEAT-019 | 2 | Phase 2 — multi-day VRP customer-funded |
+| `driverRules?` | FEAT-019 | 2 | Phase 2 — EU 561/2006 enforcement |
+| `evMode?` | FEAT-103 | 2 | Phase 2 — EV-specific routing customer-funded |
+
+**Tasarım disipline:**
+- **Optional parametre paterni** — her parametre kendi feature aktive edilene kadar NULL. Phase 1 FEAT-001 standalone çalışır.
+- **Breaking change yok** — yeni parametre eklemek Phase 1 davranışını etkilemez (default behavior değişmez).
+- **Multi-way tension** (Time/Toll/Eco/Multi-day/EV) — her parametre kendi tradeoff'unu HERE objective fonksiyonuna eklenir, weighted sum (ADR-0010 §3.4).
+
+**FEAT-001 standalone çalışma:** Phase 1'de tüm yeni parametreler `undefined` — yalnızca `tasks` + `vehicles` core VRP. Yeni feature spec'leri kendi extension'ını ekledikçe FN-016 imza aktive edilir.
 ```typescript
 function buildHereProblem(
   tasks: Task[],
@@ -485,3 +500,4 @@ Bu pilot şablon olarak kullanılır. NotebookLM kotası kontrolüyle:
 | 1 | 2026-05-27 | Cem Bakir (with Claude + NotebookLM cowork) | İlk konsolide function spec. Pilot — gelecek 30 feature için şablon. |
 | 2 | 2026-05-29 | Cem Bakir | **Cross-spec sync — FEAT-006 + FEAT-008 future evolution notları eklendi.** FN-016 `buildHereProblem` inputs imzası iki opsiyonel parametre kabul edecek şekilde genişletildi: `appointments?` (FEAT-006 service duration) + `tollCostMatrix?` (FEAT-008 Vrachtwagenheffing). Her iki parametre opsiyonel olduğu için Phase 1 implementation tek başına çalışır — breaking change DEĞİL, ADR-0004 v3 §6 additive pattern signature-level uygulaması. Yeni §4.5 "Future evolution from FEAT-006 + FEAT-008" bölümü eklendi (HERE optimal vs fallback pattern, FEAT-006 dock service duration, FEAT-008 customCostMatrix sandbox dependency). FN-016 not satırı 2026-05-29 update bağlantısı içerir. |
 | 3 | 2026-05-30 | Cem Bakir | **Cross-spec sync v3 — FEAT-009 future evolution eklendi.** FN-016 inputs imzasına üçüncü opsiyonel parametre: `routingMode?: "fastest" \| "shortest" \| "eco"` (FEAT-009 Phase 1.1 HERE Eco Routing aktivasyonu). §4.5 başlığı "Future evolution from FEAT-006 + FEAT-008 + FEAT-009" olarak güncellendi, yeni "FEAT-009 — Basic Carbon Footprint Per Route" alt-bölümü eklendi (ADR-0010 §3.4 weighted sum pattern alıntısı, default OFF Phase 1.1 karar). **Yeni "Üç-yönlü gerilim" alt-bölümü** eklendi (kritik mimari nüans): aynı `buildHereProblem`'da Time window (FEAT-006 HARD) vs Toll (FEAT-008 SOFT) vs Eco (FEAT-009 SOFT) yarışır; çelişki senaryoları ve karar mantığı belgelendi. Breaking change disiplini paragrafı 3 parametreli versiyona güncellendi. FN-016 not satırı "2026-05-30 update" satırı içerir. FN-016 Shared kolonu: `F006, F008, F009`. |
+| 3.1 (mega cross-spec sync) | 2026-05-30 | Cem Bakir + Claude | **FN-016 buildHereProblem imzası +3 yeni parametre** — `daysHorizon?` (FEAT-019:FN-04 multi-day VRP), `driverRules?` (FEAT-019:FN-04 EU 561/2006), `evMode?` (FEAT-103:FN-04 EV routing). §4.5 başlığı genişletildi (FEAT-006+008+009+019+103 → 6 parametre toplam). Tüm parametreler optional — FEAT-001 standalone Phase 1 davranışı değişmez (breaking change yok, forward-compatible additive evolution pattern). Multi-way tension belgelendi (Time/Toll/Eco/Multi-day/EV weighted sum HERE objective). Mega cross-spec sync FEAT-010 + FEAT-017 + FEAT-008 + FEAT-009 ile birlikte atomic commit. 17 pilot toplam tamamlandı. |

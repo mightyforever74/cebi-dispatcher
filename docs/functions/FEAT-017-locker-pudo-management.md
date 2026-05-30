@@ -233,12 +233,28 @@ CHECK (exception_type IN (
 ALTER TABLE public.geofences
   ADD COLUMN location_type TEXT DEFAULT 'customer_site'
   CHECK (location_type IN (
-    'customer_site',  -- default, mevcut davranış
+    'customer_site',         -- default, mevcut davranış
+    -- FEAT-017 (Locker/PUDO):
     'locker',
     'pudo_point',
     'parcel_shop',
-    'return_point'
+    'return_point',
+    -- FEAT-019 (Multi-Day Long-Haul):
+    'truck_parking',         -- standart kamyon park alanı
+    'secured_parking',       -- çitli, kameralı (high-value yükler)
+    'hotel',                 -- sürücü konaklama
+    'fuel_station',          -- akaryakıt istasyonu
+    'rest_area',             -- yol kenarı kısa dinlenme
+    'border_crossing',       -- ülke sınırı geçiş noktası
+    -- FEAT-103 (EV Range):
+    'charging_station'       -- EV şarj istasyonu
   ));
+
+-- INDEX update (tüm location_type'lar için)
+DROP INDEX IF EXISTS idx_geofences_location_type;
+CREATE INDEX idx_geofences_location_type
+  ON public.geofences (company_id, location_type)
+  WHERE location_type != 'customer_site';
 
 CREATE INDEX idx_geofences_location_type
   ON public.geofences (company_id, location_type)
@@ -432,9 +448,21 @@ Sonraki pilotlar (FEAT-014, FEAT-018 ardışık) için aynı disiplin korunacak.
 
 ## 10. Next steps
 
-### 10.1 Cross-spec sync — FEAT-010 (✅ TAMAMLANDI 2026-05-30)
+### 10.1 Cross-spec sync — FEAT-010 + Mega sync (✅ TAMAMLANDI 2026-05-30)
 
-FEAT-017:FN-12 expiry handler FEAT-010 exception_events tablosuna yazar. FEAT-018 sonrası toplu cross-spec sync commit'i ile uygulandı:
+**1. sync (sabah):** FEAT-017:FN-12 expiry handler FEAT-010 exception_events tablosuna yazar:
+- ✅ `exception_type` CHECK constraint'e `'locker_pickup_expired'` eklendi
+- ✅ §4 Severity matrix `locker_pickup_expired` 2 entry (medium, high — customer SLA breach)
+- ✅ §2 FN-06 logExceptionEvent shared kolonuna FEAT-017 eklendi
+
+**Toplu commit ile birlikte:** FEAT-014 (`tender_withdrawn`, `tender_no_quotes`) + FEAT-018 (`returns_pickup_failed`, `rts_warehouse_unreachable`).
+
+**2. mega sync (akşam):** FEAT-019 + FEAT-103 location_type genişletmesi:
+- ✅ `public.geofences.location_type` enum +7 yeni değer (FEAT-019: truck_parking, secured_parking, hotel, fuel_station, rest_area, border_crossing; FEAT-103: charging_station)
+- ✅ INDEX güncellendi (tüm location_type'lar için)
+- §6.1 schema bloğu güncellendi
+
+**Toplam:** 11 + 7 = 18 değer tablo dahilinde (1 default + 4 FEAT-017 + 6 FEAT-019 + 1 FEAT-103).
 - ✅ `exception_type` CHECK constraint'e `'locker_pickup_expired'` eklendi
 - ✅ §4 Severity matrix `locker_pickup_expired` 2 entry (medium, high — customer SLA breach)
 - ✅ §2 FN-06 logExceptionEvent shared kolonuna FEAT-017 eklendi
@@ -502,3 +530,4 @@ Yeni paradigma: external carrier API tender broadcasting + quote comparison. Pha
 |---|---|---|---|
 | 1 | 2026-05-30 | Cem Sahinkaya (with Claude + NotebookLM cowork) | İlk konsolide function spec. On birinci pilot — locker/PUDO management, wishlist W17 (Cem notu: "we do with geofence"). 13 fonksiyon (FN-01..FN-13), Phase 1.1: 10, Phase 2: 3. **Yeni paradigma: Geofence type extension** — mevcut `public.geofences` tablosu extend edilir, yeni tablo gerekmez. ADR-0004 v3 §6 additive pattern signature-level uygulaması. Round 1 (10 fn) initial pilot, Round 2 (3 fn) extension — reverse flow (FN-11 onCustomerLockerDropoff), expiry handler (FN-12 monitorLockerPickupExpiry, FEAT-010 entegrasyonu), Redis cache (FN-13 getCachedLockerAvailability). Schema değişiklikleri: `public.geofences.location_type` + `partner_provider`, `enterprise.dispatch_tasks.allow_locker_fallback` (opt-in default false), `enterprise.dispatch_tasks.metadata` JSONB locker payload, `public.companies.settings.locker_fallback` JSONB config. Konsolidasyon düzeltmeleri: FN-02 ADR-0005 §4.1 parafraz birleşim → birebir cümle (dispatcher modify pattern), schema kararları netleştirildi, partner provider Phase 2 ayrımı korundu. Cross-spec sync TODO: FEAT-010 spec'inde `exception_type` enum'a `'locker_pickup_expired'` eklenmeli (§10.1). UNCERTAINTIES: #3 PoD kesişimi FEAT-011 spec'ine bırakıldı (driver barkod onay disiplini). §number fabrikasyon = 0 ✅ (F8-F10-F17 zinciri stable). |
 | 1.1 (cross-spec sync close) | 2026-05-30 | Cem Bakir + Claude | §10.1 cross-spec sync TODO kapatıldı — FEAT-010 spec'inde `exception_type='locker_pickup_expired'` enum + §4 Severity matrix + FN-06 shared kolonu eklendi (toplu commit FEAT-014 + FEAT-018 ile birlikte). FEAT-017 spec'inde değişiklik YOK, sadece TODO işaretleme. |
+| 1.2 (mega cross-spec sync) | 2026-05-30 | Cem Bakir + Claude | **§6.1 location_type enum +7 yeni değer** — FEAT-019 (truck_parking, secured_parking, hotel, fuel_station, rest_area, border_crossing) + FEAT-103 (charging_station). §10.1 cross-spec sync TODO güncellendi (1. sync + 2. mega sync ayrı belgelendi). Tablo dahilinde 12 location_type değer (1 default + 4 F017 + 6 F019 + 1 F103). Schema değişikliği additive (CHECK constraint genişlemesi), production deployment forward-compatible. FEAT-019 + FEAT-103 spec'leri location_type değerlerini kullanır, FEAT-017 schema sahipliği korunur. Geofence type extension paterni F017→F019→F103 zinciri (mimari tutarlılık). 17 pilot toplam, mega cross-spec sync atomic commit. |

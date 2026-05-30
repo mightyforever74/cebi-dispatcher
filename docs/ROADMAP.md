@@ -2,7 +2,12 @@
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 
-> **Status as of 2026-05-25:** Phase 1 (Architecture + Bootstrap) — **Sıra 2 complete**. `fleet-enterprise-01` (CPX 32, Falkenstein) is provisioned and serving `https://enterprise-api.tulipfleet.com` with a valid Let's Encrypt certificate via Caddy. Hetzner private network `tulipfleet-internal` (10.0.0.0/16) joins both servers (`fleet-prod-01` at `10.0.0.2`, `fleet-enterprise-01` at `10.0.0.3`); enterprise backend reaches PostgreSQL over the private network with the `enterprise_backend` role. `tulipfleet-enterprise-backend` is deployed as a Docker container behind Caddy (commit `c125f4c`). End-to-end smoke verified: JWT issued by `api.tulipfleet.com` validates on `enterprise-api.tulipfleet.com`, `GET /api/dispatcher/vehicles` returns company-scoped data. Operational documentation created (`ENTERPRISE_INFRASTRUCTURE.md`, `INTEGRATION_BOUNDARIES.md`); ADR-0003 carries Implementation Notes (Section 10) for realized state. Next: Sıra 2.9 — NL Compliance Layer seed (ADR-0012) → Sıra 3 — HERE Tour Planning sandbox.
+> **Status as of 2026-05-25:**
+> Phase 1 (Architecture + Bootstrap) —
+> **Sıra 2 complete**. `fleet-enterprise-01` (CPX 32, Falkenstein) is provisioned and serving `https://enterprise-api.tulipfleet.com` with a valid Let's Encrypt certificate via Caddy. Hetzner private network `tulipfleet-internal` (10.0.0.0/16) joins both servers (`fleet-prod-01` at `10.0.0.2`, `fleet-enterprise-01` at `10.0.0.3`);
+> enterprise backend reaches PostgreSQL over the private network with the `enterprise_backend` role. `tulipfleet-enterprise-backend` is deployed as a Docker container behind Caddy (commit `c125f4c`). End-to-end smoke verified: JWT issued by `api.tulipfleet.com` validates on `enterprise-api.tulipfleet.com`, `GET /api/dispatcher/vehicles` returns company-scoped data. Operational documentation created (`ENTERPRISE_INFRASTRUCTURE.md`, `INTEGRATION_BOUNDARIES.md`); ADR-0003 carries Implementation Notes (Section 10) for realized state. Next:
+> Sıra 2.9 — NL Compliance Layer seed (ADR-0012) →
+> Sıra 3 — HERE Tour Planning sandbox.
 
 ---
 

@@ -220,7 +220,25 @@ CREATE TABLE enterprise.nl_vrachtwagenheffing_tariffs (
     UNIQUE (weight_class, emission_class, road_type, effective_from)
 );
 ```
+-- Cross-spec sync (2026-05-30 mega sync, FEAT-103 entegrasyonu):
+-- emission_class enum'a 'zero_emission' eklendi (EV exemption handling)
+ALTER TABLE enterprise.nl_vrachtwagenheffing_tariffs
+  DROP CONSTRAINT IF EXISTS nl_tariff_emission_class_check,
+  ADD CONSTRAINT nl_tariff_emission_class_check 
+  CHECK (emission_class IN ('euro4', 'euro5', 'euro6', 'zero_emission'));
 
+### EV exemption integration (cross-spec sync, FEAT-103, 2026-05-30 mega sync)
+
+FEAT-103:FN-12 `getVrachtwagenheffingEvExemption` zero-emission HGV muafiyet handling için FEAT-008 schema'sını consume eder:
+
+- **emission_class enum genişletildi** → `'zero_emission'` eklendi
+- **FN-12 algoritması:** vehicle `fuel_type='electric'` AND `emission_class='zero_emission'` → tariff lookup
+- **Phase 2 başlangıç:** NL government zero-emission HGV tariff henüz açıklanmadı (UNCERTAINTIES #4 FEAT-103). Placeholder 0 EUR/km + audit log warning.
+- **2026 Temmuz sonrası seed:** NL tariff yayınlandıktan sonra rows eklenir.
+
+**Karşılık FEAT-103 §4 (Vrachtwagenheffing EV Exemption):** detaylı algoritma + fallback rate handling.
+
+**Schema tutarlılığı:** `public.vehicles.emission_class` constraint da `'zero_emission'` içermeli (FEAT-103 §7.1 ALTER TABLE).
 ### 5.2 Tariff version handling — UNCERTAINTIES #4
 
 `effective_from` ve `effective_to` ile **tariff version'lanır**. Bir görev tarihindeki geçerli tarife:
@@ -462,3 +480,4 @@ Sandbox sonuçlarına göre §3.1 (optimal) veya §3.2 (fallback) pattern seçil
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 1 | 2026-05-29 | Cem Bakir (with Claude + NotebookLM cowork) | İlk konsolide function spec. Sekizinci pilot — Vrachtwagenheffing route cost optimization, Phase 1.1 trigger Temmuz 2026. 9 fonksiyon (FN-01..FN-09), hepsi Phase 1.1. **Pilot kalite zirvesi: 9.5/10, tek iterasyon, §number fabrikasyon 0** (F7'deki uyarı işe yaradı). Konsolidasyon düzeltmeleri: FN-01 ADR-0012 §3.1 parafraz → birebir cümle, FN-02 `effectiveDate` parametresi eklendi (tariff version handling), FN-06 inputs `tollCostMatrix` netleştirildi, FN-09 `GET hgv-toll` response schema detaylandı. Cross-spec sync TODO: FEAT-001:FN-016 buildHereProblem imzasına `tollCostMatrix?` opsiyonel parametre + "Future evolution from FEAT-008" notu (dünden kalan FEAT-006 cross-spec ile tek commit). Pre-requisite: ADR-0004 v3 §6.4 migration (`public.vehicles` emission_class + capacity_weight_kg) + `enterprise.routing_jobs.cost_breakdown JSONB` additive kolon. Soft constraint pattern (ADR-0002 §3.4) HERE objective function injection olarak modellenip §3.2 post-routing fallback alternatifi belgelendi (UNCERTAINTIES #3 sandbox test sonucuna bağlı). |
+| 1.1 (mega cross-spec sync) | 2026-05-30 | Cem Bakir + Claude | **`enterprise.nl_vrachtwagenheffing_tariffs.emission_class` enum +`'zero_emission'`** — FEAT-103 EV exemption handling (FN-12 `getVrachtwagenheffingEvExemption`). Yeni alt-bölüm "EV exemption integration" eklendi. FEAT-103 algoritma detayları + Phase 2 başlangıç placeholder (NL government 2026 Temmuz tariff yayını sonrası seed). Mega cross-spec sync atomic commit FEAT-010 + FEAT-001 + FEAT-017 + FEAT-009 ile birlikte. Schema değişikliği additive (CHECK constraint genişleme). 17 pilot toplam. |

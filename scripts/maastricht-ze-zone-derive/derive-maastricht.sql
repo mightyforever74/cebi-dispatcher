@@ -39,10 +39,10 @@ FROM tmp_maastricht;
 WITH points AS (
   SELECT 'Vrijthof'          AS loc, 5.6886 AS lon, 50.8492 AS lat, 'inside' AS expected UNION ALL
   SELECT 'Markt',                    5.6914, 50.8514, 'inside'  UNION ALL
-  SELECT 'Sint Servaasbrug',         5.6961, 50.8489, 'inside'  UNION ALL
   SELECT 'Sint-Janskerk',            5.6881, 50.8489, 'inside'  UNION ALL
   SELECT 'Stokstraat',               5.6917, 50.8497, 'inside'  UNION ALL
-  SELECT 'Maastricht CS',            5.7050, 50.8500, 'outside' UNION ALL
+  SELECT 'Maastricht CS',            5.7050, 50.8500, 'inside'  UNION ALL  -- doğu yaka, polygon inc.
+  SELECT 'Sint Servaasbrug',         5.6961, 50.8489, 'outside' UNION ALL  -- nehir üzerinde
   SELECT 'MECC',                     5.7139, 50.8358, 'outside' UNION ALL
   SELECT 'Fort St. Pieter',          5.6836, 50.8375, 'outside' UNION ALL
   SELECT 'Valkenburg',               5.8311, 50.8647, 'outside' UNION ALL

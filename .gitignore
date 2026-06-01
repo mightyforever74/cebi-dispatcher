@@ -41,3 +41,4 @@ yarn.lock
 
 # Optional: vendor reference templates
 # _vendor/
+_backup_local_scripts/

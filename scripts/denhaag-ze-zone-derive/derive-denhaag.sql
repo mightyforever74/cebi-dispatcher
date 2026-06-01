@@ -72,16 +72,16 @@ FROM tmp_denhaag_unified;
 \echo '=== 11-point sanity test (Den Haag landmarks) ==='
 WITH points AS (
   SELECT 'Binnenhof' AS loc, 4.3128 AS lon, 52.0799 AS lat, 'inside' AS expected UNION ALL
-  SELECT 'Hofvijver',             4.3120, 52.0800, 'inside'  UNION ALL
-  SELECT 'Paleis Noordeinde',     4.3068, 52.0811, 'inside'  UNION ALL
-  SELECT 'Grote Markt',           4.3078, 52.0772, 'inside'  UNION ALL
-  SELECT 'Kurhaus Scheveningen',   4.2779, 52.1119, 'inside'  UNION ALL
-  SELECT 'Rijswijk',              4.3315, 52.0416, 'outside' UNION ALL
-  SELECT 'Voorburg',              4.3551, 52.0684, 'outside' UNION ALL
-  SELECT 'Wateringen',            4.2764, 52.0296, 'outside' UNION ALL
-  SELECT 'Ypenburg',              4.3644, 52.0456, 'outside' UNION ALL
-  SELECT 'Wassenaar',             4.4019, 52.1394, 'outside' UNION ALL
-  SELECT 'Delft Centrum',         4.3567, 52.0116, 'outside'
+  SELECT 'Hofvijver',               4.3120, 52.0800, 'inside'  UNION ALL
+  SELECT 'Paleis Noordeinde',       4.3068, 52.0811, 'inside'  UNION ALL
+  SELECT 'Grote Markt',             4.3078, 52.0772, 'inside'  UNION ALL
+  SELECT 'Kurhaus Scheveningen',    4.2779, 52.1119, 'inside'  UNION ALL
+  SELECT 'Den Haag Centraal',       4.3233, 52.0811, 'outside' UNION ALL  -- istasyon binası polygon dışı
+  SELECT 'Rijswijk',                4.3315, 52.0416, 'outside' UNION ALL
+  SELECT 'Voorburg',                4.3551, 52.0684, 'outside' UNION ALL
+  SELECT 'Wateringen',              4.2764, 52.0296, 'outside' UNION ALL
+  SELECT 'Ypenburg',                4.3644, 52.0456, 'outside' UNION ALL
+  SELECT 'Wassenaar',               4.4019, 52.1394, 'outside'
 ),
 results AS (
   SELECT

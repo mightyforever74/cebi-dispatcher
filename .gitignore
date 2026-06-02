@@ -42,3 +42,8 @@ yarn.lock
 # Optional: vendor reference templates
 # _vendor/
 _backup_local_scripts/
+
+migrations/*_diff.sql
+migrations/*_symdiff.sql
+*.zip
+*.xml.gz

@@ -6,7 +6,7 @@ A high-level summary of the architectural and product decisions that govern the 
 > Phase 1 (Architecture + Bootstrap) —
 > **Sıra 2 + Sıra 2.9 complete**. `fleet-enterprise-01` (CPX 32, Falkenstein) is provisioned and serving `https://enterprise-api.tulipfleet.com` with a valid Let's Encrypt certificate via Caddy. Hetzner private network `tulipfleet-internal` (10.0.0.0/16) joins both servers (`fleet-prod-01` at `10.0.0.2`, `fleet-enterprise-01` at `10.0.0.3`); enterprise backend reaches PostgreSQL over the private network with the `enterprise_backend` role. End-to-end smoke verified (commit `c125f4c`).
 > **Sıra 2.9 — NL Compliance Layer ZE-Zone seed complete.** 20 active Zero-Emission zones are live in production (`enterprise.nl_compliance_zones`, 21 rows — Den Haag is split into Centrum + Kust; 148.8 km² total). Geometry is sourced from the **harmonized NDW DATEX II national open dataset** (`opendata.ndw.nu/emissiezones.xml.gz`), a single authoritative source replacing per-city municipal scraping. Reconciliation B aligned the 6 originally municipal-sourced cities to NDW (Den Haag re-modelled, Utrecht + Eindhoven geometry refreshed; Rotterdam/Amsterdam/Maastricht left as-is after diff showed sub-2% divergence). Each city was verified staging → production with embedded point-in-polygon sanity tests. Next:
-> Sıra 3 — HERE Tour Planning sandbox.
+> **Sıra 3 complete (2026-06-02)** — HERE Tour Planning verified, ZE-Zone routing Model 1 (HERE-native `exceptZoneIds`) locked, Ontheffing Engine schema + `enterprise_backend` prod grants live. Next: Sıra 3.5 application layer (blueprint ready).
 
 ---
 
@@ -269,13 +269,26 @@ The order below reflects the critical path; later items depend on earlier ones.
   - **Deferred (P2):** future-dated cities (Alphen 2027, Deventer 2028, Apeldoorn/Ede 2030) and Amersfoort (3 conflicting NDW entries — needs investigation). Vrachtwagenheffing static tariff table (ADR-0012 §3.1) still pending — tracked separately.
   - **Discipline learned:** prove the target `zone_id` via SELECT before any mutation; use UPDATE (not DELETE+INSERT) for same-id geometry refresh to avoid duplicate-row risk.
 
-**Sıra 3 — HERE Tour Planning sandbox**
+**Sıra 3 — HERE Tour Planning + NL Compliance application-layer foundation (complete 2026-06-02)**
 
-- Account at developer.here.com.
-- Sandbox API key (free tier, 30-day evaluation).
-- First Tour Planning REST request from a notebook or curl to validate constraint syntax.
-- Validate HERE environmental zones coverage for NL ZE-Zones (per ADR-0012 §9 Open Questions).
-- Store key in `tulipfleet-enterprise-backend/.env`.
+Started as a HERE sandbox spike; expanded into locking the ZE-Zone routing model and building the full Ontheffing Engine data + permission foundation. Key outcomes:
+
+- ✅ **HERE account + Tour Planning verified.** Single app `TulipFleet` (App ID `KHqTCN74Jxxy41LCtNbc`), freemium. Tour Planning v3 reachable (live `tourplanning.hereapi.com/v3` returns optimized tours). A second API key (`****9xxw`) was created for the enterprise backend and stored in `fleet-enterprise-01:/opt/enterprise/.env` as `HERE_API_KEY`. Prod backend keeps its own key (`****Kmco`, Routing v8) — separate keys, same account.
+- ✅ **ZE-Zone routing model LOCKED = Model 1 (HERE-native).** HERE recognizes NL environmental zones natively via `avoid.zoneCategories.categories:["environmental"]` + per-vehicle `exceptZoneIds` (`here:cm:envzone:NN`). TulipFleet does **not** inject its own polygons into HERE (its `avoid.areas` is boundingBox-only — too coarse for irregular NL borders). HERE `avoid` is a *soft* preference; hard compliance enforcement + CSRD/fine reporting stays in the Compliance Layer. Two-layer architecture. Recorded in ADR-0002 §3.4.1, ADR-0011 §8.6, ADR-0012 §3.6.
+- ✅ **HERE envzone catalog coverage spike.** Routing v8 `routingZones` harvest mapped **19 of 21** seeded zones to `here:cm:envzone:NN`, persisted to `_meta.here_envzone_id` (migration `1781800000000`). 2 zones absent from HERE catalog (Dordrecht ZE-start 2026-01-01, Arnhem ZE-start 2026-06-01 = catalog update lag) → `here_envzone_id = null` → Compliance Layer polygon is sole authority for those two. Nijmegen centroid was a false-negative (crescent core), recovered via deep-interior retest (`628`). ADR-0011 §8.6 / ADR-0012 §3.8.
+- ✅ **`public.vehicles` compliance columns** (migration `1781700000000`): `emission_class` varchar(20) + CHECK (euro_0..euro_7, euro_vi, zero_emission; NULL ok), `date_first_admission` date (DET — Datum Eerste Toelating), `carrosserie_code` varchar(10) + partial index on (emission_class, date_first_admission) WHERE status IN (available, in_use). Additive, applied staging + prod. *(This supersedes the `emission_class` item previously listed under the §6.4 infrastructure migration.)*
+- ✅ **Ontheffing Engine schema** (migration `1781600000000`): `enterprise.nl_compliance_vehicle_ontheffings` + `enterprise.nl_dagontheffing_counters` + enum `nl_ontheffing_type` (dagontheffing | netcongestie | dierenambulance). Design: depletion is hybrid/advisory (dispatcher-confirm, ADR-0005 Mode 1, counter never auto-increments); granularity company × zone_id × year (legal basis CVDR752146/1 Art 11+12 — kentekenhouder-level, 12/zone/year, NOT per-vehicle); Netcongestie 2yr (Art 9) + Dierenambulance (Art 10) modelled. ADR-0012 §3.7.
+- ✅ **Idempotency guard** (migration `1781900000000`): partial unique index `uidx_vehicle_zone_date_dagontheffing` on (vehicle_id, zone_id, valid_from) WHERE type='dagontheffing' → double-consume raises 23505 → app returns 409, counter not unfairly incremented.
+- ✅ **`enterprise_backend` prod grants corrected** (migration `1782000000000`, schema authority `tulipfleet-backend` per INTEGRATION_BOUNDARIES §5.2): prod was missing schema USAGE on `enterprise`, grants on the new ontheffing tables, and SELECT on `public.{vehicles,companies,users,drivers,tasks}` — staging had them, prod never did. Migration grants USAGE + ALL on enterprise.* + SELECT on the 5 public tables + `ALTER DEFAULT PRIVILEGES` so future enterprise.* tables auto-grant. Verified via `enterprise_backend` role over the private network (SELECT on public.vehicles now returns data; `vehicle_category` ∈ {truck_heavy, van}).
+- ⚠️ **Process lesson — "COMMITTED" ≠ applied-to-prod.** During this work we found `1781600000000` had been recorded as committed but was only ever applied to `fleet_tracking_staging`, never to prod — caught when the grant migration's AFTER block failed on a missing table. **New discipline:** after every prod migration, verify with a `pgmigrations` row + object-existence query, not just the psql `COMMITTED` echo. All 5 Sıra-3 migrations (`1781600`–`1782000`) are now confirmed present in prod `pgmigrations`.
+
+**Sıra 3.5 — Ontheffing Engine application layer (next; blueprint ready)**
+
+- Blueprint: `docs/blueprints/ADIM3_ontheffing_application_layer.md`. Fastify endpoints on `fleet-enterprise-01`.
+- `lib/checkCompliance.js` (pure fn, CVDR matrix, category-based exempt Sets: `van`→bestelauto `{SH}`, `truck_heavy`→vrachtauto `{15,16,19,23,26,27,31,SB,SF}`).
+- Endpoints: check (batch `{assignments:[...]}`), ontheffing counters, consume (advisory confirm → counter++), vehicle exemptions, except-zone-ids (HERE Model 1 bridge, skips `here_envzone_id=null` zones).
+- **Path naming:** `/api/compliance/*` per ADR-0012 §4.1 (NOT `/api/dispatcher/compliance/*` — blueprint draft used the wrong prefix; correct on implementation).
+- DB write path proven: `enterprise_backend` can INSERT into `enterprise.*` (smoke-write confirmed). Transition cutoffs read from `rules` JSONB (zone-parametric, not hardcoded).
 
 **Sıra 4 — Dispatcher UI: Live Fleet Map (first real screen, FEAT-005)**
 
@@ -334,7 +347,7 @@ These items ship shortly after the Phase 1 MVP launch, not in the MVP itself. De
 
 **Infrastructure migration:**
 
-- **Apply ADR-0004 v3 §6.4 migration** (`public.vehicles` capacity columns: `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`, `emission_class`) — FEAT-002 truck-aware routing, FEAT-007 capability matching, FEAT-008 toll calculation, FEAT-013 hazmat routing ön koşulu.
+- **Apply ADR-0004 v3 §6.4 migration** (`public.vehicles` capacity columns: `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`) — FEAT-002 truck-aware routing, FEAT-007 capability matching, FEAT-008 toll calculation, FEAT-013 hazmat routing ön koşulu. *(Note: `emission_class` already added in Sıra 3 via migration `1781700000000`, along with `date_first_admission` + `carrosserie_code` for NL compliance.)*
 
 **Indicative timeline:** 6–9 weeks from completion of Sıra 1 to first-customer pilot, assuming single founder/developer pace. Phase 1.1 follow-ups extend ship period by ~1–4 weeks.
 

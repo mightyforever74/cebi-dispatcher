@@ -204,6 +204,32 @@ Implementing the §3.6 Finding 2 scope. Two transactional tables added to `enter
 **Pattern:** Minor implementation clarification per ADR-0009 §4.5.1; no ADR version bump. The Phase 1→3 strategic decision is unchanged; this adds the transactional schema that §3.6 Finding 2 scoped.
 
 
+### 3.8 HERE envzone catalog coverage — spike result (2026-06-02, Adım 2)
+
+Model 1 requires each ZE-Zone's HERE `here:cm:envzone:NN` id (for `exceptZoneIds`). A spike harvested these via HERE Routing v8 `return=routingZones`: a short truck route through each zone's centroid; the response's `routingZones` block names the environmental zone and its `ref` (`$0:all:$1:NN`, where `$1 = here:cm:envzone`). Result: **19 of 21 rows mapped.**
+
+| zone_id | here:cm:envzone | | zone_id | here:cm:envzone |
+|---|---|---|---|---|
+| amsterdam_ze_zone_2026 | 625 | | leiden_ze_zone_2025 | 630 |
+| assen_ze_zone_2025 | 631 | | maastricht_ze_zone_2025 | 629 |
+| delft_ze_zone_2025 | 637 | | nijmegen_ze_zone_2025 | 628 (retest) |
+| denhaag_centrum_ze_zone_2025 | 636 | | rotterdam_ze_zone_2025 | 632 |
+| denhaag_kust_ze_zone_2026 | 636 (shared) | | schiphol_ze_zone_2026 | 707 |
+| eindhoven_ze_zone_2025 | 626 | | shertogenbosch_ze_zone_2025 | 699 |
+| enschede_ze_zone_2025 | 697 | | tilburg_ze_zone_2025 | 634 |
+| gouda_ze_zone_2025 | 633 | | utrecht_ze_zone_2025 | 635 |
+| groningen_ze_zone_2025 | 698 | | zwolle_ze_zone_2025 | 627 |
+| haarlem_ze_zone_2025 | 397 | | **dordrecht_ze_zone_2026** | **null (not in catalog)** |
+| | | | **arnhem_ze_zone_2026** | **null (not in catalog)** |
+
+**Notes:**
+- **Nijmegen false-negative caught.** The first harvest (centroid) returned no zone; Nijmegen's crescent-shaped historic core meant the centroid fell outside the polygon. A deep-interior retest (Grote Markt 51.8475,5.8642) returned `here:cm:envzone:628`. Lesson: centroid is not always inside an irregular polygon — verify deep-interior on a miss before concluding absence.
+- **Den Haag Centrum + Kust both map to 636.** HERE treats our temporally-split pair (Centrum 2025 / Kust 2026) as a single environmental zone. Correct for `exceptZoneIds` (one id grants both); our split is retained for compliance dates.
+- **Dordrecht + Arnhem are genuinely absent** (deep-interior route succeeds — `length>0` — but returns no environmental zone). Both have 2026 ZE start dates (Dordrecht 2026-01-01, Arnhem 2026-06-01 = today), so this is a **HERE catalog update lag**, not our error. This is a live proof of the thesis behind the two-layer architecture: global map providers lag local regulation. For these two, the Compliance Layer polygon is the sole authority (`here_envzone_id = null` → never sent as `exceptZoneIds`; routing falls back entirely to Layer 2 validation).
+
+The mapping is persisted to each row's `_meta.here_envzone_id` (+ `_meta.here_coverage`) via migration `1781800000000_add-here-envzone-id-mapping.sql`. This is the data source for the Ontheffing Engine application layer (§3.7) when building `exceptZoneIds`. **Model 1 is now locked** for the 19 covered zones; the 2 uncovered zones are Layer-2-only by design.
+
+
 ## 4. Architectural Constraints (Phase 1'de uyulması zorunlu)
 
 NotebookLM denetim çıktısının özellikle vurguladığı mimari disiplin: **Phase 1 internal use olsa bile, Phase 3 standalone'a hazır olarak kurgulanmalı.** Aksi halde Phase 3'te yeniden yazma riski büyük olur.
@@ -426,8 +452,8 @@ Eğer 3 şartın 2'si sağlanırsa, kalan 1 şart için **bekle**. Erken launch 
 
 ## 9. Open Questions
 
-- **HERE Tour Planning'in environmental zones desteği Hollanda ZE-Zone'larını ne kadar kapsıyor?** **PARTIALLY RESOLVED 2026-06-02 (§3.6):** HERE environmental zone kategorisini native tanıyor (`avoid.zoneCategories` + `exceptZoneIds`, id'ler `here:cm:envzone:NN`). **Hâlâ açık:** HERE'in `envzone` kataloğu bizim 20 seed'lenmiş zone'un tamamını güncel 2025–2026 sınırlarıyla kapsıyor mu — spike testi gerekli (aşağıda). Doğrulanana dek bizim polygon'lar hard-validation otoritesi; bu zaten Model 1'in iki-katman tasarımıyla uyumlu (HERE kapsasa da kapsamasa da bizim polygon'lar compliance/reporting için kalır).
-- **HERE `here:cm:envzone` kataloğu 20 NL ZE-Zone'unu güncel sınırlarıyla kapsıyor mu? (spike, added 2026-06-02)** Test: bilinen bir NL zone'undan (ör. Amsterdam) geçen bir Routing v8 rotası iste, yanıttaki `routingZone` bloğunda eşleşen `here:cm:envzone:NN` id'sini doğrula. Bu id'ler `exceptZoneIds` için de gerekli. Model 1 kilitlenmeden önce cevaplanmalı.
+- **HERE Tour Planning'in environmental zones desteği Hollanda ZE-Zone'larını ne kadar kapsıyor?** **RESOLVED 2026-06-02 (§3.6, §3.8):** HERE environmental zone kategorisini native tanıyor; spike ile 21 seed'lenmiş satırdan **19'u** HERE `here:cm:envzone:NN` kataloğuna eşlendi (detay §3.8). 2 satır (dordrecht_ze_zone_2026, arnhem_ze_zone_2026) HERE kataloğunda YOK — ikisi de 2026 başlangıçlı (HERE katalog gecikmesi); bu 2 zone için Compliance Layer polygon tek otorite. Eşleme `_meta.here_envzone_id` olarak migration `1781800000000` ile kalıcılaştırıldı.
+- **HERE `here:cm:envzone` kataloğu 20 NL ZE-Zone'unu güncel sınırlarıyla kapsıyor mu? (spike)** **RESOLVED 2026-06-02 (§3.8).** Routing v8 `routingZones` hasadı ile her zone'un centroid'inden geçen rota test edildi; 19/21 eşleşti, ID'ler `_meta.here_envzone_id`'ye yazıldı. Nijmegen ilk centroid testinde yanlış-negatif verdi (hilal-şekilli sınır), derin iç nokta retest'i ile `628` bulundu. Model 1 **kilitlendi**.
 - **Vrachtwagenheffing sandbox / test API var mı?** Temmuz 2026 öncesi geliştirme için. `vrachtwagenheffing.nl` dokümantasyon kontrol edilecek.
 - **PostGIS aktivasyonu staging'de test gerekli — TimescaleDB ile uyumluluk doğrulanmalı.** İkisi birlikte production kullanımları yaygın ama edge case'ler var; staging migration sırasında izlenecek.
 - **Vrachtwagenheffing tarife tablosu format ne?** PDF, JSON API, CSV download — kaynak format Phase 1 manuel seed sürecini etkiler.
@@ -461,3 +487,4 @@ Eğer 3 şartın 2'si sağlanırsa, kalan 1 şart için **bekle**. Erken launch 
 | 1 (Addendum) | 2026-05-27 | Cem Bakir | §3.1 Addendum: Vehicle-specific avoidance pattern — `checkCompliance` per-vehicle çalışır, avoid listesi per-vehicle dinamik kurulur. HERE per-vehicle avoidance area kabul ediyor mu §9'a yeni Open Question olarak eklendi. §5 Addendum: `shared_rules` / `city_overlay` precedence kuralı — `city_overlay` per-key override eder (application-layer deep-merge). Pilot Amsterdam research (RESEARCH §F.4) çıktısı. FEAT-001 spec'i (docs/functions/FEAT-001-multi-vehicle-vrp.md) ile uyumlu. Minor consistency clarifications per ADR-0009 §4.5.1 pattern; yeni ADR version'ı değil. |
 | 1 (Addendum) | 2026-06-02 | Cem Bakir | §3.6 added + §3.1/§9 updated — Sıra 3 HERE sandbox findings. **Finding 1:** routing avoidance mechanism changed to **Model 1 (HERE-native)** — HERE recognizes environmental zones (`avoid.zoneCategories` + `exceptZoneIds`, `here:cm:envzone:NN`); no polygon injection, no two-pass solve; HERE `avoid` is soft, hard enforcement stays in Compliance Layer. Two §9 open questions resolved (HERE per-vehicle avoidance, environmental coverage), one spike added (HERE NL envzone catalog coverage). **Finding 2:** current `nl_compliance_zones` is static-only; Ontheffing Engine (work item B) needs new transactional tables `nl_compliance_vehicle_ontheffings` + `nl_dagontheffing_counters`. Verified NL legal facts recorded (dagontheffing 12/zone/yr CVDR752146/1 Art 11+12; Netcongestie 2yr Art 9; RDW live ontheffing query = open question). Minor implementation clarification per ADR-0009 §4.5.1 pattern; no version bump. |
 | 1 (Addendum) | 2026-06-02 | Cem Bakir | §3.7 added — Ontheffing Engine schema design (work item B). Two transactional tables (`nl_compliance_vehicle_ontheffings`, `nl_dagontheffing_counters`) + enum `nl_ontheffing_type`, migration `1781600000000`. Decisions: depletion hybrid/advisory (ADR-0005 Mode 1, dispatcher-confirm); types dagontheffing+netcongestie+dierenambulance; granularity company×zone_id×year (legal basis kentekenhouder-level CVDR752146/1 Art 11+12, not per-vehicle). FK targets verified (companies.id/vehicles.id=uuid, nl_compliance_zones PK=zone_id text). Vehicle compliance attrs (euro/DET) out of scope — not present on public.vehicles. Minor implementation clarification per ADR-0009 §4.5.1; no version bump. |
+| 1 (Addendum) | 2026-06-02 | Cem Bakir | §3.8 added — HERE envzone catalog coverage spike (Adım 2). Routing v8 routingZones harvest mapped 19/21 seeded rows to here:cm:envzone:NN ids; persisted to _meta.here_envzone_id via migration 1781800000000. 2 rows (dordrecht 2026-01-01, arnhem 2026-06-01) absent from HERE catalog = update lag -> Layer-2 polygon sole authority (id null). Nijmegen centroid false-negative caught + fixed via deep-interior retest (628). §9 spike questions RESOLVED, Model 1 LOCKED for covered zones. Minor implementation clarification per ADR-0009 §4.5.1; no version bump. |

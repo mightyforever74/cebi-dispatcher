@@ -5,7 +5,7 @@
 | **Status**        | Accepted                                                               |
 | **Version**       | 1                                                                      |
 | **Date**          | 2026-05-13                                                             |
-| **Decision by**   | Cem Sahinkaya (Founder / Lead Engineer)                                    |
+| **Decision by**   | Cem Bakir (Founder / Lead Engineer)                                    |
 | **Component**     | TulipFleet Enterprise — Routing / Dispatch backend                     |
 | **Related**       | ADR-0001 (Dispatcher UI), ADR-0003 (Server topology), ADR-0005 (Dispatch workflow), ADR-0007 (Telematics integration) |
 
@@ -89,7 +89,7 @@ The CVRP+VRPTW problem TulipFleet sends to HERE has both **hard constraints** (m
 
 - Vehicle capacity: m³ volume and kg weight (CVRP core).
 - Driver shift hours: legal max driving hours and mandatory rest periods.
-- Avoidance areas: ZE-Zone polygons injected per-vehicle by the Compliance Layer (see ADR-0012 §3.1 addendum). A vehicle without ontheffing has the polygon in its avoid list; a vehicle with ontheffing does not.
+- Avoidance: ZE-Zone access is controlled per-vehicle by the Compliance Layer. **Mechanism updated 2026-06-02 (see §3.4.1):** following live HERE sandbox verification, the preferred direction is **Model 1 (HERE-native)** — HERE's own `avoid.zoneCategories.categories:["environmental"]` is used, and a compliant/ontheffing-holding vehicle is granted entry by listing the relevant `here:cm:envzone:NN` ids under `exceptZoneIds`. TulipFleet does **not** inject its own ZE-Zone polygons into the HERE payload (the earlier assumption). **Caveat:** HERE `avoid` is a *soft* preference, not a hard constraint — compliance enforcement (blocking, fines, CSRD reporting) is the Compliance Layer's job, not HERE's (ADR-0012, ADR-0011 §8.6).
 
 **Soft constraints (weighted in the objective function):**
 
@@ -101,6 +101,19 @@ The CVRP+VRPTW problem TulipFleet sends to HERE has both **hard constraints** (m
 **Human override (Mode 1 Advisory, per ADR-0005):** All of the above are presented as a *proposal* to the dispatcher. The dispatcher can approve, modify, or reject. The Phase 1 contract is that the system suggests; the dispatcher decides. This is not a "fourth constraint level" — it is the operational frame around the entire constraint stack.
 
 This hierarchy is enforced inside `buildHereProblem` (FN-016 in FEAT-001 spec). Per-feature spec catalogs may refine which constraints map to which HERE problem fields.
+
+### 3.4.1 ZE-Zone avoidance mechanism — verified 2026-06-02
+
+The 2026-05-27 addendum classified ZE-Zone polygons as a *hard* avoidance constraint injected per-vehicle, and flagged an open question: does HERE accept per-vehicle avoidance areas, else fall back to a two-pass solve? Sıra 3 live sandbox testing (`tourplanning.hereapi.com/v3`, production HERE key) resolved this:
+
+- **HERE recognizes environmental zones natively** via `avoid.zoneCategories.categories:["environmental"]` (valid schema; catalog ids `here:cm:envzone:NN`). No polygon injection is needed.
+- **`avoid` is soft, not hard.** HERE prefers but does not guarantee zone avoidance. The 2026-05-27 wording "HERE will not produce a route violating these" is therefore **inaccurate for ZE-Zones** and is corrected here: ZE-Zone avoidance is a *routing preference*, and hard compliance enforcement lives in the Compliance Layer (ADR-0012), not in HERE's solver output.
+- **Blanket avoid breaks in-zone deliveries:** a delivery inside an avoided zone returns `REACHABLE_CONSTRAINT: location unreachable`. Per-zone exemption via `exceptZoneIds` is mandatory for city-centre logistics.
+- **No two-pass solve needed.** Because exemption is expressed per-vehicle through `exceptZoneIds` within a single problem, the previously-anticipated two-pass fallback (separate solves for exempt vs non-exempt vehicles) is unnecessary under Model 1.
+
+**Bounding-box rejection.** HERE's alternative `avoid.areas` accepts only rectangular `boundingBox` regions. Using it to express NL's irregular, river-split ZE-Zone borders would cause significant false positives/negatives, so polygon-as-boundingBox injection (Model 2) is rejected in favour of Model 1.
+
+**Carried-forward open question** (see §9): whether HERE's `here:cm:envzone` catalog covers all 20 seeded NL ZE-Zones at current 2025–2026 boundaries. Until a spike confirms coverage, the Compliance Layer's own polygons remain the validation authority.
 
 ## 4. Consequences
 
@@ -185,6 +198,8 @@ The `IRoutingProvider` interface (Section 5) is designed so that a future `OrToo
 
 ## 9. Open Questions
 
+- **(added 2026-06-02)** Does HERE's `here:cm:envzone` catalog cover all 20 seeded NL ZE-Zones with current 2025–2026 boundaries? Spike: route through a known NL zone, inspect the Routing v8 `routingZone` response for a matching `envzone` id. Blocks locking Model 1; until then the Compliance Layer polygons are the fallback authority.
+
 - **ADR-00XX (future):** Should certain low-complexity single-vehicle routes (TSP) be solved locally using a small in-process heuristic to avoid HERE round-trips for trivial cases?
 - **ADR-00XX (future):** Should HERE's Distance Matrix responses be backed by a longer-lived store (PostgreSQL) in addition to the Redis cache, to enable offline analytics?
 
@@ -203,3 +218,4 @@ The `IRoutingProvider` interface (Section 5) is designed so that a future `OrToo
 | ------- | ---------- | --------- | ----------------------------------- |
 | 1       | 2026-05-13 | Cem Bakir | Initial decision: HERE Tour Planning over OR-Tools for Phase 1-3. |
 | 1 (Addendum) | 2026-05-27 | Cem Bakir | §3.4 added — Constraint hierarchy (hard: capacity, shift hours, avoidance areas; soft: unassigned-job minimization, time windows, Vrachtwagenheffing cost, fuel/labor; human override per ADR-0005 Mode 1). Surfaces decisions implicit in §1 Context but not previously documented. Origin: FEAT-001 spec (docs/functions/FEAT-001-multi-vehicle-vrp.md) constraint priority hierarchy section. Minor clarification per ADR-0009 §4.5.1 pattern; no version bump. |
+| 1 (Addendum) | 2026-06-02 | Cem Bakir | §3.4.1 added + §3.4 avoidance bullet corrected — HERE ZE-Zone avoidance verified via Sıra 3 live sandbox. Preferred direction = Model 1 (HERE-native `avoid.zoneCategories` + `exceptZoneIds`); no polygon injection; no two-pass solve. Corrected the 2026-05-27 claim that ZE-Zone avoidance is a hard constraint — HERE `avoid` is *soft*, hard enforcement is the Compliance Layer's job (ADR-0012, ADR-0011 §8.6). §9 spike question added (HERE NL envzone catalog coverage). Minor clarification per ADR-0009 §4.5.1 pattern; no version bump. |

@@ -213,7 +213,7 @@ NotebookLM discovery sonucu, HERE'nin Phase 1 ve Phase 2 use case'lerini ne kada
 - Locker / PUDO management as fixed waypoints — Phase 2 derivative
 - Multi-day long-haul planning — FEAT-110
 - Autonomous vehicle integration (custom vehicle profiles) — out-of-scope Phase 3
-- ZE-Zone avoidance via environmental zones parameters — FEAT-002 (also ADR-0012)
+- ZE-Zone avoidance via environmental zones parameters — FEAT-002 (also ADR-0012). **Verified 2026-06-02 — see §8.6 Implementation Findings.**
 - Vrachtwagenheffing per-km cost weighting — FEAT-008 (also ADR-0012)
 
 ### 8.3 HERE Partial — HERE core sağlar, custom katman gerekir
@@ -235,6 +235,22 @@ Bu 8 use case HERE'nin scope'unda değildir. Her biri için Phase 1 / Phase 2 ya
 | 6 | Digital document management (CMR, invoice parsing) | OCR + NLP | **Phase 2:** AI agent feature (FEAT-105) ile birleşik |
 | 7 | Yard/Ramp asset tracking | RTLS/RFID indoor | **Out-of-scope OUT-006** |
 | 8 | Breadcrumb (GPS trace) analytics vs planned route | GPS log + analitik | **Phase 2:** Internal analytics module |
+
+### 8.6 Implementation Findings — HERE ZE-Zone avoidance (verified 2026-06-02)
+
+Sıra 3 sandbox testing (live `tourplanning.hereapi.com/v3` calls with the production HERE key) resolved the long-standing question of how HERE handles NL Zero-Emission zones. Findings:
+
+1. **HERE recognizes environmental zones natively.** The profile field `avoid.zoneCategories.categories: ["environmental"]` is a valid, accepted schema (no validation error). HERE maintains environmental zones in its own map catalog with identifiers in the form `here:cm:envzone:NN` (e.g. Berlin Umweltzone is `here:cm:envzone:2`). This confirms the §8.2 classification: ZE-Zone avoidance is **Configurable**, not custom-build.
+
+2. **`avoid` is a soft preference, not a hard constraint.** Per HERE's own documentation: the avoid option *prefers* routes outside avoided zones but does not absolutely prevent entry when no alternative exists. ZE-Zone non-compliance carries a CJIB fine (bestelauto €130, vrachtauto €320), so a soft preference alone cannot guarantee compliance.
+
+3. **Categorical avoid makes in-zone deliveries unreachable.** When `environmental` is avoided and a delivery sits *inside* a ZE-Zone (the normal case for city-centre logistics), HERE returns `REACHABLE_CONSTRAINT: location unreachable` for that job. Blanket avoidance is therefore unusable for real urban delivery; per-zone exemption is required.
+
+4. **Exemption mechanism is `exceptZoneIds`.** A ZE-compliant or ontheffing-holding vehicle is granted entry to specific zones by listing their `here:cm:envzone:NN` identifiers under `avoid.zoneCategories.exceptZoneIds`. This supersedes the earlier assumption (ADR-0002 §3.4, ADR-0012 §3.1 addendum) that TulipFleet would inject its own ZE-Zone polygons into HERE as `avoid.areas`.
+
+**Preferred direction — Model 1 (HERE-native zone avoidance).** Routing avoidance uses HERE's own `zoneCategories` + `exceptZoneIds`; TulipFleet does **not** push its `enterprise.nl_compliance_zones` polygons into the HERE payload. The reason is precision: HERE `avoid.areas` accepts only rectangular `boundingBox` regions, which would crudely approximate the irregular, river-split real ZE-Zone borders and cause false positives/negatives. TulipFleet's polygons remain the authority for **hard validation** (is this delivery inside a zone? is this vehicle compliant/exempt? → block or warn) and **CSRD / violation reporting** — work HERE does not perform. This is the two-layer architecture: HERE = routing efficiency (soft avoid); Compliance Layer = compliance correctness (hard validation + reporting).
+
+**Open question carried forward:** whether HERE's `here:cm:envzone` catalog covers all 20 of TulipFleet's seeded NL ZE-Zones with current 2025–2026 boundaries. A spike test (request a route through a known NL zone, inspect the `routingZone` block in the HERE Routing v8 response for a matching `envzone` id) is required before Model 1 is locked. Until verified, the Compliance Layer's own polygons are the fallback authority. See §12 Open Questions and ADR-0012 §9.
 
 ## 9. Schema and API Impact Summary
 
@@ -329,7 +345,8 @@ Bu insight ADR-0011'de sadece referans olarak yer alır; karar ADR-0012'de tam o
 ## 12. Open Questions
 
 - **`public.drivers.skills` kolonu mevcut mu, yapısı ne?** FEAT-007 için gerekli — schema audit ile doğrulanacak. Eğer yoksa Phase 1.1 additive migration.
-- **HERE Tour Planning environmental zones desteği Hollanda ZE-Zone'larını native olarak içeriyor mu?** ADR-0012 §2 araştırma maddesi.
+- **HERE Tour Planning environmental zones desteği Hollanda ZE-Zone'larını native olarak içeriyor mu?** ~~ADR-0012 §2 araştırma maddesi.~~ **RESOLVED 2026-06-02 (§8.6):** HERE recognizes `environmental` zone category natively (`avoid.zoneCategories` + `exceptZoneIds`, catalog ids `here:cm:envzone:NN`). Avoid is soft; in-zone deliveries go unreachable under blanket avoid; exemption via `exceptZoneIds`. Model 1 (HERE-native) is the preferred direction.
+- **HERE `here:cm:envzone` catalog NL'nin 20 seed'lenmiş ZE-Zone'unun tamamını güncel 2025–2026 sınırlarıyla kapsıyor mu?** (added 2026-06-02, §8.6) Spike: bilinen bir NL zone'undan geçen rota iste, HERE Routing v8 yanıtındaki `routingZone` bloğunda eşleşen `envzone` id'sini doğrula. Model 1 kilitlenmeden önce cevaplanmalı; doğrulanana dek Compliance Layer polygon'ları fallback otorite.
 - **Vrachtwagenheffing API sandbox erişimi ne zaman açılır?** Temmuz 2026 yürürlük öncesi test imkanı varsa FEAT-008 Phase 1'e çekilebilir.
 - **Müşteri görüşmeleri ne zaman başlar?** Dobbe Transport, TMA, De Dekker, Deudekom — bu firmalardan en az 2'siyle 2026 Haziran sonu öncesi pilot konuşması, ADR-0011 v2 için ham veri toplar.
 - **`enterprise.dispatch_tasks.source jsonb` schema tasarımı?** FEAT-105 (AI agent) için forward-compatible — manuel / api / ai_agent ayrımı nasıl encode edilecek?
@@ -358,3 +375,4 @@ Bu insight ADR-0011'de sadece referans olarak yer alır; karar ADR-0012'de tam o
 | Version | Date       | Author    | Change                                                    |
 | ------- | ---------- | --------- | --------------------------------------------------------- |
 | 1       | 2026-05-14 | Cem Bakir | Initial use case scope decision: 7 Phase 1 MVP, 10 Phase 2 trigger-based, 8 out-of-scope. HERE coverage matrix. Target segment K/M-50–300 vehicles. Strategic positioning insight (KOBİ digital readiness gap + ketenregie). |
+| 1 (Addendum) | 2026-06-02 | Cem Bakir | §8.6 added — HERE ZE-Zone avoidance Implementation Findings from Sıra 3 live sandbox testing. `avoid.zoneCategories.categories:["environmental"]` valid (Configurable confirmed); avoid is soft; in-zone deliveries unreachable under blanket avoid; exemption via `exceptZoneIds` (`here:cm:envzone:NN`). Preferred direction = Model 1 (HERE-native, no polygon injection) per bounding-box precision argument. §12 open question resolved + new spike question (HERE NL envzone catalog coverage). Minor implementation clarification per ADR-0009 §4.5.1 pattern; no version bump. |

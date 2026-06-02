@@ -64,6 +64,8 @@ Phase 1'de **mimari kısıt** şudur: Compliance Layer'ın kod ve veri yapısı,
 
 **Önemli belirsizlik:** HERE Tour Planning'in per-vehicle avoidance area kabul edip etmediği henüz **doğrulanmadı** (§9 Open Questions'a yeni soru olarak eklendi). Phase 1 implementation öncesi HERE docs araştırması yapılır; two-pass fallback'in test maliyeti küçük (1 ek HERE çağrısı per plan).
 
+**RESOLVED 2026-06-02 (Sıra 3 live sandbox).** HERE per-vehicle avoidance area belirsizliği canlı test ile çözüldü ve mekanizma **değişti** — detay §3.6. Özet: HERE environmental zone'ları **kendi kataloğunda** tutuyor (`avoid.zoneCategories.categories:["environmental"]`, id'ler `here:cm:envzone:NN`); muafiyet `exceptZoneIds` ile per-vehicle ifade ediliyor. Dolayısıyla (a) **polygon injection gerekmiyor** — bizim polygon'ları HERE'e göndermiyoruz; (b) **two-pass solve gerekmiyor** — muafiyet tek problem içinde `exceptZoneIds` ile ifade ediliyor; (c) HERE `avoid` **soft**, hard compliance enforcement Compliance Layer'da kalıyor. Bu addendum'un "polygon avoid listesine eklenir/eklenmez" mekanizması **Model 1 (HERE-native)** ile değiştirildi.
+
 **Pattern:** Bu addendum ADR-0009 §4.5.1 ile aynı pattern — minor implementation clarification, yeni ADR version'ı değil. Karar değişmedi, sadece §3.1'in "avoidance area" cümlesi **per-vehicle** olarak netleşti.
 
 **Yapılmayanlar (Phase 1'de bilinçli olarak dışarıda):**
@@ -155,6 +157,27 @@ Yani: Customer-funded trigger, ADR-0007 connector pattern (Geotab connector'la a
 | **Cat 2** | Doğrudan API tüketicileri | TMS/ERP geliştiricileri, sigorta şirketleri, in-house dev ekipleri, belediyeler/yasal kuruluşlar |
 
 **Effort tahmini:** 3-4 ay full-time (developer + part-time legal counsel). Tetikleyici şart şu an karşılanmıyor, plan yaklaşık.
+
+### 3.6 Implementation Findings — HERE-native ZE-Zone avoidance + ontheffing engine scope (2026-06-02)
+
+Sıra 3 HERE Tour Planning sandbox testing produced two architecturally significant findings.
+
+**Finding 1 — Routing avoidance is Model 1 (HERE-native), not polygon injection.**
+HERE recognizes environmental zones in its own catalog (`avoid.zoneCategories.categories:["environmental"]`, ids `here:cm:envzone:NN`). Exemption for a compliant/ontheffing vehicle is expressed per-vehicle via `exceptZoneIds`. TulipFleet does **not** push `enterprise.nl_compliance_zones` polygons into the HERE payload, because HERE's polygon alternative (`avoid.areas`) accepts only rectangular `boundingBox` regions — too coarse for NL's irregular, river-split zone borders. HERE `avoid` is a *soft* preference (does not guarantee non-entry) and blanket avoid makes in-zone deliveries `unreachable`. Full detail in ADR-0002 §3.4.1 and ADR-0011 §8.6.
+
+**Two-layer architecture (now explicit):**
+- **HERE = routing efficiency.** Soft-avoids environmental zones; `exceptZoneIds` lets exempt vehicles enter. Produces an efficient plan.
+- **Compliance Layer = compliance correctness.** `enterprise.nl_compliance_zones` polygons are the authority for *hard* validation (is this delivery inside a zone? is this vehicle compliant or exempt? → block / warn / record violation) and CSRD + fine-risk reporting. HERE does not do this. The seeded polygons are therefore **not** redundant with HERE — they serve a different function (hard validation + reporting), only the routing-avoidance delivery mechanism changed.
+
+**Finding 2 — Ontheffing engine needs new transactional tables (current schema is static-only).**
+The existing `enterprise.nl_compliance_zones` table holds only geographic polygons, static rules, and source URLs — a **static reference table**. It cannot track dynamic exemption state: per-vehicle ontheffing grants, per-company per-zone dagontheffing allowance consumption, or application status. Verified NL legal facts (from CVDR752146/1, Amsterdam 2026 decree, nationally harmonized across the 20 zones):
+- **Dagontheffing limit: 12 per zone per year** for both bedrijfsauto (Art 11) and vrachtauto (Art 12).
+- **Netcongestie ontheffing (Art 9, new in 2026): 2 years, extendable** — long-term exemption for vehicles unable to charge due to grid congestion.
+- **Dierenambulance ontheffing (Art 10, new in 2026).**
+- **RDW:** open data (DET registration date + emission class) is available as an API; a real-time third-party query of a vehicle's *ontheffing registration* status is **not confirmed available** and remains an open question. The safe positioning is "we blend RDW registration data (DET + emission class) with our local legal schema," not "we query RDW ontheffing live."
+
+This finding scopes the **Ontheffing Engine** (next work item, "B"): new tables `enterprise.nl_compliance_vehicle_ontheffings` (vehicle↔exemption grants) and `enterprise.nl_dagontheffing_counters` (company × zone × year → remaining of 12), designed in a forthcoming addendum and migrated under `tulipfleet-backend/migrations/` per ADR-0009 §4.5.1 schema authority. These power the "Dynamic Ontheffing Management" differentiator: hardware/telematics + local legal schema combined — something API-only dispatcher competitors (Routific, OptimoRoute) cannot replicate without their own hardware.
+
 
 ## 4. Architectural Constraints (Phase 1'de uyulması zorunlu)
 
@@ -378,14 +401,15 @@ Eğer 3 şartın 2'si sağlanırsa, kalan 1 şart için **bekle**. Erken launch 
 
 ## 9. Open Questions
 
-- **HERE Tour Planning'in environmental zones desteği Hollanda ZE-Zone'larını ne kadar kapsıyor?** Eğer HERE bizim seed verimizden daha güncel ZE-Zone polygon'ları sağlıyorsa, Phase 1 effort daha da düşer. HERE dokümantasyonu incelemesi sonraki seansta.
+- **HERE Tour Planning'in environmental zones desteği Hollanda ZE-Zone'larını ne kadar kapsıyor?** **PARTIALLY RESOLVED 2026-06-02 (§3.6):** HERE environmental zone kategorisini native tanıyor (`avoid.zoneCategories` + `exceptZoneIds`, id'ler `here:cm:envzone:NN`). **Hâlâ açık:** HERE'in `envzone` kataloğu bizim 20 seed'lenmiş zone'un tamamını güncel 2025–2026 sınırlarıyla kapsıyor mu — spike testi gerekli (aşağıda). Doğrulanana dek bizim polygon'lar hard-validation otoritesi; bu zaten Model 1'in iki-katman tasarımıyla uyumlu (HERE kapsasa da kapsamasa da bizim polygon'lar compliance/reporting için kalır).
+- **HERE `here:cm:envzone` kataloğu 20 NL ZE-Zone'unu güncel sınırlarıyla kapsıyor mu? (spike, added 2026-06-02)** Test: bilinen bir NL zone'undan (ör. Amsterdam) geçen bir Routing v8 rotası iste, yanıttaki `routingZone` bloğunda eşleşen `here:cm:envzone:NN` id'sini doğrula. Bu id'ler `exceptZoneIds` için de gerekli. Model 1 kilitlenmeden önce cevaplanmalı.
 - **Vrachtwagenheffing sandbox / test API var mı?** Temmuz 2026 öncesi geliştirme için. `vrachtwagenheffing.nl` dokümantasyon kontrol edilecek.
 - **PostGIS aktivasyonu staging'de test gerekli — TimescaleDB ile uyumluluk doğrulanmalı.** İkisi birlikte production kullanımları yaygın ama edge case'ler var; staging migration sırasında izlenecek.
 - **Vrachtwagenheffing tarife tablosu format ne?** PDF, JSON API, CSV download — kaynak format Phase 1 manuel seed sürecini etkiler.
 - **Belçika ve Almanya LEZ Phase 3 kapsamı düşünülmeli mi?** Cross-border NL→DE/BE rotalar yaygın. ADR-0012 Phase 3 launch ADR'ında değerlendirilir.
 - **Compliance Pro tier 200–500 €/ay pricing range nasıl validate edilir?** Phase 2 ilk müşteri görüşmesinde competitive intelligence ile.
 - **Dutch hukuk firması seçimi — kim?** Phase 2 öncesi araştırılacak; logistics/tech specialty olan firmalar tercih.
-- **HERE Tour Planning per-vehicle avoidance area kabul ediyor mu?** (added 2026-05-27, §3.1 addendum kapsamında) Vehicle-specific avoidance pattern, HERE'nin `tour.constraints.avoidAreas` parametresinin per-vehicle scope kabul etmesine bağlı. Eğer sadece global avoidance varsa, `buildHereProblem` two-pass solve pattern'ine düşer (muafiyet'siz vs muafiyet'li araçlar ayrı çağrılar). HERE Tour Planning Developer Guide §5 (avoidance constraints) incelenecek. M1-M3 migration sprint öncesi cevaplanmalı.
+- **HERE Tour Planning per-vehicle avoidance area kabul ediyor mu?** (added 2026-05-27) **RESOLVED 2026-06-02 (§3.6, ADR-0002 §3.4.1):** Soru artık geçersiz çünkü mekanizma değişti — polygon avoidance yerine HERE-native `avoid.zoneCategories` + per-vehicle `exceptZoneIds` kullanılıyor (Model 1). Two-pass solve fallback'ine gerek yok; muafiyet tek problem içinde per-vehicle ifade ediliyor.
 
 ## 10. References
 
@@ -410,3 +434,4 @@ Eğer 3 şartın 2'si sağlanırsa, kalan 1 şart için **bekle**. Erken launch 
 | 1       | 2026-05-14 | Cem Bakir | Initial decision: 3-phase strategy (Internal → Premium → Standalone). Architectural microservice-ready constraints. PostGIS adoption. Phase 3 trigger conjunction (Vrachtwagenheffing 12-month data + ZE-Zone exemption verification + 10 paying customers). |
 | 1 (Addendum) | 2026-05-25 | Cem Bakir | §3.1 Addendum: Vrachtwagenheffing statik tarife tablosu Phase 1'den Phase 1.1'e (FEAT-008) taşındı — tüketici fazına hizalama. Schema migration `1779200000001_create-enterprise-nl-vrachtwagenheffing-tariffs` yine Sıra 2.9.2'de uygulanır; seed verisi ve consuming logic Phase 1.1'e ertelendi. Minor consistency clarification per ADR-0009 §4.5.1 pattern; yeni ADR version'ı değil, stratejik karar değişmedi. |
 | 1 (Addendum) | 2026-05-27 | Cem Bakir | §3.1 Addendum: Vehicle-specific avoidance pattern — `checkCompliance` per-vehicle çalışır, avoid listesi per-vehicle dinamik kurulur. HERE per-vehicle avoidance area kabul ediyor mu §9'a yeni Open Question olarak eklendi. §5 Addendum: `shared_rules` / `city_overlay` precedence kuralı — `city_overlay` per-key override eder (application-layer deep-merge). Pilot Amsterdam research (RESEARCH §F.4) çıktısı. FEAT-001 spec'i (docs/functions/FEAT-001-multi-vehicle-vrp.md) ile uyumlu. Minor consistency clarifications per ADR-0009 §4.5.1 pattern; yeni ADR version'ı değil. |
+| 1 (Addendum) | 2026-06-02 | Cem Bakir | §3.6 added + §3.1/§9 updated — Sıra 3 HERE sandbox findings. **Finding 1:** routing avoidance mechanism changed to **Model 1 (HERE-native)** — HERE recognizes environmental zones (`avoid.zoneCategories` + `exceptZoneIds`, `here:cm:envzone:NN`); no polygon injection, no two-pass solve; HERE `avoid` is soft, hard enforcement stays in Compliance Layer. Two §9 open questions resolved (HERE per-vehicle avoidance, environmental coverage), one spike added (HERE NL envzone catalog coverage). **Finding 2:** current `nl_compliance_zones` is static-only; Ontheffing Engine (work item B) needs new transactional tables `nl_compliance_vehicle_ontheffings` + `nl_dagontheffing_counters`. Verified NL legal facts recorded (dagontheffing 12/zone/yr CVDR752146/1 Art 11+12; Netcongestie 2yr Art 9; RDW live ontheffing query = open question). Minor implementation clarification per ADR-0009 §4.5.1 pattern; no version bump. |

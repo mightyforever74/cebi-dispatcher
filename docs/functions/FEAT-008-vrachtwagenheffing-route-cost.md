@@ -7,8 +7,42 @@
 | **Trigger** | **Temmuz 2026** — vrachtwagenheffing.nl resmi API live |
 | **Tulipfleet Phase** | Phase 1.1 (MVP launch sonrası 1-4 hafta marginal effort ~3-5 gün, schema in place) |
 | **Schema status** | ✅ Production'da (Sıra 2.9.3, 2026-05-26) — `enterprise.nl_vrachtwagenheffing_tariffs` |
-| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-29) |
+| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-29). **Period-1 baseline IMPLEMENTED 2026-06-03** (tariff seed prod+staging + `calculateHeffing` engine) — see §0 Reality Update. |
 | **Pilot note** | Sekizinci pilot. Tek iterasyonda **9.5/10** skor. **§number fabrikasyon = 0** ✅ (F7'deki uyarı sonrası kalite zirvesi). Schema-ready disiplini ROADMAP üzerinden doğru kavrandı. |
+
+---
+
+## 0. Reality Update — Period 1 implementation (2026-06-03)
+
+> **Bu blok, resmi tarife tablosu vrachtwagenheffing.nl uzerinden browser ile dogrulandiktan SONRA eklendi. Asagidaki gercekler spec'in bazi varsayimlarini gecersiz kiliyor. Temmuz 2026 consuming-logic'i yazilirken ONCE bu blok okunmalidir.**
+
+**Yapilan (API-bagimsiz yari — COMPLETE):**
+- Resmi Period-1 tarifeleri seed edildi: `enterprise.nl_vrachtwagenheffing_tariffs`, prod + staging, 9 satir, migration `1782100000000`. Window `2026-07-01 -> 2026-08-31`. Kaynak: vrachtwagenheffing.nl "Dit gaat u betalen" tablosu "tot 1 september 2026" (browser-verified). Weight `12_18t`/`18_32t`/`32_plus_t` x emission `euro_5`/`euro_6`/`zero_emission`.
+- `lib/calculateHeffing.js` (tulipfleet-enterprise-backend, commit `cabc90e`, 5/5 Jest) — pure fn, date-versioned lookup.
+
+**GERCEK 1 — `road_type` 2026 tarifesinde YOK (spec §1.1 3. eksen gecersiz):**
+Resmi tarife tablosu IKI eksenli: `vehicle_weight_class` x `CO2-emissieklasse`. Yol tipi (motorway/n_road/all_other) tarifeyi ETKILEMIYOR — heffing distance-based, km basina sabit. Etkilenen fonksiyonlar:
+
+| Spec ogesi | Period-1 gercegine gore |
+|---|---|
+| **FN-04 `fetchRoadSegmentType`** (HERE polyline -> RoadType[]) | **GEREKSIZ olabilir** — yol tipi tarifeye girmiyor. FN-04 + UNCERTAINTIES #1 (HERE road granularity) dusurelebilir. Ciddi is tasarrufu. |
+| **FN-03 `calculateSegmentTollCost(distance_km, roadType, hgvProfile)`** | `roadType` parametresi anlamsiz. `total = sum(km) x rate` yeter. `calculateHeffing.js` bunu `road_type='all_other'` sabitiyle zaten yapiyor. |
+| **FN-09 rapor `road_type_breakdown` / `groupBy=road_type`** | Anlamsiz (hepsi `all_other`). Rapor `weight_class`/`emission_class`/`vehicle` bazli olmali. |
+| **§5.1 sema `road_type` kolonu** | KALIR (forward-compat). Period-1 verisi hep `'all_other'`. |
+
+**GERCEK 2 — emission_class enum spec'teki §EV-exemption ALTER ile CELISIYOR:**
+Spec'in "EV exemption integration (FEAT-103, 2026-05-30)" bolumu su ALTER'i onermisti:
+`CHECK (emission_class IN ('euro4','euro5','euro6','zero_emission'))` — 4 deger, alt-cizgisiz.
+**Gercek prod semasi (bu oturumda `\d` ile dogrulandi) FARKLI:** `euro_0`..`euro_6` + `zero_emission` (8 deger, alt-CIZGILI `euro_6`). Spec'teki o ALTER ya hic uygulanmadi ya farkli uygulandi. Seed `euro_6` (cizgili) kullandi — prod CHECK boyle. Spec'in §EV bolumu eski/yanlis formatta; consuming-logic gercek enumu (`euro_N`, 8 deger) kullanmali.
+
+**GERCEK 3 — zero_emission "placeholder 0 EUR/km" varsayimi gecersiz:**
+Spec §EV-exemption "NL government zero-emission HGV tariff henuz aciklanmadi -> placeholder 0 EUR/km" diyordu. **Resmi tarifeler ACIKLANDI ve seed edildi:** zero_emission 12_18t=0.035, 18_32t=0.037, 32_plus_t=0.038 EUR/km (CO2-klasse 5). Sifir degil. FEAT-103 EV exemption logic'i bu gercek rakamlari kullanmali, 0 placeholder degil.
+
+**OPEN WORK:**
+- **Period 2** (`2026-09-01 -> 2026-12-31`, -%22,3 gecici indirim, Minister Karremans 22 May 2026). Resmi "van 1 september 2026 tot 1 januari 2027" tablosundan yuvarlanmis degerler okunup insert edilecek. `onDate` version handling hazir.
+- 2027 enflasyon tarifeleri Ekim 2026'da yayimlanir.
+- `euro_0..euro_4` + CO2-klasse 2-4 sub-tier'lar deferred (o araclar icin `matched:false`).
+- Consuming-logic (FN-05/06 HERE toll injection, FN-08 widget, FN-09 rapor, `routing_jobs.cost_breakdown`) Temmuz 2026 API live olunca — yukaridaki road_type sadelesmesiyle.
 
 ---
 

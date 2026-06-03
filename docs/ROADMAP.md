@@ -6,7 +6,8 @@ A high-level summary of the architectural and product decisions that govern the 
 > Phase 1 (Architecture + Bootstrap) —
 > **Sıra 2 + Sıra 2.9 complete**. `fleet-enterprise-01` (CPX 32, Falkenstein) is provisioned and serving `https://enterprise-api.tulipfleet.com` with a valid Let's Encrypt certificate via Caddy. Hetzner private network `tulipfleet-internal` (10.0.0.0/16) joins both servers (`fleet-prod-01` at `10.0.0.2`, `fleet-enterprise-01` at `10.0.0.3`); enterprise backend reaches PostgreSQL over the private network with the `enterprise_backend` role. End-to-end smoke verified (commit `c125f4c`).
 > **Sıra 2.9 — NL Compliance Layer ZE-Zone seed complete.** 20 active Zero-Emission zones are live in production (`enterprise.nl_compliance_zones`, 21 rows — Den Haag is split into Centrum + Kust; 148.8 km² total). Geometry is sourced from the **harmonized NDW DATEX II national open dataset** (`opendata.ndw.nu/emissiezones.xml.gz`), a single authoritative source replacing per-city municipal scraping. Reconciliation B aligned the 6 originally municipal-sourced cities to NDW (Den Haag re-modelled, Utrecht + Eindhoven geometry refreshed; Rotterdam/Amsterdam/Maastricht left as-is after diff showed sub-2% divergence). Each city was verified staging → production with embedded point-in-polygon sanity tests. Next:
-> **Sıra 3 complete (2026-06-02)** — HERE Tour Planning verified, ZE-Zone routing Model 1 (HERE-native `exceptZoneIds`) locked, Ontheffing Engine schema + `enterprise_backend` prod grants live. Next: Sıra 3.5 application layer (blueprint ready).
+> **Sıra 3 complete (2026-06-02)** — HERE Tour Planning verified, ZE-Zone routing Model 1 (HERE-native `exceptZoneIds`) locked, Ontheffing Engine schema + `enterprise_backend` prod grants live.
+> **Sıra 3.5 complete (2026-06-03)** — Ontheffing Engine application layer live on `fleet-enterprise-01` (`/api/compliance/*`, 5 endpoints, 38 tests, end-to-end smoke against staging DB returning `compliant` / `needs_exemption` / `exempt_granted`). **FEAT-008 Vrachtwagenheffing Period 1 baseline complete** — official 2026-07-01→08-31 tariffs seeded (prod + staging, 9 rows) + pure `calculateHeffing` engine (date-versioned). Next: Sıra 4 (Dispatcher UI Live Fleet Map).
 
 ---
 
@@ -100,7 +101,7 @@ The dispatcher wishlist (`Ben_bir_advisor_um-1.docx`) catalogs **31 industry use
 
 | W# | Feature | Source | FEAT ID | Phase | Status |
 |----|---|---|---|---|---|
-| W-A1 | Vrachtwagenheffing Route Cost Optimization | NL regulatory trigger (Temmuz 2026), ADR-0012 | FEAT-008 | 1.1 | ✅ Spec v1 (9.5/10 pilot zirvesi) |
+| W-A1 | Vrachtwagenheffing Route Cost Optimization | NL regulatory trigger (Temmuz 2026), ADR-0012 | FEAT-008 | 1.1 | ✅ Spec v1 (9.5/10 pilot zirvesi); Period-1 tariff seed + engine done (Sıra 3.5) |
 | W-A2 | CSRD-Compliant Carbon Report Export | EU regulatory layer, Large 3PL trigger | FEAT-106 | 2 | 🔵 Customer-funded (Heineken/Picnic level trigger) |
 
 ### Coverage summary
@@ -282,13 +283,26 @@ Started as a HERE sandbox spike; expanded into locking the ZE-Zone routing model
 - ✅ **`enterprise_backend` prod grants corrected** (migration `1782000000000`, schema authority `tulipfleet-backend` per INTEGRATION_BOUNDARIES §5.2): prod was missing schema USAGE on `enterprise`, grants on the new ontheffing tables, and SELECT on `public.{vehicles,companies,users,drivers,tasks}` — staging had them, prod never did. Migration grants USAGE + ALL on enterprise.* + SELECT on the 5 public tables + `ALTER DEFAULT PRIVILEGES` so future enterprise.* tables auto-grant. Verified via `enterprise_backend` role over the private network (SELECT on public.vehicles now returns data; `vehicle_category` ∈ {truck_heavy, van}).
 - ⚠️ **Process lesson — "COMMITTED" ≠ applied-to-prod.** During this work we found `1781600000000` had been recorded as committed but was only ever applied to `fleet_tracking_staging`, never to prod — caught when the grant migration's AFTER block failed on a missing table. **New discipline:** after every prod migration, verify with a `pgmigrations` row + object-existence query, not just the psql `COMMITTED` echo. All 5 Sıra-3 migrations (`1781600`–`1782000`) are now confirmed present in prod `pgmigrations`.
 
-**Sıra 3.5 — Ontheffing Engine application layer (next; blueprint ready)**
+**Sıra 3.5 — Ontheffing Engine application layer (complete 2026-06-03)**
 
-- Blueprint: `docs/blueprints/ADIM3_ontheffing_application_layer.md`. Fastify endpoints on `fleet-enterprise-01`.
-- `lib/checkCompliance.js` (pure fn, CVDR matrix, category-based exempt Sets: `van`→bestelauto `{SH}`, `truck_heavy`→vrachtauto `{15,16,19,23,26,27,31,SB,SF}`).
-- Endpoints: check (batch `{assignments:[...]}`), ontheffing counters, consume (advisory confirm → counter++), vehicle exemptions, except-zone-ids (HERE Model 1 bridge, skips `here_envzone_id=null` zones).
-- **Path naming:** `/api/compliance/*` per ADR-0012 §4.1 (NOT `/api/dispatcher/compliance/*` — blueprint draft used the wrong prefix; correct on implementation).
-- DB write path proven: `enterprise_backend` can INSERT into `enterprise.*` (smoke-write confirmed). Transition cutoffs read from `rules` JSONB (zone-parametric, not hardcoded).
+- Blueprint: `docs/blueprints/ADIM3_ontheffing_application_layer.md`. Fastify endpoints live on `fleet-enterprise-01`.
+- `lib/checkCompliance.js` (pure fn, CVDR matrix, category-based exempt Sets: `van`→bestelauto `{SH}`, `truck_heavy`→vrachtauto `{15,16,19,23,26,27,31,SB,SF}`) — 15/15 Jest. `lib/exceptZoneIds.js` (HERE Model 1 bridge, skips `here_envzone_id=null` zones) — 9/9 Jest.
+- `routes/compliance.js` — 5 endpoints under `/api/compliance/*` (per ADR-0012 §4.1): check (batch `{assignments:[...]}`), ontheffing counters, consume (advisory confirm → counter++, 23505→409), vehicle exemptions, routing/except-zone-ids. Decision order: DB grant lookup → `exempt_granted` short-circuit, else `checkCompliance`. 14/14 pg-mem integration tests.
+- **Deployed live** (commits `8a3a769`, `1f48d7c`; Dockerfile `COPY lib/` added, server.js registers route). End-to-end smoke with a real JWT against the staging DB confirmed all branches: `unknown` (null emission), `needs_exemption` (euro_6 truck_heavy → dagontheffing 0/12), `exempt_granted` (active grant short-circuit).
+- **Engine bug caught + fixed:** `CURRENT_DATE` in grant/exemption lookups replaced with `now()::date` (identical in real PG; `CURRENT_DATE` carried a time component under pg-mem, breaking same-day grant matches).
+- Transition cutoffs read from `rules` JSONB (zone-parametric, not hardcoded). Test accounts via prod login (`admin@fleet.com`), company `00000000-0000-0000-0000-000000000001` (Demo Fleet).
+
+**FEAT-008 — Vrachtwagenheffing tariff seed + engine, Period 1 (complete 2026-06-03)**
+
+The API-independent half of FEAT-008: the static tariff table is now populated and a pure cost engine exists. The API/HERE-dependent consuming half stays deferred (see Phase 1.1 below).
+
+- ✅ **Official Period-1 tariffs seeded** (migration `1782100000000`, prod + staging, 9 rows). Window `2026-07-01 → 2026-08-31` (before the temporary 22.3% discount). Source: vrachtwagenheffing.nl "Dit gaat u betalen" table "tot 1 september 2026", browser-verified 2026-06-03. Covers `12_18t`/`18_32t`/`32_plus_t` × `euro_5`/`euro_6`/`zero_emission`.
+- ✅ **Schema-preserving mapping (no ALTER):** `road_type` fixed to `all_other` (NL heffing is distance-based, road-type independent); `emission_class` reuses the existing CHECK enum (CO2-klasse 5 == `zero_emission`, CO2-klasse 1 == `euro_*`); composite CO2-strings rejected by the prod CHECK constraint — caught before insert. Prod schema (sealed since Sıra 2.9.3) stays untouched so HERE orchestration is not disturbed.
+- ✅ **Data correctness:** `18_32t zero_emission = 0.0370` (a 0.038 draft was corrected against the official table). Verified in both DBs.
+- ✅ **`lib/calculateHeffing.js`** (commit `cabc90e`, enterprise repo) — pure fn `calculateHeffing(vehicle, tariffs, distanceInKm, onDate)`, filters `road_type='all_other'` + effective-date window (version handling), returns `{rate_per_km, total_charge, matched}`. 5/5 Jest.
+- ✅ **Deploy method noted:** this project applies migrations by direct `docker exec ... psql < file.sql` against `fleet_tracking` + `fleet_tracking_staging`, with the `pgmigrations` row inserted explicitly — `/opt/fleet/backend` git checkout is stale (`05aad6d`) and `npm run migrate` is not the live runner. Period-1 migration confirmed in both DBs' `pgmigrations`.
+- ⚠️ **OPEN WORK — Period 2 (2026-09-01 → 2026-12-31), −22.3% temporary discount** (Minister Karremans, 22 May 2026). Read the official rounded values from the vrachtwagenheffing.nl table "van 1 september 2026 tot 1 januari 2027" (or the RDW PDF) and insert rows with `effective_from='2026-09-01'`, `effective_to='2026-12-31'`. `onDate` version handling already supports it. 2027 inflation-adjusted rates publish Oct 2026. Also deferred: `euro_0..euro_4` + CO2-klasse 2-4 sub-tiers (currently `matched:false` for those).
+- ⚠️ **Repo placement to reconcile:** the Period-1 migration was committed to `tulipfleet-dispatcher` (`d6d6eb0`), but INTEGRATION_BOUNDARIES §3/§4.2 assigns `enterprise.*` migrations to `tulipfleet-enterprise-backend`. In practice all this session's `enterprise.*` migrations were authored elsewhere and applied by direct psql; the authoritative repo for `enterprise.*` migration files needs a one-time decision.
 
 **Sıra 4 — Dispatcher UI: Live Fleet Map (first real screen, FEAT-005)**
 
@@ -326,7 +340,7 @@ These items ship shortly after the Phase 1 MVP launch, not in the MVP itself. De
 
 **Implementation-ready (spec hazır):**
 
-- **FEAT-008 — Vrachtwagenheffing route cost optimization (W-A1).** Activated when Temmuz 2026 API goes live; ~3–5 days marginal effort. Per ADR-0011 and ADR-0012.
+- **FEAT-008 — Vrachtwagenheffing route cost optimization (W-A1).** **Period-1 baseline done in Sıra 3.5** (official tariff seed prod+staging + pure `calculateHeffing` engine). Remaining (API/HERE-dependent, ~3–5 days, activate when Temmuz 2026 API goes live): `syncVrachtwagenheffingTariffs` worker, `fetchRoadSegmentType` (HERE), `buildHereProblem` toll-matrix injection, `GET /api/dispatcher/reports/hgv-toll`, `<CostBreakdownWidget />`, and the `enterprise.routing_jobs.cost_breakdown` JSONB column. Plus Period-2 discount seed (see Sıra 3.5 OPEN WORK). Per ADR-0011 and ADR-0012.
 - **FEAT-009 — Basic carbon footprint per route (W21).** HERE Eco Routing already returns CO2/fuel data; UI display added. **CSRD-aware** (FEAT-009) vs **CSRD-compliant** (FEAT-106 Phase 2) ayrımı per FEAT-009 §1.2.
 
 **Spec pending — sıraya alındı (Phase 1.1 hedefi):**

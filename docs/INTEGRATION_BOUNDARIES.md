@@ -2,7 +2,7 @@
 
 The contract between TulipFleet's two production servers: what is shared, what is owned by which side, and how to coordinate change across the boundary.
 
-Last updated: 2026-05-25
+Last updated: 2026-06-04
 
 ---
 
@@ -82,12 +82,20 @@ The enterprise backend connects via the private network: `10.0.0.2:5433`. Public
 
 | Aspect | Detail |
 |--------|--------|
-| Host | `fleet-prod-01`, Docker container `66e3aa849d79_fleet-emqx` |
-| Public endpoint | `mqtt.tulipfleet.com:8883` (Cloudflare DNS only, no proxy) |
-| TLS | Certificate at `/opt/fleet-certs` on the host |
+| Host | `fleet-prod-01`, Docker container `66e3aa849d79_fleet-emqx` (EMQX 5.4.0) |
+| Device endpoint | `mqtt.tulipfleet.com:8883` (TLS-MQTT, Cloudflare DNS only, no proxy) — ESP32 devices, `setInsecure()` |
+| Dispatcher endpoint | `wss://mqtt.tulipfleet.com/mqtt` (port 443) — browser WSS, terminated by nginx, reverse-proxied to EMQX plain-WS `127.0.0.1:8083` |
+| TLS | Device path: self-signed cert at `/opt/fleet-certs` (broker-internal, not browser-valid). Dispatcher path: Let's Encrypt cert for `mqtt.tulipfleet.com`, managed by certbot on the host, terminated at nginx — EMQX never sees it. |
 | Operational owner | `tulipfleet-backend` team |
 
-Phase 1 of the dispatcher does not consume MQTT. The enterprise backend has placeholder `MQTT_*` environment variables in its `.env` but does not connect. Phase 2 plans a read-only `enterprise_subscriber` role for real-time telemetry (per ADR-0009 §4.5.1 addendum). When that work begins, this section will be updated with the role name, ACL, and topic filter.
+As of Sıra 4.2 (2026-06-04), the dispatcher **does** consume MQTT for the Live Fleet Map (live telemetry), superseding the earlier "Phase 1 does not consume MQTT" position. The architecture, proven and in production:
+
+- **`dispatcher-readonly`** — EMQX built-in-database user, **subscribe-only** ACL (`acl.conf`) on `fleet/device/+/location`, `fleet/device/+/behavior`, `fleet/device/+/alert` (per ADR-0009 §4.2). The dispatcher frontend connects with these credentials and never publishes.
+- **`sim-publisher`** — EMQX user, **publish-only** ACL on `fleet/device/+/location`, used by the dev synthetic telemetry publisher while the ESP32 fleet is offline. Not a production identity; can be disabled once real devices stream.
+- **Transport:** the dispatcher is the first *browser* consumer of the broker. Browsers cannot skip TLS validation (unlike the ESP32's `setInsecure()`), so the browser-valid WSS path runs through nginx (TLS termination + WebSocket upgrade proxy) rather than exposing an EMQX TLS listener directly. EMQX ports `8083`/`8084` are bound to the host and closed at UFW to the public internet; only nginx `:443` is exposed.
+- **Cert lifecycle:** certbot auto-renews the `mqtt.tulipfleet.com` cert alongside the other production certs; nginx picks up renewals. EMQX requires no cert maintenance for the dispatcher path.
+
+The enterprise *backend* still does not connect to MQTT — it holds placeholder `MQTT_*` env vars but opens no connection. The MQTT consumer added in Sıra 4.2 is the dispatcher **frontend** (browser), not the enterprise backend. A backend-side `enterprise_subscriber` role (ADR-0009 §4.5.1 addendum) remains a separate, future item if server-side telemetry consumption is ever needed.
 
 ### 3.3 Redis
 
@@ -130,7 +138,8 @@ These are the places where the two backends do not overlap. If a change is here,
 
 - All migrations against `public.*` and against Timescale hypertables in `fleet_tracking`.
 - Operational responsibility for the PostgreSQL container (backup, restore, restart, upgrades).
-- EMQX server configuration, ESP32 device credentials, MQTT ACLs.
+- EMQX server configuration, ESP32 device credentials, and all MQTT users/ACLs — including the dispatcher-facing `dispatcher-readonly` (subscribe-only) and dev `sim-publisher` (publish-only) users added in Sıra 4.2.
+- The nginx reverse-proxy on fleet-prod-01, including the `mqtt.tulipfleet.com` WSS → EMQX `127.0.0.1:8083` proxy and its Let's Encrypt cert (certbot).
 - The `/api/auth/login` endpoint and all session lifecycle.
 - Mobile app APIs (driver, admin, super-admin).
 - The nightly backup script (`/opt/fleet/backup.sh`).
@@ -252,7 +261,8 @@ A bug on either side that fails to enforce `company_id` scoping is a tenant-isol
 | `fleetadmin` password | fleet-prod-01:/opt/fleet/backend/.env | No |
 | `enterprise_backend` password | fleet-enterprise-01:/opt/enterprise/.env | No |
 | `JWT_SECRET` | Both `.env` files (synchronized) | Yes, intentionally |
-| MQTT credentials | fleet-prod-01:/opt/fleet/backend/.env | Not yet on enterprise side |
+| MQTT device credentials (`fleet_esp32`) | fleet-prod-01:/opt/fleet/backend/.env | Not on enterprise side |
+| MQTT `dispatcher-readonly` (subscribe-only) | dispatcher frontend `.env` (`REACT_APP_MQTT_*`), git-ignored | Browser-delivered at runtime; subscribe-only ACL limits blast radius |
 | GitHub PAT (deploy) | fleet-enterprise-01:/root/.git-credentials | No |
 
 If a leak is suspected on either side, the rotation procedure for that credential is owned by the side that holds it, with the exception of `JWT_SECRET` (always coordinated).
@@ -277,3 +287,4 @@ If a leak is suspected on either side, the rotation procedure for that credentia
 | Date | Change |
 |------|--------|
 | 2026-05-25 | Document created at the close of Sıra 2. Captures the boundary contract as realized in practice — private network, role split, schema split, JWT_SECRET sharing, change protocols. |
+| 2026-06-04 | Sıra 4.2: dispatcher now consumes MQTT (Live Fleet Map). Updated §3.2 (dispatcher WSS endpoint via nginx → EMQX 8083, `dispatcher-readonly` subscribe-only + `sim-publisher` dev users, Let's Encrypt cert path, superseding "Phase 1 does not consume MQTT"), §4.1 (nginx WSS reverse-proxy + dispatcher MQTT users under prod-backend ownership), §7.3 (dispatcher-readonly credential isolation). |

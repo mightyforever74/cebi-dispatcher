@@ -36,34 +36,35 @@ Coded by www.creative-tim.com
 */
 
 // Material Dashboard 2 PRO React layouts
-import Analytics from "layouts/dashboards/analytics";
-import Sales from "layouts/dashboards/sales";
-import ProfileOverview from "layouts/pages/profile/profile-overview";
-import AllProjects from "layouts/pages/profile/all-projects";
-import NewUser from "layouts/pages/users/new-user";
-import Settings from "layouts/pages/account/settings";
-import Billing from "layouts/pages/account/billing";
-import Invoice from "layouts/pages/account/invoice";
-import Timeline from "layouts/pages/projects/timeline";
-import PricingPage from "layouts/pages/pricing-page";
-import Widgets from "layouts/pages/widgets";
-import RTL from "layouts/pages/rtl";
-import Charts from "layouts/pages/charts";
-import Notifications from "layouts/pages/notifications";
+import Calendar from "layouts/applications/calendar";
+import DataTables from "layouts/applications/data-tables";
 import Kanban from "layouts/applications/kanban";
 import Wizard from "layouts/applications/wizard";
-import DataTables from "layouts/applications/data-tables";
-import Calendar from "layouts/applications/calendar";
-import NewProduct from "layouts/ecommerce/products/new-product";
-import EditProduct from "layouts/ecommerce/products/edit-product";
-import ProductPage from "layouts/ecommerce/products/product-page";
-import OrderList from "layouts/ecommerce/orders/order-list";
-import OrderDetails from "layouts/ecommerce/orders/order-details";
+import ResetCover from "layouts/authentication/reset-password/cover";
 import SignInBasic from "layouts/authentication/sign-in/basic";
 import SignInCover from "layouts/authentication/sign-in/cover";
 import SignInIllustration from "layouts/authentication/sign-in/illustration";
 import SignUpCover from "layouts/authentication/sign-up/cover";
-import ResetCover from "layouts/authentication/reset-password/cover";
+import Analytics from "layouts/dashboards/analytics";
+import Sales from "layouts/dashboards/sales";
+import OrderDetails from "layouts/ecommerce/orders/order-details";
+import OrderList from "layouts/ecommerce/orders/order-list";
+import EditProduct from "layouts/ecommerce/products/edit-product";
+import NewProduct from "layouts/ecommerce/products/new-product";
+import ProductPage from "layouts/ecommerce/products/product-page";
+import LiveFleetMap from "layouts/live-fleet-map";
+import Billing from "layouts/pages/account/billing";
+import Invoice from "layouts/pages/account/invoice";
+import Settings from "layouts/pages/account/settings";
+import Charts from "layouts/pages/charts";
+import Notifications from "layouts/pages/notifications";
+import PricingPage from "layouts/pages/pricing-page";
+import AllProjects from "layouts/pages/profile/all-projects";
+import ProfileOverview from "layouts/pages/profile/profile-overview";
+import Timeline from "layouts/pages/projects/timeline";
+import RTL from "layouts/pages/rtl";
+import NewUser from "layouts/pages/users/new-user";
+import Widgets from "layouts/pages/widgets";
 
 // Material Dashboard 2 PRO React TS components
 import MDAvatar from "components/MDAvatar";
@@ -121,6 +122,15 @@ const routes = [
         component: <Sales />,
       },
     ],
+  },
+  {
+    type: "collapse",
+    name: "Live Fleet Map",
+    key: "live-fleet-map",
+    icon: <Icon fontSize="medium">map</Icon>,
+    route: "/dashboards/live-fleet-map",
+    component: <LiveFleetMap />,
+    noCollapse: true,
   },
   { type: "title", title: "Pages", key: "title-pages" },
   {

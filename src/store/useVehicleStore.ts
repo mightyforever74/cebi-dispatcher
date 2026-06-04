@@ -1,19 +1,22 @@
 import { create } from "zustand";
 
 /**
- * Live Fleet Map — vehicle telemetry store (Sıra 4.1 / 4.2).
+ * Live Fleet Map — vehicle telemetry store (Sıra 4.1 / 4.2 / 4.3).
  *
  * IMPORTANT — `status` is a DERIVED UI value, not a DB column.
  * Verified 2026-06-04 against prod: `public.locations` has `speed` (numeric 6,2)
  * and `heading` (numeric 5,1) but NO status column. Movement state
  * (moving / idle / stopped) is computed on the client from `speed` via
- * deriveStatus(). Do not look for a locations.status field in 4.2/4.3 — it
- * does not exist; derive it here from the speed in each telemetry frame.
+ * deriveStatus(). Do not look for a locations.status field — it does not exist.
  *
  * Phase 4.1: seeded with mock NL-corridor vehicles so the map renders standalone.
- * Phase 4.2: setVehicles / updateVehicleLocation driven by EMQX MQTT-over-WSS
- *   (topic fleet/device/+/location) per ADR-0006 §4.
- * Phase 4.3: initial snapshot from GET /api/locations/latest (to be written).
+ * Phase 4.2: live frames via EMQX MQTT-over-WSS (topic fleet/device/+/location).
+ * Phase 4.3: initial snapshot via GET /api/dispatcher/locations/latest.
+ *
+ * Both the REST snapshot (4.3) and the MQTT stream (4.2) write through ONE
+ * guarded path — applyLocationFrame — which enforces the stale-overwrite guard:
+ * a frame older than the stored sample (by timestamp) is ignored, so the REST
+ * snapshot arriving after a newer MQTT frame can't teleport a truck backwards.
  */
 
 export type VehicleStatus = "moving" | "idle" | "stopped";
@@ -39,6 +42,17 @@ export function deriveStatus(speedKmh: number): VehicleStatus {
   return "stopped";
 }
 
+export interface LocationFrame {
+  device_id: string;
+  plate_no?: string;
+  latitude: number;
+  longitude: number;
+  speed: number;
+  heading?: number;
+  timestamp: string;
+  source: "rest" | "mqtt";
+}
+
 interface VehicleStoreState {
   vehicles: Record<string, VehicleTelemetry>;
   selectedVehicleId: string | null;
@@ -50,6 +64,7 @@ interface VehicleStoreState {
     speed: number,
     heading?: number
   ) => void;
+  applyLocationFrame: (frame: LocationFrame) => void;
   selectVehicle: (id: string | null) => void;
 }
 
@@ -59,36 +74,36 @@ const initialMockVehicles: Record<string, VehicleTelemetry> = {
     plate: "GV-082-B",
     vehicle_weight_class: "32_plus_t",
     emission_class: "euro_6",
-    latitude: 51.9244, // Rotterdam port area
+    latitude: 51.9244,
     longitude: 4.4777,
     speed_kmh: 82,
     heading: 45,
     status: "moving",
-    last_update: new Date().toISOString(),
+    last_update: new Date(0).toISOString(),
   },
   "v-truck-002": {
     id: "v-truck-002",
     plate: "NL-991-X",
     vehicle_weight_class: "12_18t",
     emission_class: "zero_emission",
-    latitude: 52.3676, // Amsterdam
+    latitude: 52.3676,
     longitude: 4.9041,
     speed_kmh: 0,
     heading: 180,
     status: "stopped",
-    last_update: new Date().toISOString(),
+    last_update: new Date(0).toISOString(),
   },
   "v-truck-003": {
     id: "v-truck-003",
     plate: "DH-447-K",
     vehicle_weight_class: "18_32t",
     emission_class: "euro_5",
-    latitude: 52.0705, // Den Haag
+    latitude: 52.0705,
     longitude: 4.3007,
     speed_kmh: 54,
     heading: 270,
     status: "moving",
-    last_update: new Date().toISOString(),
+    last_update: new Date(0).toISOString(),
   },
   "v-truck-004": {
     id: "v-truck-004",
@@ -100,48 +115,90 @@ const initialMockVehicles: Record<string, VehicleTelemetry> = {
     speed_kmh: 3,
     heading: 120,
     status: "idle",
-    last_update: new Date().toISOString(),
+    last_update: new Date(0).toISOString(),
   },
   "v-truck-005": {
     id: "v-truck-005",
     plate: "UT-556-P",
     vehicle_weight_class: "12_18t",
     emission_class: "euro_6",
-    latitude: 52.0907, // Utrecht
+    latitude: 52.0907,
     longitude: 5.1214,
     speed_kmh: 0,
     heading: 0,
     status: "stopped",
-    last_update: new Date().toISOString(),
+    last_update: new Date(0).toISOString(),
   },
 };
+
+// Resolve a frame's device_id (chipId) OR plate to the store key.
+function resolveKey(
+  vehicles: Record<string, VehicleTelemetry>,
+  deviceId: string,
+  plateNo?: string
+): string | undefined {
+  if (vehicles[deviceId]) return deviceId; // direct key match
+  return Object.keys(vehicles).find(
+    (k) => vehicles[k].plate === deviceId || (plateNo ? vehicles[k].plate === plateNo : false)
+  );
+}
 
 export const useVehicleStore = create<VehicleStoreState>((set) => ({
   vehicles: initialMockVehicles,
   selectedVehicleId: null,
   setVehicles: (vehicles) => set({ vehicles }),
-  updateVehicleLocation: (id, lat, lng, speed, heading) =>
+
+  // Unified guarded write path (gotcha #1 stale-guard + gotcha #2 key resolve).
+  applyLocationFrame: (frame) =>
     set((state) => {
-      // id may be the store key (v-truck-001) OR the plate/chipId (GV-082-B).
-      // Resolve: direct key first, else find by plate.
-      let key = state.vehicles[id]
-        ? id
-        : Object.keys(state.vehicles).find((k) => state.vehicles[k].plate === id);
+      const key = resolveKey(state.vehicles, frame.device_id, frame.plate_no);
       if (!key) return state;
+
+      const existing = state.vehicles[key];
+      // Stale-overwrite guard: ignore a frame not newer than what we already have.
+      if (existing.last_update && new Date(frame.timestamp) <= new Date(existing.last_update)) {
+        return state;
+      }
+
       return {
         vehicles: {
           ...state.vehicles,
           [key]: {
-            ...state.vehicles[key],
+            ...existing,
+            latitude: frame.latitude,
+            longitude: frame.longitude,
+            speed_kmh: frame.speed,
+            heading: frame.heading ?? existing.heading,
+            status: deriveStatus(frame.speed),
+            last_update: frame.timestamp,
+          },
+        },
+      };
+    }),
+
+  // Back-compat shim — routes through applyLocationFrame. Callers without a real
+  // timestamp (legacy) get "now"; prefer applyLocationFrame with the frame's own
+  // timestamp so the stale-guard is meaningful.
+  updateVehicleLocation: (id, lat, lng, speed, heading) =>
+    set((state) => {
+      const key = resolveKey(state.vehicles, id);
+      if (!key) return state;
+      const existing = state.vehicles[key];
+      return {
+        vehicles: {
+          ...state.vehicles,
+          [key]: {
+            ...existing,
             latitude: lat,
             longitude: lng,
             speed_kmh: speed,
-            heading: heading ?? state.vehicles[id].heading,
+            heading: heading ?? existing.heading,
             status: deriveStatus(speed),
             last_update: new Date().toISOString(),
           },
         },
       };
     }),
+
   selectVehicle: (id) => set({ selectedVehicleId: id }),
 }));

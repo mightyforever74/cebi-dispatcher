@@ -1,13 +1,22 @@
 import { create } from "zustand";
 
 /**
- * Live Fleet Map — vehicle telemetry store (Sıra 4.1).
+ * Live Fleet Map — vehicle telemetry store (Sıra 4.1 / 4.2).
+ *
+ * IMPORTANT — `status` is a DERIVED UI value, not a DB column.
+ * Verified 2026-06-04 against prod: `public.locations` has `speed` (numeric 6,2)
+ * and `heading` (numeric 5,1) but NO status column. Movement state
+ * (moving / idle / stopped) is computed on the client from `speed` via
+ * deriveStatus(). Do not look for a locations.status field in 4.2/4.3 — it
+ * does not exist; derive it here from the speed in each telemetry frame.
  *
  * Phase 4.1: seeded with mock NL-corridor vehicles so the map renders standalone.
- * Phase 4.2: setVehicles / updateVehicleLocation will be driven by the EMQX
- *   MQTT-over-WSS stream (topic fleet/device/+/location) per ADR-0006 §4.
- * Phase 4.3: initial snapshot from GET /api/locations/latest (enterprise backend).
+ * Phase 4.2: setVehicles / updateVehicleLocation driven by EMQX MQTT-over-WSS
+ *   (topic fleet/device/+/location) per ADR-0006 §4.
+ * Phase 4.3: initial snapshot from GET /api/locations/latest (to be written).
  */
+
+export type VehicleStatus = "moving" | "idle" | "stopped";
 
 export interface VehicleTelemetry {
   id: string;
@@ -18,19 +27,32 @@ export interface VehicleTelemetry {
   longitude: number;
   speed_kmh: number;
   heading: number;
-  status: "moving" | "idle" | "stopped";
+  status: VehicleStatus;
   last_update: string;
+}
+
+// Single source of truth for movement state. speed in km/h.
+// > 5 km/h = moving, > 0 = idle (creeping/manoeuvring), 0 = stopped.
+export function deriveStatus(speedKmh: number): VehicleStatus {
+  if (speedKmh > 5) return "moving";
+  if (speedKmh > 0) return "idle";
+  return "stopped";
 }
 
 interface VehicleStoreState {
   vehicles: Record<string, VehicleTelemetry>;
   selectedVehicleId: string | null;
   setVehicles: (vehicles: Record<string, VehicleTelemetry>) => void;
-  updateVehicleLocation: (id: string, lat: number, lng: number, speed: number) => void;
+  updateVehicleLocation: (
+    id: string,
+    lat: number,
+    lng: number,
+    speed: number,
+    heading?: number
+  ) => void;
   selectVehicle: (id: string | null) => void;
 }
 
-// Mock NL logistics-corridor vehicles (Rotterdam port / Amsterdam) for 4.1 standalone render.
 const initialMockVehicles: Record<string, VehicleTelemetry> = {
   "v-truck-001": {
     id: "v-truck-001",
@@ -68,13 +90,37 @@ const initialMockVehicles: Record<string, VehicleTelemetry> = {
     status: "moving",
     last_update: new Date().toISOString(),
   },
+  "v-truck-004": {
+    id: "v-truck-004",
+    plate: "RT-203-M",
+    vehicle_weight_class: "32_plus_t",
+    emission_class: "zero_emission",
+    latitude: 51.886,
+    longitude: 4.65,
+    speed_kmh: 3,
+    heading: 120,
+    status: "idle",
+    last_update: new Date().toISOString(),
+  },
+  "v-truck-005": {
+    id: "v-truck-005",
+    plate: "UT-556-P",
+    vehicle_weight_class: "12_18t",
+    emission_class: "euro_6",
+    latitude: 52.0907, // Utrecht
+    longitude: 5.1214,
+    speed_kmh: 0,
+    heading: 0,
+    status: "stopped",
+    last_update: new Date().toISOString(),
+  },
 };
 
 export const useVehicleStore = create<VehicleStoreState>((set) => ({
   vehicles: initialMockVehicles,
   selectedVehicleId: null,
   setVehicles: (vehicles) => set({ vehicles }),
-  updateVehicleLocation: (id, lat, lng, speed) =>
+  updateVehicleLocation: (id, lat, lng, speed, heading) =>
     set((state) => {
       if (!state.vehicles[id]) return state;
       return {
@@ -85,7 +131,8 @@ export const useVehicleStore = create<VehicleStoreState>((set) => ({
             latitude: lat,
             longitude: lng,
             speed_kmh: speed,
-            status: speed > 5 ? "moving" : speed > 0 ? "idle" : "stopped",
+            heading: heading ?? state.vehicles[id].heading,
+            status: deriveStatus(speed),
             last_update: new Date().toISOString(),
           },
         },

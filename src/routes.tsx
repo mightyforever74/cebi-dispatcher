@@ -52,7 +52,7 @@ import OrderList from "layouts/ecommerce/orders/order-list";
 import EditProduct from "layouts/ecommerce/products/edit-product";
 import NewProduct from "layouts/ecommerce/products/new-product";
 import ProductPage from "layouts/ecommerce/products/product-page";
-import LiveFleetMap from "layouts/live-fleet-map";
+import LiveFleetMap from "layouts/live-fleet-map/LiveFleetMap";
 import Billing from "layouts/pages/account/billing";
 import Invoice from "layouts/pages/account/invoice";
 import Settings from "layouts/pages/account/settings";

@@ -27,6 +27,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { useVehicleStore, VehicleStatus, VehicleTelemetry } from "store/useVehicleStore";
 
 // Leaflet CSS
+import { useMqttTelemetry } from "hooks/useMqttTelemetry";
 import "leaflet/dist/leaflet.css";
 
 const STATUS_COLOR: Record<VehicleStatus, string> = {
@@ -92,6 +93,7 @@ function MapViewController({
 type StatusFilter = "all" | "moving" | "stopped" | "ze";
 function LiveFleetMap(): JSX.Element {
   const { vehicles, selectedVehicleId, selectVehicle } = useVehicleStore();
+  const { state: mqttState } = useMqttTelemetry();
   const vehicleList = Object.values(vehicles);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -188,11 +190,32 @@ function LiveFleetMap(): JSX.Element {
               >
                 <Icon sx={{ color: C.accent }}>navigation</Icon> Live Fleet
               </MDTypography>
-              <Chip
-                label={`${filteredVehicles.length} active`}
-                size="small"
-                sx={{ bgcolor: C.border, color: C.textMuted, fontWeight: "bold", fontSize: "11px" }}
-              />
+              <MDBox display="flex" alignItems="center" gap={0.75}>
+                <span
+                  title={`MQTT: ${mqttState}`}
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    backgroundColor:
+                      mqttState === "connected"
+                        ? "#4caf50"
+                        : mqttState === "connecting"
+                        ? "#fb8c00"
+                        : "#f44336",
+                  }}
+                />
+                <Chip
+                  label={`${filteredVehicles.length} active`}
+                  size="small"
+                  sx={{
+                    bgcolor: C.border,
+                    color: C.textMuted,
+                    fontWeight: "bold",
+                    fontSize: "11px",
+                  }}
+                />
+              </MDBox>
             </MDBox>
 
             <MDBox mb={2}>

@@ -122,12 +122,17 @@ export const useVehicleStore = create<VehicleStoreState>((set) => ({
   setVehicles: (vehicles) => set({ vehicles }),
   updateVehicleLocation: (id, lat, lng, speed, heading) =>
     set((state) => {
-      if (!state.vehicles[id]) return state;
+      // id may be the store key (v-truck-001) OR the plate/chipId (GV-082-B).
+      // Resolve: direct key first, else find by plate.
+      let key = state.vehicles[id]
+        ? id
+        : Object.keys(state.vehicles).find((k) => state.vehicles[k].plate === id);
+      if (!key) return state;
       return {
         vehicles: {
           ...state.vehicles,
-          [id]: {
-            ...state.vehicles[id],
+          [key]: {
+            ...state.vehicles[key],
             latitude: lat,
             longitude: lng,
             speed_kmh: speed,

@@ -2,7 +2,7 @@
 
 Operational reference for `fleet-enterprise-01`, the Hetzner server that hosts the TulipFleet Enterprise Dispatcher backend.
 
-Last updated: 2026-05-29 (Cloudflare proxy + Origin Certificate enabled)
+Last updated: 2026-06-04 (Sıra 4.2 MQTT scope note — §5.3)
 
 ---
 
@@ -211,7 +211,7 @@ Key facts:
 - `HOST=0.0.0.0` so the container can bind to all interfaces inside its network namespace; the host then publishes only `127.0.0.1:3001` (see Section 5.4).
 - `DATABASE_URL` points to `10.0.0.2:5433` (fleet-prod-01 via private network), uses the `enterprise_backend` role.
 - `JWT_SECRET` must match fleet-prod-01's `JWT_SECRET` exactly (per ADR-0009 §4.3). Rotation is owned by the fleet-prod-01 team; see `INTEGRATION_BOUNDARIES.md`.
-- MQTT variables are placeholders. Phase 1 does not use MQTT from the enterprise side.
+- MQTT variables are placeholders. The enterprise **backend** does not connect to MQTT (Phase 1, and still true as of Sıra 4.2). Note: the dispatcher **frontend** (browser) does consume MQTT live telemetry as of Sıra 4.2 (2026-06-04), but that runs in the browser against the broker on fleet-prod-01 via `wss://mqtt.tulipfleet.com/mqtt` — it does not involve this server. A backend-side `enterprise_subscriber` MQTT role remains a future item (ADR-0009 §4.5.1) if server-side telemetry consumption is ever needed. See `INTEGRATION_BOUNDARIES.md` §3.2 for the broker, ACL, and WSS reverse-proxy details (all owned by fleet-prod-01).
 
 ### 5.4 docker-compose.yml
 
@@ -456,3 +456,4 @@ Future hardening: add `trusted_proxies` to Caddy's `reverse_proxy` block (or glo
 |------|--------|
 | 2026-05-25 | Document created at the close of Sıra 2. Captures server provisioning, network, Caddy, Docker deployment, and smoke tests as actually performed. |
 | 2026-05-29 | **Cloudflare proxy + Origin Certificate enabled** for `enterprise-api.tulipfleet.com`. Caddy switched from Let's Encrypt ACME to a manual Cloudflare Origin Certificate (RSA 2048, 15-year validity, expires 2041-05-25). DNS record changed from "DNS only" to "Proxied" (orange cloud). Cloudflare SSL/TLS mode set to "Full (strict)". Origin VPS IP no longer surfaced in public DNS for this hostname. Triggered by observed reconnaissance scans (`/js/twint_ch.js`, `/assets/js/auth.js`) hitting the unprotected origin. §3.1, §3.3, §4.2, §6.2 updated; §9.6 and §9.7 added (firewall narrowing and trusted_proxies as future hardening). |
+| 2026-06-04 | §5.3 MQTT note clarified for Sıra 4.2. The enterprise **backend** still does not connect to MQTT; the new live-telemetry consumer is the dispatcher **frontend** (browser), connecting to the EMQX broker on fleet-prod-01 via `wss://mqtt.tulipfleet.com/mqtt` — out of scope for this server. Broker/ACL/WSS-proxy details live in `INTEGRATION_BOUNDARIES.md` §3.2/§4.1. No fleet-enterprise-01 runtime change. |

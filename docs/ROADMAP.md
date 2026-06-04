@@ -7,7 +7,8 @@ A high-level summary of the architectural and product decisions that govern the 
 > **Sıra 2 + Sıra 2.9 complete**. `fleet-enterprise-01` (CPX 32, Falkenstein) is provisioned and serving `https://enterprise-api.tulipfleet.com` with a valid Let's Encrypt certificate via Caddy. Hetzner private network `tulipfleet-internal` (10.0.0.0/16) joins both servers (`fleet-prod-01` at `10.0.0.2`, `fleet-enterprise-01` at `10.0.0.3`); enterprise backend reaches PostgreSQL over the private network with the `enterprise_backend` role. End-to-end smoke verified (commit `c125f4c`).
 > **Sıra 2.9 — NL Compliance Layer ZE-Zone seed complete.** 20 active Zero-Emission zones are live in production (`enterprise.nl_compliance_zones`, 21 rows — Den Haag is split into Centrum + Kust; 148.8 km² total). Geometry is sourced from the **harmonized NDW DATEX II national open dataset** (`opendata.ndw.nu/emissiezones.xml.gz`), a single authoritative source replacing per-city municipal scraping. Reconciliation B aligned the 6 originally municipal-sourced cities to NDW (Den Haag re-modelled, Utrecht + Eindhoven geometry refreshed; Rotterdam/Amsterdam/Maastricht left as-is after diff showed sub-2% divergence). Each city was verified staging → production with embedded point-in-polygon sanity tests. Next:
 > **Sıra 3 complete (2026-06-02)** — HERE Tour Planning verified, ZE-Zone routing Model 1 (HERE-native `exceptZoneIds`) locked, Ontheffing Engine schema + `enterprise_backend` prod grants live.
-> **Sıra 3.5 complete (2026-06-03)** — Ontheffing Engine application layer live on `fleet-enterprise-01` (`/api/compliance/*`, 5 endpoints, 38 tests, end-to-end smoke against staging DB returning `compliant` / `needs_exemption` / `exempt_granted`). **FEAT-008 Vrachtwagenheffing Period 1 baseline complete** — official 2026-07-01→08-31 tariffs seeded (prod + staging, 9 rows) + pure `calculateHeffing` engine (date-versioned). Next: Sıra 4 (Dispatcher UI Live Fleet Map).
+> **Sıra 3.5 complete (2026-06-03)** — Ontheffing Engine application layer live on `fleet-enterprise-01` (`/api/compliance/*`, 5 endpoints, 38 tests, end-to-end smoke against staging DB returning `compliant` / `needs_exemption` / `exempt_granted`). **FEAT-008 Vrachtwagenheffing Period 1 baseline complete** — official 2026-07-01→08-31 tariffs seeded (prod + staging, 9 rows) + pure `calculateHeffing` engine (date-versioned).
+> **Sıra 4.1 complete (2026-06-04)** — Dispatcher UI Live Fleet Map skeleton (commit `404d997`): Leaflet + react-leaflet map with mock-fed Zustand store, registered in the Material Dashboard template. React pinned to 18.2.0 (override) after a React-19 install broke the ecosystem; broken `.eslintrc.json` removed. Next: Sıra 4.2 (EMQX MQTT-over-WSS live telemetry → Zustand).
 
 ---
 
@@ -306,11 +307,23 @@ The API-independent half of FEAT-008: the static tariff table is now populated a
 
 **Sıra 4 — Dispatcher UI: Live Fleet Map (first real screen, FEAT-005)**
 
-- Replace Material Dashboard 2 PRO placeholder map.
-- Leaflet + react-leaflet per ADR-0006, MapTiler tile provider (free tier).
-- MQTT-over-WSS client connecting to existing EMQX broker.
-- Dedicated EMQX user `dispatcher-readonly` (read-only ACL on `fleet/device/+/location`, `fleet/device/+/behavior`, `fleet/device/+/alert` per ADR-0009 §4.2).
-- Real-time markers for production vehicles.
+Split into three atomic sub-phases. The dispatcher app is the `tulipfleet-dispatcher` repo (Material Dashboard 2 PRO React TS template, CRA, baseUrl `src`).
+
+*Sıra 4.1 — Frontend skeleton + mock-fed map (complete 2026-06-04, commit `404d997`)*
+- ✅ Dependencies injected: `leaflet@^1.9.4`, `react-leaflet@^4.2.1`, `react-leaflet-cluster@^2.1.0`, `zustand@^4.5.2`, `@types/leaflet` (installed with `--legacy-peer-deps` — react-leaflet@4 + CRA 5 peer conflict).
+- ✅ **React pinned to 18.2.0** in both `dependencies` and `overrides`. A clean install had pulled React 19 (template's loose `>=16.8.0`), breaking the whole MUI/Kanban/FullCalendar/react-leaflet ecosystem with `Cannot read properties of undefined (reading 'ReactCurrentOwner')` (white screen). The override makes the downgrade permanent.
+- ✅ `src/store/useVehicleStore.ts` — Zustand store (`VehicleTelemetry` type; `setVehicles` / `updateVehicleLocation` / `selectVehicle`); seeded with 3 mock NL-corridor vehicles for standalone render.
+- ✅ `src/layouts/live-fleet-map/index.tsx` — `<MapContainer>` + OSM-direct dev tiles (no key needed; MapTiler in 4.2/prod per ADR-0006 §3.4) + `<MarkerClusterGroup>` + per-vehicle `<Popup>`. Leaflet CSS imported; CDN marker-icon fix for the CRA/webpack icon-resolution break. Wrapped in template `DashboardLayout`. Registered in `routes.tsx` under Dashboards.
+- ✅ Removed a broken `.eslintrc.json` (it had been committed containing `.gitignore` content, not ESLint config); CRA's built-in `react-app` preset (`package.json` `eslintConfig`) now governs lint. Node 24 LTS installed (was absent on the dev machine).
+
+*Sıra 4.2 — EMQX MQTT-over-WSS live telemetry (next)*
+- Add `mqtt` client; connect over WSS to the existing EMQX broker.
+- Dedicated EMQX user `dispatcher-readonly` (read-only ACL on `fleet/device/+/location`, `fleet/device/+/behavior`, `fleet/device/+/alert` per ADR-0009 §4.2). **Verify first (do not assume): does this user + ACL exist? what is the WSS endpoint/port? are ESP32s actually publishing to `fleet/device/+/location`?**
+- Wire incoming messages into `useVehicleStore` (replace mock seed), normalize into the position store, let React reconcile markers (no imperative Leaflet manipulation — ADR-0006 §6).
+
+*Sıra 4.3 — Initial-state REST snapshot*
+- `GET /api/locations/latest` on the enterprise backend — **confirmed NOT to exist yet** (`grep` on `/opt/enterprise/routes` + `server.js` returned nothing, 2026-06-04). Must be written: company-scoped latest-position-per-vehicle, served to the dispatcher for initial map state before the live MQTT stream takes over.
+- TanStack Query hook on the frontend to fetch the snapshot on mount.
 
 **Sıra 5 — Vehicle / Driver / Task list screens**
 

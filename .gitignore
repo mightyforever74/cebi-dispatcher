@@ -47,3 +47,6 @@ migrations/*_diff.sql
 migrations/*_symdiff.sql
 *.zip
 *.xml.gz
+
+.cursorrules
+claude/

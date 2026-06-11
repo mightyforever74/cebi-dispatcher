@@ -1,7 +1,18 @@
+import CssBaseline from "@mui/material/CssBaseline";
+import { ThemeProvider } from "@mui/material/styles";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "App";
+import theme from "assets/theme";
 import { MaterialUIControllerProvider } from "context";
+import Basic from "layouts/authentication/sign-in/basic";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+
+import { useLatestLocations } from "hooks/useLatestLocations";
+import { useAuthStore } from "store/useAuthStore";
+
+// Query client for react-query; kept minimal and passed into the provider below.
+const queryClient = new QueryClient();
 
 const container = document.getElementById("root");
 if (!container) {
@@ -10,10 +21,26 @@ if (!container) {
 
 const root = createRoot(container);
 
+function AuthGate() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  // Sıra 4.3: REST snapshot SADECE burada çağrılır. LiveFleetMap içine
+  // EKLEME — çift fetch / çift mount riski. MQTT canlı akışı LiveFleetMap'te,
+  // ilk-durum snapshot'ı burada; iki ayrı sorumluluk, tek çağrı noktası.
+  useLatestLocations();
+
+  // Simple gate — render App when authenticated, otherwise render Basic sign-in.
+  return isAuthenticated ? <App /> : <Basic />;
+}
+
 root.render(
-  <BrowserRouter>
-    <MaterialUIControllerProvider>
-      <App />
-    </MaterialUIControllerProvider>
-  </BrowserRouter>
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <MaterialUIControllerProvider>
+          <AuthGate />
+        </MaterialUIControllerProvider>
+      </ThemeProvider>
+    </BrowserRouter>
+  </QueryClientProvider>
 );

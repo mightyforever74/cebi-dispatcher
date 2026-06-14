@@ -32,7 +32,7 @@ export function useVehicles() {
       // Route returns { vehicles: [...], count }. Verified against routes/vehicles.js.
       return Array.isArray(body) ? body : body.vehicles || [];
     },
-    enabled: !!token,
+    enabled: Boolean(token),
     staleTime: 1000 * 60 * 2, // 2 dakika
     retry: 1,
   });

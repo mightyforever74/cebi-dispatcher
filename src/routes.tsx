@@ -47,6 +47,7 @@ import SignInIllustration from "layouts/authentication/sign-in/illustration";
 import SignUpCover from "layouts/authentication/sign-up/cover";
 import Analytics from "layouts/dashboards/analytics";
 import Sales from "layouts/dashboards/sales";
+import Drivers from "layouts/dispatcher/drivers";
 import Vehicles from "layouts/dispatcher/vehicles";
 import OrderDetails from "layouts/ecommerce/orders/order-details";
 import OrderList from "layouts/ecommerce/orders/order-list";
@@ -131,6 +132,24 @@ const routes = [
     icon: <Icon fontSize="medium">map</Icon>,
     route: "/dashboards/live-fleet-map",
     component: <LiveFleetMap />,
+    noCollapse: true,
+  },
+  {
+    type: "collapse",
+    name: "Araç Listesi",
+    key: "vehicle-list",
+    icon: <Icon fontSize="medium">local_shipping</Icon>,
+    route: "/dispatcher/vehicles",
+    component: <Vehicles />,
+    noCollapse: true,
+  },
+  {
+    type: "collapse",
+    name: "Sürücü Listesi",
+    key: "driver-list",
+    icon: <Icon fontSize="medium">people</Icon>,
+    route: "/dispatcher/drivers",
+    component: <Drivers />,
     noCollapse: true,
   },
   { type: "title", title: "Pages", key: "title-pages" },
@@ -246,13 +265,6 @@ const routes = [
         key: "data-tables",
         route: "/applications/data-tables",
         component: <DataTables />,
-      },
-      {
-        name: "Araç Listesi",
-        key: "vehicles",
-        route: "/dispatcher/vehicles",
-        icon: <Icon fontSize="medium">local_shipping</Icon>,
-        component: <Vehicles />,
       },
       {
         name: "Calendar",

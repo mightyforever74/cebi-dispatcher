@@ -335,10 +335,31 @@ Sıra 4.3 — REST Initial-State Snapshot: COMPLETE (mekanizma), veri seed bekli
 
 Sıra 4.4 — Enterprise Auth Katmanı: COMPLETE. Login → token → gate → dashboard redirect çalışıyor. Şablon Basic sign-in useAuthStore.login'e bağlandı, eski LoginScreen kaldırıldı, ThemeProvider hiyerarşisi düzeltildi (linearGradient hatası çözüldü). Not: Cursor'ın eklediği OAuth/simüle-token kodu güvenlik gerekçesiyle kaldırıldı — sosyal login fonksiyonel değil, görsel bile değil; email/şifre tek auth yolu.
 
-Sıra 5 — Vehicle / Driver / Task list screens
+Sıra 5 — Vehicle / Driver / Task list screens (ADR-0011 §9.5)
 
-Dispatcher list screens per ADR-0011 §9.5 endpoint family: GET /api/dispatcher/vehicles, GET /api/dispatcher/drivers, GET /api/dispatcher/tasks (filters: pending review / today / planned).
-Dependency note: all three need the same JWT-reuse auth that Sıra 4.3's frontend wiring is blocked on. Suggest building the minimal auth layer before or as the opening of Sıra 5, so it unblocks both the 4.3 snapshot wiring and the Sıra 5 list screens at once (one auth investment, two payoffs). The useLatestLocations TanStack pattern from 4.3 becomes the template for the three list-fetch hooks.
+**Backend: SEALED** — commit `1ce898b` on `main`, deployed to `/opt/enterprise`, reads `fleet_tracking_staging` (the deliberate Phase 1 target per INTEGRATION_BOUNDARIES §3.1). All three endpoints proven live via curl with a real JWT. Auth dependency (originally flagged here) was resolved as Sıra 4.3/4.4 — JWT-reuse auth, Zustand persist store, sign-in gate, all COMPLETE. The `useLatestLocations` TanStack-v5 pattern became the template for the list-fetch hooks.
+
+Ground-truths proven before any code was written ("ispat et", live DB via Docker/node):
+- **K1 (grants):** `enterprise_backend` has `SELECT` on `public.drivers`, `public.tasks`, and `public.users` (all confirmed — `users` needed for the name JOIN).
+- **K2 (drivers schema, ADR-0011 §12 open question CLOSED):** `public.drivers` has **NO `skills` column**. Real columns: `id, user_id, license_no, license_expiry, phone, emergency_contact, status, total_km_driven, safety_score, assigned_vehicle_id, company_id`. Driver names live in `public.users` (`first_name`/`last_name`/`email`, snake_case) via `user_id` JOIN.
+- **K3/T1/T2 (tasks schema + real statuses):** `public.tasks` carries `task_no, title, status, priority, driver_id, vehicle_id, start_location, end_location, scheduled_start, scheduled_end, planned_start/end, total_distance_km, created_at, company_id`. Real Dobbe statuses in staging: `completed`, `pending_review`, `in_progress`. `scheduled_start` is sparse and all past-dated → `today`/`planned` filters legitimately return 0 (not a bug).
+
+Slice status:
+- **5.1 Vehicles — DONE (backend + frontend).** `GET /api/dispatcher/vehicles` → `{vehicles,count}`. Frontend: `useVehicles.ts` (TanStack v5 object-signature, token inject, `body.vehicles`), `layouts/dispatcher/vehicles/index.tsx` (template `DataTable`, plate search), `routes.tsx` entry under Live Fleet Map (`local_shipping`). Proven rendering 4 real Dobbe vehicles. Dispatcher commit `03ef912`.
+- **5.2 Drivers — backend DONE, frontend PENDING.** `GET /api/dispatcher/drivers` → `{drivers,count}`, company-scoped, INNER JOIN `public.users` for names. Curl-proven `count:4`.
+- **5.3 Tasks — backend DONE, frontend PENDING.** `GET /api/dispatcher/tasks?filter=pending_review|today|planned` → `{tasks,count,filter}`. Filter clauses are fixed strings (no injection). Curl-proven staging: all `count:3`, pending_review `count:1`, today `count:0`. (Lower than prod's 15/2 because the endpoint reads `fleet_tracking_staging`, by design.)
+
+**Next session — Sıra 5 FRONTEND (the remaining quarter):**
+- `src/hooks/useDrivers.ts` + `src/hooks/useTasks.ts` — TanStack v5, `useVehicles` template. `useTasks` takes a `filter` param, `queryKey:['tasks',filter]`; read `body.drivers` / `body.tasks`.
+- `src/layouts/dispatcher/drivers/index.tsx` — DataTable: MDAvatar initials, status dot (available=grey / on_task=green), `safety_score`, name/email/phone/license. Route under vehicles, `people` icon.
+- `src/layouts/dispatcher/tasks/index.tsx` — MUI Tabs (Pending Review / Today / Planned), timeline-feel cards with left-border accent by priority, `task_no` (DAGO-0412 format). Route, `assignment` icon.
+- **5.4 polish:** gradient summary stat cards (Total / Moving / Out-of-service; Total / Today / Pending-Review); focus-on-map action (reuse `useVehicleStore.selectedVehicleId` + `selectVehicle`, already present from Sıra 4.1 → navigate to Live Fleet Map + zoom); MDPagination; debounced search.
+
+Flags carried forward:
+- Staging has only 3 tasks / 4 drivers → if a fuller demo is wanted, seeding `fleet_tracking_staging` is a separate small side-task.
+- `plugins/db.js` graceful DB fallback is `NODE_ENV`-gated (prod still fail-fast — safe, since the server runs `NODE_ENV=production`), but it is a foot-gun: if `NODE_ENV` is ever unset on the server it would serve a DB-less backend with silent empty results. Noted, not blocking.
+- Do not route this work through ecc.tools / Cursor — a prior pass injected an OAuth/sim-token auth-bypass that had to be removed (see Sıra 4.4). Build slice-by-slice, prove each, `git add` by file name (never `.cursorrules`/`claude/`).
+
 **Sıra 6 — Plan workflow (Advisory mode — FEAT-001 through FEAT-007)**
 
 - `POST /api/dispatcher/plans` — submit to HERE Tour Planning with truck attributes, capacity, skill, time window, and compliance avoidance area constraints.

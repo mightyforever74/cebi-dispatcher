@@ -51,7 +51,9 @@ function DriversLayout(): JSX.Element {
         ),
         safety_score: (
           <MDTypography variant="body2">
-            {d.safety_score !== undefined ? d.safety_score.toFixed(1) : "—"}
+            {d.safety_score != null && !isNaN(Number(d.safety_score))
+              ? Number(d.safety_score).toFixed(1)
+              : "—"}
           </MDTypography>
         ),
         status_badge: (

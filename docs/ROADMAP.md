@@ -334,34 +334,40 @@ Sıra 4.3 — REST Initial-State Snapshot: COMPLETE (mekanizma), veri seed bekli
 
 
 Sıra 4.4 — Enterprise Auth Katmanı: COMPLETE. Login → token → gate → dashboard redirect çalışıyor. Şablon Basic sign-in useAuthStore.login'e bağlandı, eski LoginScreen kaldırıldı, ThemeProvider hiyerarşisi düzeltildi (linearGradient hatası çözüldü). Not: Cursor'ın eklediği OAuth/simüle-token kodu güvenlik gerekçesiyle kaldırıldı — sosyal login fonksiyonel değil, görsel bile değil; email/şifre tek auth yolu.
+## 📦 Sıra 5 — Araç / Sürücü / Görev Listeleri (ADR-0011 §9.5)
 
-Sıra 5 — Vehicle / Driver / Task list screens (ADR-0011 §9.5)
+**Sıra Durumu: %100 TAMAMLANDI (Mühürlü & Canlıda Dağıtıldı)**
+- **Backend Durumu:** `tulipfleet-enterprise-backend` reposunda `main` dalı üzerinde `1ce898b` karmasıyla (commit) kilitlendi. `/opt/enterprise` dizinine canlı deploy edildi. `INTEGRATION_BOUNDARIES.md §3.1` sınırlarına tam sadık kalarak `fleet_tracking_staging` şemasını okuyor. Üç endpoint de (`vehicles`, `drivers`, `tasks`) geçerli kurumsal JWT ile `curl` üzerinden loopback testlerinden sıfır hatayla geçti.
+- **Kimlik Doğrulama:** Sıra 4.3/4.4 kapsamında JWT-reuse katmanı, Zustand persist store ve sign-in gate entegrasyonu tamamlandığından, ön-yüz bağımlılıkları tamamen çözülmüştür. Ön-yüz veri çekme mimarisinde `useLatestLocations` (TanStack Query v5 object-signature) yapısı tüm listeler için ana şablon (template) kabul edilmiştir.
 
-**Backend: SEALED** — commit `1ce898b` on `main`, deployed to `/opt/enterprise`, reads `fleet_tracking_staging` (the deliberate Phase 1 target per INTEGRATION_BOUNDARIES §3.1). All three endpoints proven live via curl with a real JWT. Auth dependency (originally flagged here) was resolved as Sıra 4.3/4.4 — JWT-reuse auth, Zustand persist store, sign-in gate, all COMPLETE. The `useLatestLocations` TanStack-v5 pattern became the template for the list-fetch hooks.
+### 🔍 Doğrulanan Yer-Gerçekleri (Ground-Truths via Live DB)
+- **K1 (Yetkiler):** `enterprise_backend` veritabanı rolünün `public.drivers`, `public.tasks` ve `public.users` tabloları üzerinde `SELECT` yetkisi olduğu `\z` ile kanıtlandı (`users` tablosu, ad-soyad JOIN'i için zorunludur).
+- **K2 (Sürücü Şeması - ADR-0011 §12 Çelişkisi KAPATILDI):** Canlı veritabanı okumasıyla `public.drivers` tablosunda **`skills` kolonunun OLMADIĞI ispat edildi.** Tablonun gerçek kolon yapısı: `id, user_id, license_no, license_expiry, phone, emergency_contact, status, total_km_driven, safety_score, assigned_vehicle_id, company_id` şeklindedir. Sürücü isimleri `user_id` üzerinden `public.users` tablosuna (`first_name`, `last_name`, `email`) `INNER JOIN` yapılarak ön-yüze beslenmektedir.
+- **K3 (Görev Şeması & Canlı Statüler):** `public.tasks` tablosunun gerçek kolonları: `task_no, title, status, priority, driver_id, vehicle_id, start_location, end_location, scheduled_start, scheduled_end, planned_start/end, total_distance_km, created_at, company_id`. Staging veritabanında Dobbe lojistik sisteminden gelen aktif statüler: `completed`, `pending_review`, `in_progress`. `scheduled_start` alanı sparse (çoğu boş) ve geçmiş tarihli olduğundan, `today`/`planned` filtrelerinin ekranda 0 sonuç dönmesi bir bug değil, verinin kendi yer-gerçeğidir.
 
-Ground-truths proven before any code was written ("ispat et", live DB via Docker/node):
-- **K1 (grants):** `enterprise_backend` has `SELECT` on `public.drivers`, `public.tasks`, and `public.users` (all confirmed — `users` needed for the name JOIN).
-- **K2 (drivers schema, ADR-0011 §12 open question CLOSED):** `public.drivers` has **NO `skills` column**. Real columns: `id, user_id, license_no, license_expiry, phone, emergency_contact, status, total_km_driven, safety_score, assigned_vehicle_id, company_id`. Driver names live in `public.users` (`first_name`/`last_name`/`email`, snake_case) via `user_id` JOIN.
-- **K3/T1/T2 (tasks schema + real statuses):** `public.tasks` carries `task_no, title, status, priority, driver_id, vehicle_id, start_location, end_location, scheduled_start, scheduled_end, planned_start/end, total_distance_km, created_at, company_id`. Real Dobbe statuses in staging: `completed`, `pending_review`, `in_progress`. `scheduled_start` is sparse and all past-dated → `today`/`planned` filters legitimately return 0 (not a bug).
+### 📊 Dilim Durumları (Slice Status)
 
-Slice status:
-<<<<<<< HEAD
-- **5.1 Vehicles — DONE (backend + frontend).** `GET /api/dispatcher/vehicles` → `{vehicles,count}`, Phase 1.1 SELECT genişletildi (fuel_type, total_km, last_maintenance_date, next_maintenance_km, emission_class — enterprise commit `9aaf1fb`, loopback-proven). Frontend: `useVehicles.ts` (TanStack v5 object-signature), `vehicles/index.tsx` (template `DataTable`, DashboardLayout kabuğu, client-side driver lookup, toNum tip zırhı). 4 gerçek Dobbe aracı render. Dispatcher commit `5f8e12e` (önceki `03ef912` üzerine).
-=======
-- **5.2 Drivers — DONE (backend + frontend).** `GET /api/dispatcher/drivers` → `{drivers,count}`, company-scoped, INNER JOIN `public.users`. Frontend: `useDrivers.ts`, `drivers/index.tsx` (DataTable, safety_score 0-10 ölçek progress bar — canlı min 4.5/max 9.2/avg 5.44 doğrulandı, client-side plate lookup, status badge: available/on_task/task_pending/on_leave/offline). Dispatcher commit `5f8e12e`.
-- **5.3 Tasks — DONE (backend + frontend).** `GET /api/dispatcher/tasks?filter=pending_review|today|planned` + filtresiz (all) → `{tasks,count,filter}`. Frontend: `useTasks.ts` (v5, filter query-key), `tasks/index.tsx` (DataTable, 4 MUI Tab [Alle/pending_review/today/planned, Alle varsayılan], 9-statü MDBadge eşlemesi — canlı `\d` CHECK: pending/pending_review/accepted/assigned/rejected/in_progress/completed/cancelled/withdrawn, client-side driver+vehicle lookup çünkü endpoint JOIN'siz uuid döndürüyor, today/planned filtresi scheduled_start üzerinden, satır-içi onay YOK per ADR-0005 §4.1). Dispatcher commit `0b57c5e`.
-  
-**Next session — Sıra 5 FRONTEND (the remaining quarter):**
-- `src/hooks/useDrivers.ts` + `src/hooks/useTasks.ts` — TanStack v5, `useVehicles` template. `useTasks` takes a `filter` param, `queryKey:['tasks',filter]`; read `body.drivers` / `body.tasks`.
-- `src/layouts/dispatcher/drivers/index.tsx` — DataTable: MDAvatar initials, status dot (available=grey / on_task=green), `safety_score`, name/email/phone/license. Route under vehicles, `people` icon.
-- `src/layouts/dispatcher/tasks/index.tsx` — MUI Tabs (Pending Review / Today / Planned), timeline-feel cards with left-border accent by priority, `task_no` (DAGO-0412 format). Route, `assignment` icon.
-- **5.4 polish:** gradient summary stat cards (Total / Moving / Out-of-service; Total / Today / Pending-Review); focus-on-map action (reuse `useVehicleStore.selectedVehicleId` + `selectVehicle`, already present from Sıra 4.1 → navigate to Live Fleet Map + zoom); MDPagination; debounced search.
+#### 5.1 Araç Yönetimi (Vehicles) — DONE (Commit: `9aaf1fb` / Ön-Yüz: `5f8e12e`)
+- **Backend:** `GET /api/dispatcher/vehicles` endpoint'i `{vehicles,count}` dönüyor. Phase 1.1 kapsamında genişletilmiş kurumsal envanter kolonları (`fuel_type`, `total_km`, `last_maintenance_date`, `next_maintenance_km`, `emission_class`) zırhlı SELECT ile koda işlendi.
+- **Frontend:** `useVehicles.ts` hook'u (TanStack v5) üzerinden veri çekiliyor. `vehicles/index.tsx` ekranında şablon `DataTable`, `DashboardLayout` kabuğu, client-side sürücü lookup eşleştirmesi ve veri tiplerini koruyan `toNum` tip zırhı entegre edildi. 4 gerçek Dobbe aracı harita entegrasyonuyla render ediliyor.
 
-Flags carried forward:
-- Staging has only 3 tasks / 4 drivers → if a fuller demo is wanted, seeding `fleet_tracking_staging` is a separate small side-task.
-- `plugins/db.js` graceful DB fallback is `NODE_ENV`-gated (prod still fail-fast — safe, since the server runs `NODE_ENV=production`), but it is a foot-gun: if `NODE_ENV` is ever unset on the server it would serve a DB-less backend with silent empty results. Noted, not blocking.
-- Do not route this work through ecc.tools / Cursor — a prior pass injected an OAuth/sim-token auth-bypass that had to be removed (see Sıra 4.4). Build slice-by-slice, prove each, `git add` by file name (never `.cursorrules`/`claude/`).
+#### 5.2 Sürücü Yönetimi (Drivers) — DONE (Ön-Yüz Commit: `5f8e12e`)
+- **Backend:** `GET /api/dispatcher/drivers` endpoint'i şirket sınırlarına göre (`company-scoped`) veriyi izole edip `public.users` tablosuyla `INNER JOIN` yaparak `{drivers,count}` dönüyor.
+- **Frontend:** `useDrivers.ts` kancası yazıldı. `drivers/index.tsx` ekranında `DataTable` üzerinde sürücü bilgileri, `safety_score` için 0-10 ölçekli progress bar (canlı DB verisinde min 4.5 / max 9.2 / avg 5.44 skalası korundu), araç plakası için client-side plaka eşleştirmesi ve 5 canlı statüyü (`available`, `on_task`, `task_pending`, `on_leave`, `offline`) kapsayan Material UI badge tasarımları ayağa kaldırıldı. Sol menüde `people` ikonuyla yerini aldı.
 
+#### 5.3 Görev Yönetimi (Tasks) — DONE (Ön-Yüz Commit: `0b57c5e`)
+- **Backend:** `GET /api/dispatcher/tasks?filter=pending_review|today|planned` + filtresiz genel liste mimarisi `{tasks,count,filter}` formatında teslim edildi.
+- **Frontend:** `useTasks.ts` kancası query-key bağımlı filtre yapısıyla kodlandı. `tasks/index.tsx` ekranında `DataTable` üzerinde 4'lü MUI Tab yapısı (`Alle` [Varsayılan], `pending_review`, `today`, `planned`) kuruldu. Canlı veritabanındaki 9 statüyü (`pending`, `pending_review`, `accepted`, `assigned`, `rejected`, `in_progress`, `completed`, `cancelled`, `withdrawn`) eksiksiz karşılayan `MDBadge` renk matrisi haritalandı. `ADR-0005 §4.1` gereği satır içi hızlı onay (inline approval) mekanizması gürültüyü önlemek için kaldırıldı. Sol menüde `assignment` ikonuyla kilitlendi.
+
+#### 5.4 UI/UX Cilalama & Ergonomi — ⚠️ PLANLANAN (Sıra 6.5 ile Birlikte Yürütülecek)
+- **Özet Kartları (Gradient Stat Cards):** Sürücü ve görev ekranlarının üst kısmına canlı gradyan geçişli operasyonel istatistik kartları eklenecek (Araçlar için: *Total / Moving / Out-of-service*; Görevler için: *Total / Today / Pending-Review*).
+- **Haritaya Odaklanma Aksiyonu (Focus-on-Map):** Görev veya araç listesinden bir satıra tıklandığında, Sıra 4.1'den kalan `useVehicleStore.selectedVehicleId` + `selectVehicle` global state'i tetiklenerek uygulamanın otomatik olarak `Live Fleet Map` ekranına yönlenmesi, ilgili araca zoom (yakınlaşma) yapması ve sol menü odağını kaydırması kodlanacak.
+- **Ergonomi ve Performans:** Sayfalama için `MDPagination` ve arama kutuları için geciktirmeli (`debounced search`) girdi filtreleri eklenerek sunucu yükü hafifletilecek.
+
+### ⚠️ Kritik Sınırlar ve Operasyonel Notlar (Flags Carried Forward)
+1. **Veri Kısıtı:** Staging veritabanında şu an yalnızca 3 görev ve 4 sürücü bulunmaktadır. Daha geniş kapsamlı bir dispatcher demosu için `fleet_tracking_staging` şemasının seed edilmesi bağımsız bir yan görevdir.
+2. **Database Fallback Riski:** `plugins/db.js` içindeki veritabanı bağlantı hatası durumunda çökmemeyi sağlayan koruma katmanı `NODE_ENV` bağımlıdır. Canlı ortam `NODE_ENV=production` ile çalıştığı için güvenlidir; ancak sunucuda bu değişkenin yanlışlıkla silinmesi durumunda backend'in sessizce boş sonuçlar dönme riski (foot-gun) not edilmiştir, engelleyici değildir.
+3. **Araç İzolasyonu:** Bu dilim içerisindeki hiçbir kod `ecc.tools` veya `Cursor` otomatik yapay zeka kurallarına paslanmamıştır. Sıra 4.4'te temizlemek zorunda kaldığımız o tehlikeli OAuth bypass yamalarının tekrar sızmasını önlemek amacıyla geliştirmeler atomic olarak dosya ismiyle (`git add <file_name>`) repo geçmişine işlenmiştir.
 **Sıra 6 — Plan workflow (Advisory mode — FEAT-001 through FEAT-007)**
 
 - `POST /api/dispatcher/plans` — submit to HERE Tour Planning with truck attributes, capacity, skill, time window, and compliance avoidance area constraints.

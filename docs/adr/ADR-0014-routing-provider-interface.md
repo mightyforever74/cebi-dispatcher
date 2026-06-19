@@ -49,43 +49,47 @@ The interface contract is duplicated as a small typed file in each repo (or a sh
 ## 3. Interface Contract
 
 ```typescript
-// ── Capabilities ────────────────────────────────────────────────
-// A provider declares which surfaces + features it supports.
-// Callers gate on capabilities(); they never assume HERE.
-export type RoutingCapability =
-  | "single_route"      // computeRoute: one origin→destination (HERE Routing v8 — LIVE)
-  | "matrix"            // computeMatrix: N×M travel-time matrix
-  | "traffic"           // live traffic delay + incidents (HERE Routing v8 — LIVE)
-  | "vrp"               // solveVrp: multi-vehicle VRPTW+CVRP (HERE Tour Planning — future)
-  | "toll_cost"         // per-km road tax soft constraint (FEAT-008)
-  | "eco_routing"       // emission-minimizing mode (FEAT-009)
-  | "ev_consumption";   // battery SoC + consumption model (FEAT-103, Phase 2)
+// ── Capabilities (flag-object, explicit boolean matrix) ─────────
+// Every provider declares the FULL matrix: each flag true or false,
+// no omissions. Compile-time autocomplete + LSP safety.
+export interface ProviderCapabilities {
+  // Single-route surface (HERE Routing v8 — LIVE in tulipfleet-backend)
+  computeRoute: boolean;
+  computeMatrix: boolean;
+  traffic: boolean;          // live traffic delay + incidents
+  // Multi-vehicle surface (HERE Tour Planning — future, enterprise-backend)
+  solveVrp: boolean;
+  // VRP feature flags (only meaningful when solveVrp is true)
+  tollCost: boolean;         // FEAT-008 per-km road tax soft constraint
+  ecoRouting: boolean;       // FEAT-009 emission-minimizing mode
+  evConsumption: boolean;    // FEAT-103 battery SoC (Phase 2)
+}
 
 // ── Single-route / matrix (synchronous) ─────────────────────────
 export interface RouteRequest {
   origin: LatLon;
   destination: LatLon;
-  transportMode?: "truck" | "car";       // HERE: transportMode=truck (current default)
-  return?: ("summary" | "incidents")[];  // current calls use summary,incidents
+  transportMode?: "truck" | "car";       // current calls: transportMode=truck
+  return?: ("summary" | "incidents")[];  // current calls: summary,incidents
 }
 export interface RouteResult {
   durationSec: number;
   baseDurationSec: number;
-  delayMin: number;                       // max(0, (duration-base)/60), as today
+  delayMin: number;                       // max(0,(duration-base)/60), as today
   incidents: { text: string | null; type: string }[];
   raw?: unknown;                          // provider-native payload, audit only
 }
 export interface MatrixRequest { origins: LatLon[]; destinations: LatLon[]; transportMode?: "truck" | "car"; }
-export interface MatrixResult { matrix: number[][]; /* travel seconds */ raw?: unknown; }
+export interface MatrixResult { matrix: number[][]; raw?: unknown; }
 
-// ── Multi-vehicle optimization (asynchronous, submit/poll/fetch) ─
+// ── Multi-vehicle optimization (async, submit/poll/fetch) ───────
 export interface VrpProblem {
   tasks: VrpTask[];
   vehicles: VrpVehicle[];
   complianceZones?: AvoidancePolygon[];   // ADR-0012 ZE-Zone avoidance (per-vehicle)
-  tollCostMatrix?: TollCostMatrix;        // requires "toll_cost"   (FEAT-008)
-  routingMode?: "fast" | "short" | "eco"; // "eco" requires "eco_routing" (FEAT-009)
-  evConsumption?: EvConsumptionModel;     // requires "ev_consumption" (FEAT-103)
+  tollCostMatrix?: TollCostMatrix;        // requires capabilities.tollCost  (FEAT-008)
+  routingMode?: "fast" | "short" | "eco"; // "eco" requires capabilities.ecoRouting (FEAT-009)
+  evConsumption?: EvConsumptionModel;     // requires capabilities.evConsumption (FEAT-103)
 }
 export type VrpJobStatus = "submitted" | "pending" | "completed" | "failed";
 export interface VrpResult {
@@ -98,8 +102,8 @@ export interface VrpResult {
 
 // ── The contract ────────────────────────────────────────────────
 export interface IRoutingProvider {
-  /** Which surfaces/features this provider supports. Callers gate on this. */
-  capabilities(): ReadonlySet<RoutingCapability>;
+  /** Full capability matrix. Every flag explicitly true or false. */
+  readonly capabilities: ProviderCapabilities;
 
   // Single-route surface (HereRoutingProvider implements these)
   computeRoute?(req: RouteRequest): Promise<RouteResult>;
@@ -117,17 +121,19 @@ The optional (`?`) methods are how the cross-contract works: a provider only imp
 ## 4. Factory
 
 ```typescript
-// Each repo ships its own factory returning the provider it implements.
-// Selection is config-driven so a future OrTools/Mock swap is one line.
+// Her repo kendi factory'sini barındırır.
 
 // tulipfleet-backend/src/routing/factory.ts
 export function createRoutingProvider(): IRoutingProvider {
   switch (process.env.ROUTING_PROVIDER ?? "here") {
     case "here": return new HereRoutingProvider(process.env.HERE_API_KEY!);
-    // case "mock": return new MockRoutingProvider();
     default: throw new Error(`Unknown ROUTING_PROVIDER`);
   }
 }
+
+// HereRoutingProvider matrisi (tulipfleet-backend)
+//   computeRoute: true,  computeMatrix: true,  traffic: true,
+//   solveVrp: false, tollCost: false, ecoRouting: false, evConsumption: false
 
 // tulipfleet-enterprise-backend/src/routing/factory.ts
 export function createRoutingProvider(): IRoutingProvider {
@@ -137,11 +143,10 @@ export function createRoutingProvider(): IRoutingProvider {
     default: throw new Error(`Unknown ROUTING_PROVIDER`);
   }
 }
-```
 
-`HereRoutingProvider.capabilities()` → `{single_route, matrix, traffic}`.
-`HereTourPlanningProvider.capabilities()` → `{vrp, toll_cost, eco_routing, ...}`.
-`MockRoutingProvider.capabilities()` → declares whatever the test needs.
+// HereTourPlanningProvider matrisi (enterprise-backend)
+//   computeRoute: false, computeMatrix: false, traffic: false,
+//   solveVrp: true, tollCost: true, ecoRouting: true, evConsumption: false (Phase 2)
 
 ## 5. Migration mandate (tulipfleet-backend, existing live code)
 

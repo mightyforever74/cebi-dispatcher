@@ -154,14 +154,72 @@ FN-016 `buildHereProblem` imzası 6 yeni optional parametre kabul edecek şekild
 
 **FEAT-001 standalone çalışma:** Phase 1'de tüm yeni parametreler `undefined` — yalnızca `tasks` + `vehicles` core VRP. Yeni feature spec'leri kendi extension'ını ekledikçe FN-016 imza aktive edilir.
 ```typescript
-function buildHereProblem(
-  tasks: Task[],
-  vehicles: Vehicle[],
-  complianceZones: ZoneList,
-  appointments?: Appointment[],                            // FEAT-006 implementation
-  tollCostMatrix?: TollCostMatrix,                         // FEAT-008 implementation
-  routingMode?: "fastest" | "shortest" | "eco"             // FEAT-009 implementation
-): HereProblemJSON
+// VrpProblem ADR-0014 v1.2 kontratından gelir (options-object, pozisyonel imza yok).
+// SADECE provider/builder katmanında görünür (export edilmez):
+type HereRoutingMode = "fastest" | "shortest";
+
+interface HereProblemJSON {
+  fleet: unknown;        // vehicles → HERE fleet types
+  plan: unknown;         // tasks → HERE jobs/services
+  routingMode?: HereRoutingMode;
+  objectives?: { type: "minimize"; value: string; weight: number }[];
+}
+
+/**
+ * buildHereProblem — DOĞUM ŞABLONU (FEAT-001 §4.5)
+ * Girdi: VrpProblem (ADR-0014 v1.2 options-object). Pozisyonel imza yoktur.
+ * HereTourPlanningProvider içinde yaşar; HERE semantiği provider boundary'sini geçmez.
+ */
+export function buildHereProblem(problem: VrpProblem): HereProblemJSON {
+  const {
+    tasks,
+    vehicles,
+    complianceZones,
+    appointments,
+    tollCostMatrix,
+    routingMode,
+    evConsumption,
+  } = problem;
+
+  // 1) Çekirdek haritalama: provider-agnostic → HERE ham şeması
+  const here: HereProblemJSON = {
+    fleet: mapVehiclesToHereFleet(vehicles, complianceZones),
+    plan: mapTasksToHerePlan(tasks),
+  };
+
+  // 2) routingMode çevirisi: ADR-0014 ('fast'/'short') → HERE ('fastest'/'shortest')
+  //    'eco' HERE'da mode değil, objective olarak enjekte edilir (adım 5).
+  if (routingMode === "fast")  here.routingMode = "fastest";
+  if (routingMode === "short") here.routingMode = "shortest";
+
+  // 3) appointments (FEAT-006): per-stop service_duration enjeksiyonu
+  if (appointments?.length) {
+    injectServiceDurations(here, appointments);
+  }
+
+  // 4) tollCostMatrix (FEAT-008): sandbox sonucuna bağlı enjeksiyon
+  //    (customCostMatrix → objective | fallback post-routing overlay)
+  if (tollCostMatrix) {
+    injectTollCost(here, tollCostMatrix);
+  }
+
+  // 5) eco routing (FEAT-009): HERE objective'e minimize hedefi ekle
+  if (routingMode === "eco") {
+    here.objectives = here.objectives ?? [];
+    here.objectives.push({
+      type: "minimize",
+      value: "fuel_consumption",   // veya "co2_emission" — sandbox'ta kesinleşir
+      weight: ECO_WEIGHT,
+    });
+  }
+
+  // 6) evConsumption (FEAT-103, Phase 2): forward-compat no-op
+  if (evConsumption) {
+    injectEvConsumption(here, evConsumption);
+  }
+
+  return here;
+}
 ```
 
 #### FEAT-006 — Automated Appointment Scheduling (Phase 1)

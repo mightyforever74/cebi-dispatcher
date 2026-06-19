@@ -3,7 +3,7 @@
 | Field           | Value                                                                       |
 | --------------- | --------------------------------------------------------------------------- |
 | **Status**      | Accepted                                                                    |
-| **Version**     | 1.1                                                                         |
+| **Version**     | 1.2                                                                        |
 | **Date**        | 2026-06-19                                                                  |
 | **Decision by** | Cem Bakir (Founder / Lead Engineer)                                         |
 | **Component**   | TulipFleet — Routing abstraction across main fleet + enterprise backends    |
@@ -83,10 +83,16 @@ export interface MatrixRequest { origins: LatLon[]; destinations: LatLon[]; tran
 export interface MatrixResult { matrix: number[][]; raw?: unknown; }
 
 // ── Multi-vehicle optimization (async, submit/poll/fetch) ───────
+export interface VrpAppointment {
+  taskId: string;                 // hangi task'a bağlı (VrpTask.id ile eşleşir)
+  serviceDurationSeconds: number; // per-stop dwell/dock süresi (FEAT-006 §7.1)
+}
+
 export interface VrpProblem {
   tasks: VrpTask[];
   vehicles: VrpVehicle[];
   complianceZones?: AvoidancePolygon[];   // ADR-0012 ZE-Zone avoidance (per-vehicle)
+  appointments?: VrpAppointment[];        // FEAT-006 (service_duration genişleme payı)
   tollCostMatrix?: TollCostMatrix;        // requires capabilities.tollCost  (FEAT-008)
   routingMode?: "fast" | "short" | "eco"; // "eco" requires capabilities.ecoRouting (FEAT-009)
   evConsumption?: EvConsumptionModel;     // requires capabilities.evConsumption (FEAT-103)
@@ -198,3 +204,4 @@ This is the part of the ADR that removes the lock-in already present, not just t
 | ------- | ---- | ------ | ------ |
 | 1       | 2026-06-18 | Cem Bakir | Initial proposal. Cross-repo contract with capabilities method stub. |
 | 1.1     | 2026-06-19 | Cem Bakir | **Accepted.** Refactored capability tracking into an explicit, compile-time flag-object matrix. Approved the cross-contract separation model. Ready for implementation. |
+| 1.2     | 2026-06-19 | Cem Bakir | Added `VrpAppointment` interface and `appointments?` optional field to `VrpProblem` as an extension hook for FEAT-006, without breaking the contract signature. FEAT-001 §4.5 buildHereProblem synchronized to this options-object contract. |

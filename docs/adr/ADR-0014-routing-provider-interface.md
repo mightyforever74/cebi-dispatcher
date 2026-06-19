@@ -35,7 +35,7 @@ Two decisions.
 - **Single-route / matrix** (`computeRoute`, `computeMatrix`) — synchronous, the surface HERE Routing API v8 already serves. Consolidates the two scattered live calls.
 - **Multi-vehicle optimization** (`solveVrp`, async submit/poll/fetch) — the future HERE Tour Planning surface (ADR-0002 §5).
 
-A provider declares which surface it implements via `capabilities()`. Neither repo must implement both.
+A provider declares which surface it implements via the `readonly capabilities` flag-object. Neither repo must implement both.
 
 ### 2.2 Backend strategy — shared contract, separate implementations (cross-contract)
 
@@ -116,7 +116,7 @@ export interface IRoutingProvider {
 }
 ```
 
-The optional (`?`) methods are how the cross-contract works: a provider only implements its surface, and `capabilities()` tells callers which methods are safe to call. A caller checks `capabilities().has("vrp")` before `submitVrp`, `has("single_route")` before `computeRoute`. Calling an unimplemented method is a programming error the capability check prevents.
+The optional (`?`) methods are how the cross-contract works: a provider only implements its surface, and the explicit boolean matrix in `capabilities` tells callers which methods are safe to call. A caller checks `provider.capabilities.solveVrp === true` before calling `submitVrp!`, and `provider.capabilities.computeRoute === true` before `computeRoute!`. Calling an unimplemented method without this flag check is prevented by compilation rules.
 
 ## 4. Factory
 
@@ -147,6 +147,7 @@ export function createRoutingProvider(): IRoutingProvider {
 // HereTourPlanningProvider matrisi (enterprise-backend)
 //   computeRoute: false, computeMatrix: false, traffic: false,
 //   solveVrp: true, tollCost: true, ecoRouting: true, evConsumption: false (Phase 2)
+```
 
 ## 5. Migration mandate (tulipfleet-backend, existing live code)
 
@@ -174,12 +175,12 @@ This is the part of the ADR that removes the lock-in already present, not just t
 ### 8.1 Positive
 - Existing scattered HERE Routing calls collapse to one provider; the live lock-in is removed, not just prevented.
 - Both backends speak the same contract without runtime coupling.
-- Future Tour Planning slots into the same interface; FEAT-005/008/009/103 gate on `capabilities()`.
+- Future Tour Planning slots into the same interface; FEAT-005/008/009/103 gate on the `capabilities` flag-object.
 - A provider swap (OrTools, Routific, Mock) is a factory line + a new class.
 
 ### 8.2 Negative / accepted trade-offs
 - Contract duplicated across two repos (no shared package yet). Accepted: avoids version coupling; drift risk mitigated by keeping the interface small and stable.
-- Optional methods mean callers must check `capabilities()`. Mitigation: the check is one call; skipping it is caught in review and by types (optional method may be undefined).
+- Optional methods mean callers must check the `capabilities` flag (e.g. `capabilities.solveVrp`). Mitigation: the check is one property read; skipping it is caught in review and by types (optional method may be undefined).
 
 ## 9. Open Questions
 - When does a shared private package become worth the coupling? Revisit if the contract changes frequently or a third consumer appears.

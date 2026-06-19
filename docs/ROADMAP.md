@@ -513,7 +513,7 @@ Phase 2 customer trigger geldiğinde, **önceki tüm halka production'da olmalı
 
 Phase 1.1 implementation kickoff için **bottleneck-aware** sprint sırası:
 
-1. **FEAT-001 foundation** — buildHereProblem options object refactor (5 extension consumer mitigation)
+1. **FEAT-001'in foundation kısmı (mock-first akış) DONE (commit f968ce8, state machine test edildi); kalan: HereTourPlanningProvider gerçek gövdesi (Temmuz 2026 HERE API).
 2. **FEAT-005 base components** — MQTT subscriber + Leaflet map widget shared
 3. **FEAT-010 exception orchestrator** — 7 FEAT consumer foundation
 4. **FEAT-017 geofence type extension** — PostGIS index strategy (12 enum value)

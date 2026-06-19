@@ -14,7 +14,9 @@ FK→vehicles, updated_at, company_id uuid FK→companies.
 - safety_score: 0-10 ÖLÇEK (canlı min 4.50 / max 9.20 / avg 5.44). 0-100 DEĞİL.
 - skills kolonu YOK (ADR-0011 satır 151/331 geçersiz). Yetkinlik dispatch
   tarafında enterprise.dispatch_tasks.skill_required'da tutulur.
-
+- safety_score 0-10'dur. FEAT-007'nin önerdiği enterprise.driver_scores.score
+  (0-100) AYRI bir skordur ve henüz tablo değildir (2026-06-18 itibarıyla yok).
+  
 ## public.vehicles
 id, plate_no varchar(20) NOT NULL UNIQUE, esp32_device_id varchar(50) NOT NULL
 UNIQUE, model, brand, year, fuel_type, fuel_capacity, current_fuel_level,

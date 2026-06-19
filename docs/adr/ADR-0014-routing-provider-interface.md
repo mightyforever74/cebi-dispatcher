@@ -2,9 +2,9 @@
 
 | Field           | Value                                                                       |
 | --------------- | --------------------------------------------------------------------------- |
-| **Status**      | Proposed (candidate)                                                         |
-| **Version**     | 1                                                                           |
-| **Date**        | 2026-06-18                                                                  |
+| **Status**      | Accepted                                                                    |
+| **Version**     | 1.1                                                                         |
+| **Date**        | 2026-06-19                                                                  |
 | **Decision by** | Cem Bakir (Founder / Lead Engineer)                                         |
 | **Component**   | TulipFleet — Routing abstraction across main fleet + enterprise backends    |
 | **Related**     | ADR-0002 (HERE solver), ADR-0005 (dispatch workflow), ADR-0012 (NL compliance), FEAT-001/005/008/009/103 |
@@ -193,6 +193,8 @@ This is the part of the ADR that removes the lock-in already present, not just t
 ---
 
 ## 11. Change Log
+## 11. Change Log
 | Version | Date | Author | Change |
 | ------- | ---- | ------ | ------ |
-| 1 | 2026-06-18 | Cem Bakir | Initial proposal. Cross-repo IRoutingProvider contract covering single-route (live HERE Routing, to be consolidated) + multi-vehicle VRP (future HERE Tour Planning). Separate implementations per repo, no runtime coupling. Migration mandate for the two scattered server.js HERE calls. |
+| 1       | 2026-06-18 | Cem Bakir | Initial proposal. Cross-repo contract with capabilities method stub. |
+| 1.1     | 2026-06-19 | Cem Bakir | **Accepted.** Refactored capability tracking into an explicit, compile-time flag-object matrix. Approved the cross-contract separation model. Ready for implementation. |

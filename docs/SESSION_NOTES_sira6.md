@@ -45,3 +45,29 @@ Köprü üzerinden ana fleet (fleetadmin yetkisi) yazdı.
 3. **Lokal enterprise node → köprü erişimi tünelle**: köprü prod-01 staging'de (localhost:3001 sadece içeriden). Lokal enterprise'dan ulaşmak için `ssh -L 3010:localhost:3001 root@46.224.1.192`, `.env.local`'de INTERNAL_CORE_API_URL=http://localhost:3010/... DİKKAT: localhost:3001 lokal enterprise'ı işaret eder, köprüyü değil.
 4. **Pencere disiplini**: SSH penceresi=bash (grep, docker, psql), PowerShell=Windows (Select-String, npm, Invoke-RestMethod). PowerShell komutu bash'e yazılınca "command not found".
 5. **approve fonksiyon konumu**: endpoint'ler tasksRoutes(fastify){} İÇİNDE olmalı; kapanış } dışına taşarsa "fastify is not defined".
+================================================================================
+📜 TULIPFLEET TELEMETRY ANALYTICS - SESSION CLOSURE ARCHIVE
+================================================================================
+
+[Mevcut Durum]: Sütun 1 (Şamandıra), Sütun 2 (GPS), Sütun 3 (Regresyon) BACKEND %100 BİTTİ.
+[Senkronizasyon]: GitHub, Staging Sunucu ve Lokal Repo tam hizalandı (Kuyruk: 0).
+
+⚠️ CRITICAL STAGING-ONLY CONFIGS (DO NOT DEPLOY TO PRODUCTION)
+────────────────────────────────────────────────────────────────────────────────
+1. [Trigger Drop]: public.locations ve public.driver_behavior tablolarındaki 
+   "ts_insert_blocker" trigger'ları sadece staging seed manipülasyonu için DROP edildi.
+   Production'da bu hypertable korumaları kesinlikle aktif kalmalıdır!
+2. [Tenant Isolation]: Tulip Lojistik aracı (5ad2dd21) veri tutarsızlığı nedeniyle
+   devre dışı. Dobbe tır üçlemesi (DEMO-ESP-002, 003, 004) tek karargahımız.
+3. [Sandbox Records]: Sütun 2'nin ürettiği 3 GPS sapma uyarısı (53b04ab7, 082acede,
+   279a4315) staging-only verisidir, prod veritabanına taşınmamalıdır.
+
+🚀 PRODUCTION-APPROVED ARCHITECTURE (DEPLOYMENT ROADMAP)
+────────────────────────────────────────────────────────────────────────────────
+1. [DB Schema]: public.companies tablosuna "fuel_analytics_snapshot" JSONB kolonu
+   ALTER TABLE ile production ortamına kesinlikle eklenmelidir.
+2. [The Ingestion Worker]: Kolonun canlıda güncel kalması için nightly cron job
+   (correlationBatch.js'in her gece 02:00'de tetiklenmesi) hatta enjekte edilmelidir.
+   (Kolon tek başına yetmez, yazıcı şarttır!).
+
+================================================================================

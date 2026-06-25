@@ -17,7 +17,12 @@ Hibrit Köprü API + Plan Onay Akışı. Commit'ler SESSION_NOTES'ta.
 - WORKING_RULES deploy: production backup → staging→production kopya → sürüm no güncelle → health → release commit
 - DİKKAT: production container, "sadece docker restart deploy YASAK (.env yansımaz)" — düzgün rebuild/deploy gerekir
 - INTERNAL_BRIDGE_TOKEN production .env'ine de eklenmeli (fail-closed)
-
+**GÜNCELLEME (25.06.2026) — kısmi deploy + bekletme kararı:**
+- ✅ Migration production'a UYGULANDI: public.tasks.enterprise_dispatch_task_id (uuid, nullable) + FK enterprise.dispatch_tasks(id) ON DELETE SET NULL. Doğrulandı (\d public.tasks). Additive, zararsız.
+- ✅ INTERNAL_BRIDGE_TOKEN production .env'de ZATEN VAR (grep -c → 1).
+- ⏸️ KÖPRÜ KODU production server.js'te HÂLÂ YOK (grep boş) ve DEPLOY EDİLMEDİ — bilinçli bekletildi.
+- GEREKÇE: production enterprise.dispatch_tasks = 0 SATIR. Dispatcher production'da gerçek görev onaylamıyor (henüz demo/geliştirme fazı, Sıra 6.5 demo seed bekliyor). Köprünün taşıyacağı onaylı görev YOK.
+- KARAR: köprü kodu rebuild'i (5 hafta uptime production container, kesinti riski) dispatcher production'da GERÇEK görev onaylamaya başlayınca yapılacak. O ana kadar migration + token hazır bekler.
 ### 3. Staging test verisi temizliği (opsiyonel)
 - public.tasks'ta TLP-26-00001 (izole test) + TLP-26-00002 (uçtan uca) — test verisi
 - Demo seed öncesi silinebilir, ama staging, zarar yok

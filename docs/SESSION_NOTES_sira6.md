@@ -30,11 +30,11 @@ Köprü üzerinden ana fleet (fleetadmin yetkisi) yazdı.
 
 ## Ground-truth'lar (bu oturumda kanıtlanan)
 
-- Dobbe araçları (vehicles.id): `b1b2b3b4-...0001` BX-TR-42/DEMO-ESP-002, `...0002` RD-NL-78/DEMO-ESP-003, `...0003` AH-05-KL/DEMO-ESP-004, `...0004` NL-92-VB/DEMO-ESP-005
+- Dobbe araçları (vehicles.id): `b1b2b3b4-...0001` BX-TR-42/DEMO-ESP-002, `...0002` RD-NL-78/DEMO-ESP-003, `...0003` AH-05-KL/DEMO-ESP-004, `...0004`NL-92-VB / DEMO-ESP-005 / vehicle 5ad2dd21 Dobbe'ye AİT DEĞİL, Tulip Lojistik'e ait (company 00000000-...001). Sıra 6'daki "4. Dobbe aracı" kaydı yanlıştı; demo seed'den çıkarıldı. Dobbe = 3 tır (DEMO-ESP-002/003/004).
 - Dobbe sürücüleri: driver_id `d1d2...0001-0003`, user_id `a1b2...0001-0003`, drivers.assigned_vehicle_id DOLU (araç→sürücü zinciri çalışıyor)
 - ESP32 üçlüsü: vehicles.esp32_device_id (varchar50, NOT NULL UNIQUE) + device_assignments tablosu (driver_id+vehicle_id+device_id NOT NULL, status active/inactive, idx_active_device_assignment UNIQUE WHERE status=active)
 - fuel_records: enterprise_backend PERMISSION DENIED (fleetadmin gerekli), Dobbe'de 0 kayıt, tarih kolonu record_date (date, NOT NULL, idx_fuel_date)
-- alerts: enterprise_backend PERMISSION DENIED, Dobbe'de 1 kayıt
+- alerts Dobbe kayıt sayısı: Sıra 6'da 1 idi; FEAT-007-EXT Sütun 2 sonrası +3 GPS sapma uyarısı eklendi (staging-only sandbox).
 - tasks: Dobbe'de 2 completed + 1 pending_review, hepsi Mart 2026 tarihli
 - companies.code Dobbe için BOŞ (köprü "TLP" fallback'e düştü → TLP-26-xxxxx)
 

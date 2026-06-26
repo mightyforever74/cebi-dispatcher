@@ -46,15 +46,30 @@ Tutarlılık:
 - ESP32-araç-sürücü üçlü tutarlılığı korunmalı (device_assignments active)
 - carbon: dispatch_tasks ADD COLUMN carbon_footprint_kg NUMERIC(8,3) + fuel_consumed_liters NUMERIC(8,3) (FEAT-009, additive)
 
-## FEAT-007-EXT Virtual Telematics — frontend yüzeyleri (25.06.2026)
+## FEAT-007-EXT Virtual Telematics — yakıt göstergesi (durum: 26.06.2026 kanıtlandı)
 
-Backend üç sütun (Sanal Şamandıra / GPS Mutabakatı / Korelasyon) staging'de TAMAM. Frontend yüzeyleri:
-- ✅ 1. Driver yakıt göstergesi — dairesel FuelGauge (react-native-svg halka), commit `7f7ca91`, imzalı release APK derlendi, simülatörde %74 doğrulandı. Production'a 3 araç current_fuel_level yazıldı (RD-NL-78 %74 / AH-05-KL %86 / BX-TR-42 %58).
-- ✅ 2. Admin araç ekranı — yakıt metriği birim hatası düzeltildi (current_fuel_level litre/kapasite → %, "257.91%" bug fix) + seviye rengi, commit `fadd512`.
-- ⏳ 3. Dispatcher araç & ekipman tablosu (web MUI TS) — sanal şamandıra sütunu, YAPILMADI.
-- ⏸️ 4. Dispatcher canlı filo hover/popup — navbar tasarımı sonrasına ertelendi.
-- NOT: production current_fuel_level şu an tek seferlik manuel UPDATE ile dolu (3 araç). Kalıcı yazıcı (nightly cron correlationBatch ya da endpoint) YOK — production veri akışı kalıcı çözüm bekliyor.
-- KOZMETİK: DriverVehicle yakıt kartında "vehicle.noRefuelRecord" ham i18n anahtarı görünüyor — çeviri eklenecek (en son).
+### Sütun 1 — Sanal Depo Göstergesi: BACKEND MÜHÜRLENDİ (staging)
+- 03-logic saf fonksiyon ✓ / 04-tests 8 Jest yeşil ✓ / 05-integration batch ✓ / üç kanal (GitHub + sunucu + lokal) senkron ✓
+- Entegrasyon batch dosyası: `fuelSnapshotBatch.js` (DİKKAT: doküman eskiden "correlationBatch" diyordu — YANLIŞ isim, düzeltildi)
+  - repo `tulipfleet-backend`, `main`, `FEAT-007-EXT-virtual-telematics/05-integration/fuelSnapshotBatch.js`
+  - son commit `5631a17` (24.06, dosyayı `05-integration/` klasörüne taşıyan rename). COMMIT TEYİDİ KAPALI ✓
+  - tasarımı: staging yolundan elle çalıştırılan tek seferlik batch (header: `cd /opt/fleet/backend-staging/...; node fuelSnapshotBatch.js`). Kendi içinde cron/zamanlayıcı YOK.
+
+### PRODUCTION KALICI YAZICI: KANITLANDI YOK (26.06.2026)
+- `fuelSnapshotBatch.js` production'da HİÇ YOK (`ls /opt/fleet/backend/...` boş; sadece `backend-staging`'de var, 4623B, 24.06 14:50)
+- crontab / cron.d / /etc/crontab / systemd-timer / PM2'de fuel|snapshot işi YOK (PM2'de yalnızca `fleet-sim`[stopped], `fleet-staging`[online])
+- production `current_fuel_level` (%74 / %86 / %58) = tek seferlik manuel UPDATE. Kalıcı çözüm (production'a batch deploy + zamanlama VEYA endpoint) BEKLİYOR.
+
+### Gösterge yerleştirme — 3 YER (hepsi aynı veriyi gösterir: `current_fuel_level` / `fuel_capacity`)
+- ✅ 1. tulipfleet app · driver menü · araç (`DriverVehicle.js`) — dairesel FuelGauge, commit `7f7ca91`, imzalı release APK, simülatörde %74 doğrulandı. KALAN: i18n `vehicle.noRefuelRecord` çevirisi.
+- ⏳ 2. tulipfleet app · admin menü · araç (mobil RN) — yakıt bölümüne aynı FuelGauge eklenecek. BAŞLANMADI. (RN component hazır, yeniden kullanılabilir.) NOT: `AdminVehicles.js` `fadd512` sadece yüzde metni bug fix'iydi, gauge değil.
+- ⏳ 3. dispatcher · araç menüsü (web MUI TS, DB olarak tulipfleet'e bağlı) — sanal şamandıra gösterimi. BAŞLANMADI. TEKNİK NOT: RN `FuelGauge.js` (`react-native-svg`) web'de kullanılamaz, MUI/SVG ile ayrı implementasyon gerekir.
+
+### AYRI EPIC (bu 3'e dahil DEĞİL)
+- ⏸️ dispatcher canlı filo hover/popup — mikro-etkileşim tasarımı + state yönetimi (hover → plaka → sağ tık → plaka gizleme + navbar satır bazlı popup). Canlı filo izleme / navbar tasarımı epic'ine bağlı, o epic bitince.
+
+### EPIC KAPANIŞI
+- 3 yerleştirme bitince FEAT-007-EXT yakıt göstergesi epic'i kapanır → ROADMAP.md güncelle (Sıra 6 + bu epic DONE).
 
 ## BEKLEYEN — diğer (önceki oturumlardan)
 - 5.4 dispatcher polish (Sıra 6.5)

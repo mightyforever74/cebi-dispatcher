@@ -241,7 +241,7 @@ Bu kısıtlar somut implementation kararları olarak yazılır:
 Compliance endpoint'leri **dispatcher-specific path** kullanmaz:
 
 - ❌ `/api/dispatcher/check-zone-access`
-- ✅ `/api/compliance/check-zone-access`
+- ✅ `/api/compliance/check`
 
 Phase 3'te bu path bağımsız servise taşınınca **path değişmez** — sadece host değişir (`enterprise-api.tulipfleet.com/api/compliance/*` → `compliance.tulipfleet.com/api/compliance/*`).
 

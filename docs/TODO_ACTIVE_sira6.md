@@ -74,7 +74,7 @@ Tutarlılık:
 ## BEKLEYEN — diğer (önceki oturumlardan)
 - 5.4 dispatcher polish (Sıra 6.5)
 - replan endpoint (FEAT-004)
-- compliance check endpoint /api/compliance/check-access (ADR-0012 §4.1)
+- compliance check endpoint /api/compliance/check (ADR-0012 §4.1)
 - Plan review UI (map + timeline + Kanban)
 - AdminAlerts.js 3 bug (generic "Uyarı"→alert.title; warning severity undefined→"Info"; vehicle_id→plaka/sürücü lookup="Atanmamış")
 - ROADMAP.md Sıra 6 DONE işaretle

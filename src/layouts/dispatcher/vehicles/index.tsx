@@ -5,6 +5,7 @@ import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import DataTable from "examples/Tables/DataTable";
+import FuelGaugeMini from "components/FuelGaugeMini";
 import useDrivers from "hooks/useDrivers";
 import useVehicles from "hooks/useVehicles";
 import { useMemo } from "react";
@@ -64,6 +65,7 @@ function VehiclesLayout(): JSX.Element {
       { Header: "Plaat / Model", accessor: "vehicle_info" },
       { Header: "Categorie", accessor: "category_badge" },
       { Header: "Brandstof", accessor: "fuel_type_badge" },
+      { Header: "Brandstofniveau", accessor: "fuel_level_gauge" },
       { Header: "Totaal km", accessor: "total_km_display" },
       { Header: "Onderhoud", accessor: "maintenance_info" },
       { Header: "Emissie", accessor: "emission_badge" },
@@ -96,6 +98,18 @@ function VehiclesLayout(): JSX.Element {
       ) : (
         <MDTypography variant="caption">—</MDTypography>
       );
+
+      // Yakıt seviyesi göstergesi: current_fuel_level / fuel_capacity -> %
+      const fuelLevel = toNum(v.current_fuel_level);
+      const fuelCap = toNum(v.fuel_capacity);
+      const fuelLevelGauge =
+        fuelLevel != null && fuelCap != null && fuelCap > 0 ? (
+          <MDBox display="flex" justifyContent="center">
+            <FuelGaugeMini percent={(fuelLevel / fuelCap) * 100} />
+          </MDBox>
+        ) : (
+          <MDTypography variant="caption">—</MDTypography>
+        );
 
       const totalKm = toNum(v.total_km);
       const totalKmDisplay =
@@ -152,6 +166,7 @@ function VehiclesLayout(): JSX.Element {
         vehicle_info: vehicleInfo,
         category_badge: categoryBadge,
         fuel_type_badge: fuelTypeBadge,
+        fuel_level_gauge: fuelLevelGauge,
         total_km_display: totalKmDisplay,
         maintenance_info: maintenanceInfo,
         emission_badge: emissionBadge,

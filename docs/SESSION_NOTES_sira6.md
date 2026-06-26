@@ -67,7 +67,7 @@ Köprü üzerinden ana fleet (fleetadmin yetkisi) yazdı.
 1. [DB Schema]: public.companies tablosuna "fuel_analytics_snapshot" JSONB kolonu
    ALTER TABLE ile production ortamına kesinlikle eklenmelidir.
 2. [The Ingestion Worker]: Kolonun canlıda güncel kalması için nightly cron job
-   (correlationBatch.js'in her gece 02:00'de tetiklenmesi) hatta enjekte edilmelidir.
+   (fuelSnapshotBatch.js'in her gece 02:00'de tetiklenmesi) hatta enjekte edilmelidir.
    (Kolon tek başına yetmez, yazıcı şarttır!).
 
 ================================================================================

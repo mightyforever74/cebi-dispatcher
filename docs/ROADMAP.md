@@ -375,11 +375,11 @@ Sıra 4.4 — Enterprise Auth Katmanı: COMPLETE. Login → token → gate → d
 - `GET /api/dispatcher/plans/:id` — fetch status and result with predicted ETA.
 - `POST /api/dispatcher/plans/:id/approve` — commit plan to `enterprise.dispatch_tasks` and push to existing `public.tasks` (one-way per ADR-0009 §4.4).
 - `POST /api/dispatcher/plans/:id/replan` — manual "Replan Now" for dynamic re-routing (FEAT-004 per ADR-0011).
-- Compliance check endpoint: `POST /api/compliance/check-access` (note: `/api/compliance/*` path naming per ADR-0012 §4.1, not `/api/dispatcher/compliance/*`).
+- Compliance check endpoint: `POST /api/compliance/check` (note: `/api/compliance/*` path naming per ADR-0012 §4.1, not `/api/dispatcher/compliance/*`).
 - Apply ADR-0004 v3 §6.2 migration (`public.tasks.enterprise_dispatch_task_id` nullable UUID column).
 - Plan review UI: map + timeline + Kanban views.
 
-- **Durum: staging'de TAMAM (25.06.2026).** Hibrit Köprü API + Plan Onay Akışı çalışıyor ve kanıtlı. Production köprü deploy'u bilinçli bekletildi (prod enterprise.dispatch_tasks = 0 satır; migration + INTERNAL_BRIDGE_TOKEN prod'da hazır). Açık kalanlar: replan endpoint (FEAT-004), /api/compliance/check-access, Plan review UI.
+- **Durum: staging'de TAMAM (25.06.2026).** Hibrit Köprü API + Plan Onay Akışı çalışıyor ve kanıtlı. Production köprü deploy'u bilinçli bekletildi (prod enterprise.dispatch_tasks = 0 satır; migration + INTERNAL_BRIDGE_TOKEN prod'da hazır). Açık kalanlar: replan endpoint (FEAT-004), /api/compliance/check, Plan review UI.
 
 **Sıra 7 — Pilot customer onboarding**
 

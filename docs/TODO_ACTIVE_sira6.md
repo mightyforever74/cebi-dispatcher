@@ -62,8 +62,8 @@ Tutarlılık:
 
 ### Gösterge yerleştirme — 3 YER (hepsi aynı veriyi gösterir: `current_fuel_level` / `fuel_capacity`)
 - ✅ 1. tulipfleet app · driver menü · araç (`DriverVehicle.js`) — dairesel FuelGauge, commit `7f7ca91`, imzalı release APK, simülatörde %74 doğrulandı. KALAN: i18n `vehicle.noRefuelRecord` çevirisi.
-- ⏳ 2. tulipfleet app · admin menü · araç (mobil RN) — yakıt bölümüne aynı FuelGauge eklenecek. BAŞLANMADI. (RN component hazır, yeniden kullanılabilir.) NOT: `AdminVehicles.js` `fadd512` sadece yüzde metni bug fix'iydi, gauge değil.
-- ⏳ 3. dispatcher · araç menüsü (web MUI TS, DB olarak tulipfleet'e bağlı) — sanal şamandıra gösterimi. BAŞLANMADI. TEKNİK NOT: RN `FuelGauge.js` (`react-native-svg`) web'de kullanılamaz, MUI/SVG ile ayrı implementasyon gerekir.
+- ✅  2. tulipfleet app · admin menü · araç (mobil RN) — yakıt bölümüne aynı FuelGauge eklendi.
+- ✅ 3. dispatcher · araç menüsü (web MUI TS, DB olarak tulipfleet'e bağlı) — sanal şamandıra gösterimi eklendi. TEKNİK NOT: RN `FuelGauge.js` (`react-native-svg`) web'de kullanılamaz, MUI/SVG ile ayrı implementasyon gerekir.
 
 ### AYRI EPIC (bu 3'e dahil DEĞİL)
 - ⏸️ dispatcher canlı filo hover/popup — mikro-etkileşim tasarımı + state yönetimi (hover → plaka → sağ tık → plaka gizleme + navbar satır bazlı popup). Canlı filo izleme / navbar tasarımı epic'ine bağlı, o epic bitince.

@@ -97,7 +97,13 @@ export interface VrpProblem {
   routingMode?: "fast" | "short" | "eco"; // "eco" requires capabilities.ecoRouting (FEAT-009)
   evConsumption?: EvConsumptionModel;     // requires capabilities.evConsumption (FEAT-103)
 }
-export type VrpJobStatus = "submitted" | "pending" | "completed" | "failed";
+// CORRECTION (RUNTIME_LAWS.md status authority, 2026-06-27):
+// Authoritative job status is the live DB CHECK constraint
+// enterprise.routing_jobs.routing_jobs_status_check, verified on staging + prod:
+// 'submitted' | 'running' | 'completed' | 'failed'.
+// Earlier drafts used 'pending'; that value was never valid in the table.
+// Replaced with 'running'. Code follows the table enum, not this type alias.
+export type VrpJobStatus = "submitted" | "running" | "completed" | "failed";
 export interface VrpResult {
   jobId: string;
   status: "completed";
@@ -199,9 +205,9 @@ This is the part of the ADR that removes the lock-in already present, not just t
 ---
 
 ## 11. Change Log
-## 11. Change Log
 | Version | Date | Author | Change |
 | ------- | ---- | ------ | ------ |
 | 1       | 2026-06-18 | Cem Bakir | Initial proposal. Cross-repo contract with capabilities method stub. |
 | 1.1     | 2026-06-19 | Cem Bakir | **Accepted.** Refactored capability tracking into an explicit, compile-time flag-object matrix. Approved the cross-contract separation model. Ready for implementation. |
 | 1.2     | 2026-06-19 | Cem Bakir | Added `VrpAppointment` interface and `appointments?` optional field to `VrpProblem` as an extension hook for FEAT-006, without breaking the contract signature. FEAT-001 §4.5 buildHereProblem synchronized to this options-object contract. |
+| 1.3     | 2026-06-27 | Cem Bakir | Correction. VrpJobStatus aligned to live DB authority (routing_jobs_status_check): pending -> running. Per RUNTIME_LAWS.md status law, verified staging + prod. No code change (VRP status layer follows table enum; grep empty for 'pending' in enterprise lib/routes). |

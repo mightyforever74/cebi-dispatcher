@@ -62,12 +62,23 @@ Köprü üzerinden ana fleet (fleetadmin yetkisi) yazdı.
 3. [Sandbox Records]: Sütun 2'nin ürettiği 3 GPS sapma uyarısı (53b04ab7, 082acede,
    279a4315) staging-only verisidir, prod veritabanına taşınmamalıdır.
 
-🚀 PRODUCTION-APPROVED ARCHITECTURE (DEPLOYMENT ROADMAP)
+🚀 PRODUCTION DEPLOYMENT — GERÇEK DURUM (düzeltildi 28.06.2026, DB + kod kanıtıyla)
 ────────────────────────────────────────────────────────────────────────────────
-1. [DB Schema]: public.companies tablosuna "fuel_analytics_snapshot" JSONB kolonu
-   ALTER TABLE ile production ortamına kesinlikle eklenmelidir.
-2. [The Ingestion Worker]: Kolonun canlıda güncel kalması için nightly cron job
-   (fuelSnapshotBatch.js'in her gece 02:00'de tetiklenmesi) hatta enjekte edilmelidir.
-   (Kolon tek başına yetmez, yazıcı şarttır!).
+DÜZELTME NOTU: Aşağıdaki önceki iki madde HATALIYDI; canlı DB ve script kodu
+incelenerek düzeltildi. Eski iddialar: (a) "public.companies'e fuel_analytics_snapshot
+JSONB kolonu eklenmeli", (b) "nightly cron 02:00 enjekte edilmeli". İkisi de yanlıştı.
+
+GERÇEK (kanıtlı):
+1. [Hedef Tablo]: fuelSnapshotBatch.js, public.companies'e DEĞİL, public.vehicles
+   tablosuna yazar: UPDATE public.vehicles SET current_fuel_level, total_km, updated_at.
+   Bu üç kolon production'da zaten mevcut (numeric). fuel_analytics_snapshot diye
+   bir kolon companies'te YOK ve GEREKMİYOR; şema değişikliği iptal.
+2. [Çalışma Şekli]: Script kendi header'ında manuel çalıştırma için tasarlanmış
+   (cd .../05-integration; node fuelSnapshotBatch.js). Kendi içinde cron/zamanlayıcı YOK.
+   Sadece Dobbe (efbaa346-...) için, statik seed verisinden kör-gün mesafesi hesabı.
+3. [Production Durumu]: Script production'da HİÇ YOK (sadece backend-staging'de).
+   current_fuel_level şu an tek seferlik manuel UPDATE ile dolu. Kalıcı yazıcı
+   (taşıma + execution yöntemi: manuel docker exec VEYA nightly cron) BEKLİYOR;
+   yöntem kararı ayrıca verilecek. Bkz. TODO_ACTIVE_sira6.md FEAT-007-EXT bölümü.
 
 ================================================================================

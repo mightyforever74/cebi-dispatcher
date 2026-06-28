@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 // Leaflet & react-leaflet
 import L from "leaflet";
@@ -99,6 +100,19 @@ function LiveFleetMap(): JSX.Element {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [triggerFly, setTriggerFly] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  // URL'den gelen focusPlate ile listeden gelen araca otomatik odaklan
+  useEffect(() => {
+    const focusPlate = searchParams.get("focusPlate");
+    if (!focusPlate) return;
+    const match = vehicleList.find((v) => v.plate.toLowerCase() === focusPlate.toLowerCase());
+    if (match) {
+      selectVehicle(match.id);
+      setTriggerFly(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, vehicleList.length]);
 
   const filteredVehicles = vehicleList.filter((v) => {
     const matchesSearch = v.plate.toLowerCase().includes(searchTerm.toLowerCase());

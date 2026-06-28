@@ -11,11 +11,13 @@ import DataTable from "examples/Tables/DataTable";
 import useDrivers from "hooks/useDrivers";
 import useVehicles from "hooks/useVehicles";
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { toNum } from "utils/toNum";
 
 function VehiclesLayout(): JSX.Element {
   const { data: vehicles = [], isLoading, error } = useVehicles();
   const { data: drivers = [] } = useDrivers(); // YENİ
+  const navigate = useNavigate();
 
   // assigned_vehicle_id -> driver_name ters haritası
   const driverNameByVehicleId = useMemo(() => {
@@ -77,9 +79,22 @@ function VehiclesLayout(): JSX.Element {
 
     const rows = vehicles.map((v: any) => {
       const vehicleInfo = (
-        <MDBox display="flex" alignItems="center" gap={1}>
+        <MDBox
+          display="flex"
+          alignItems="center"
+          gap={1}
+          onClick={() =>
+            v.plate_no &&
+            navigate(`/dashboards/live-fleet-map?focusPlate=${encodeURIComponent(v.plate_no)}`)
+          }
+          sx={{ cursor: v.plate_no ? "pointer" : "default" }}
+        >
           <MDBox display="flex" flexDirection="column">
-            <MDTypography variant="body2" fontWeight="medium">
+            <MDTypography
+              variant="body2"
+              fontWeight="medium"
+              sx={{ color: "info.main", "&:hover": { textDecoration: "underline" } }}
+            >
               {v.plate_no || "—"}
             </MDTypography>
             <MDTypography variant="caption" color="text.secondary">

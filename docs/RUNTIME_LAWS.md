@@ -72,8 +72,10 @@ HTTP girişi → `routes/`.
 - `.env.example`'da HERE Tour Planning / ROUTING_PROVIDER değişkenleri HENÜZ YOK.
   FEAT-001 provider implementasyonunda eklenecek: `ROUTING_PROVIDER` (here-tour|mock),
   ve HERE Tour Planning credential değişkenleri (OAuth ya da key, HERE hesabına göre).
-- Mevcut `.env.example` HERE Routing v8 (ana fleet) için değil; o ayrı backend
-  (`tulipfleet-backend`, SYSTEM_TOPOLOGY.md).
+- Yakıt Batch Cap Otoritesi: fuelSnapshotBatch.js script'inin çalışma sınırları ana fleet (tulipfleet-backend) .env dosyası üzerinden kontrol edilir (enterprise backend değildir).
+FUEL_CAP_KM_PER_DAY: Makul lojistik günlük kilometre tavanı (default: 450).
+FUEL_CAP_BLIND_DAYS: Maksimum kör-gün hesaplama sınırı (default: 5).
+Bu değişkenler tanımlı değilse sistem varsayılan değerleri (450km / 5 gün) kullanır.
 
 ## 5. Güncelleme Kuralı
 Repoda dil/framework/klasör deseni değişince ya da routing config eklenince burayı

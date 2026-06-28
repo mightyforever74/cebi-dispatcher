@@ -1,7 +1,15 @@
 # TulipFleet Enterprise — Roadmap
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
-
+> **Status as of 2026-06-28 (Demo Tahkimi):**
+> Demo sunumu öncesinde production backend dondurulmuştur (Code Freeze)...
+> [senin 4 maddelik yeni blok]
+>
+> ---
+>
+> **Status as of 2026-06-04:**
+> Phase 1 (Architecture + Bootstrap)...
+> 
 > **Status as of 2026-06-04:**
 > Phase 1 (Architecture + Bootstrap) —
 > **Sıra 2 + Sıra 2.9 complete**. `fleet-enterprise-01` (CPX 32, Falkenstein) is provisioned and serving `https://enterprise-api.tulipfleet.com` with a valid Let's Encrypt certificate via Caddy. Hetzner private network `tulipfleet-internal` (10.0.0.0/16) joins both servers (`fleet-prod-01` at `10.0.0.2`, `fleet-enterprise-01` at `10.0.0.3`); enterprise backend reaches PostgreSQL over the private network with the `enterprise_backend` role. End-to-end smoke verified (commit `c125f4c`).

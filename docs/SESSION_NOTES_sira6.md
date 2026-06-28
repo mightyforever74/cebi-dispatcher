@@ -37,6 +37,12 @@ Köprü üzerinden ana fleet (fleetadmin yetkisi) yazdı.
 - alerts Dobbe kayıt sayısı: Sıra 6'da 1 idi; FEAT-007-EXT Sütun 2 sonrası +3 GPS sapma uyarısı eklendi (staging-only sandbox).
 - tasks: Dobbe'de 2 completed + 1 pending_review, hepsi Mart 2026 tarihli
 - companies.code Dobbe için BOŞ (köprü "TLP" fallback'e düştü → TLP-26-xxxxx)
+- Dobbe Yakıt Yelpazesi (28.06.2026 Manuel Çalışma): fuelSnapshotBatch.js script'i production veritabanı üzerinde tek seferlik manuel tetiklendi. Hedef tablo public.vehicles (companies değildir). 4 Dobbe aracı için current_fuel_level değerleri mühürlendi:
+RD-NL-78: %45 (157.25L)
+BX-TR-42: %47 (186.61L)
+AH-05-KL: %62 (236.25L)
+NL-92-VB: %88 (344.73L)
+- Veri Bütünlüğü Kalkanı: total_km değerleri bilinçli olarak güncellenmedi ve mevcut değerlerinde sabit bırakıldı. Gerekçe: Cap'li kör mesafe hesaplamasının araç odometre değerlerini saptırmasını engellemek.
 
 ## Dersler (kritik, tekrar etmesin)
 

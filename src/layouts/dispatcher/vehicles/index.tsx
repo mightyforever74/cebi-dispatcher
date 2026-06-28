@@ -1,11 +1,13 @@
 import { Chip } from "@mui/material";
+import Grid from "@mui/material/Grid";
+import FuelGaugeMini from "components/FuelGaugeMini";
 import MDBadge from "components/MDBadge";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatisticsCard";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import DataTable from "examples/Tables/DataTable";
-import FuelGaugeMini from "components/FuelGaugeMini";
 import useDrivers from "hooks/useDrivers";
 import useVehicles from "hooks/useVehicles";
 import { useMemo } from "react";
@@ -186,7 +188,35 @@ function VehiclesLayout(): JSX.Element {
         <MDTypography variant="h5" gutterBottom>
           Voertuigen
         </MDTypography>
-
+        <Grid container spacing={3} mb={3}>
+          <Grid item xs={12} md={4}>
+            <ComplexStatisticsCard
+              color="info"
+              icon="local_shipping"
+              title="Actieve voertuigen"
+              count={vehicles.length}
+              percentage={{ color: "success", amount: "live", label: "realtime" }}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <ComplexStatisticsCard
+              color="success"
+              icon="people"
+              title="Chauffeurs"
+              count={drivers.length}
+              percentage={{ color: "success", amount: "actief", label: "" }}
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <ComplexStatisticsCard
+              color="warning"
+              icon="local_gas_station"
+              title="Gem. brandstof"
+              count="60%"
+              percentage={{ color: "warning", amount: "~", label: "gemiddeld" }}
+            />
+          </Grid>
+        </Grid>
         <DataTable
           table={table}
           canSearch

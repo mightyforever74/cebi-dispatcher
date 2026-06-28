@@ -78,3 +78,7 @@ Tutarlılık:
 - Plan review UI (map + timeline + Kanban)
 - AdminAlerts.js 3 bug (generic "Uyarı"→alert.title; warning severity undefined→"Info"; vehicle_id→plaka/sürücü lookup="Atanmamış")
 - ROADMAP.md Sıra 6 DONE işaretle
+- ADR-0014 "tamamlandı" mühürlenmiş olsa da bu durum sadece kod katmanı için geçerlidir; production deploy henüz gerçekleştirilmemiştir. Bir sonraki oturumda sistemin "prod'da çalışıyor" olduğu varsayılmamalıdır. Demo Sonrası Aksiyon Planı:
+Sunucu üzerindeki untracked FEAT-007-EXT klasörünü host dışına taşıyarak temizle.
+git pull ile bekleyen 21+ commit'i production'a çek.
+Production server.js dosyasında hereapi.com araması yaparak sonucun 0 olduğunu, routingProvider.computeRoute kullanımının ise 2 olduğunu doğrula.

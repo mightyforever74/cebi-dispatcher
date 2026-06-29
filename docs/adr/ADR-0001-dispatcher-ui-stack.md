@@ -3,7 +3,7 @@
 | Field             | Value                                                                  |
 | ----------------- | ---------------------------------------------------------------------- |
 | **Status**        | Accepted                                                               |
-| **Version**       | 2 (supersedes v1 draft dated 2026-05-12)                               |
+| **Version**       | 3 (supersedes v1 draft dated 2026-05-12; section 9.1 added 2026-06-29)                               |
 | **Date**          | 2026-05-13                                                             |
 | **Decision by**   | Cem Bakir (Founder / Lead Engineer)                                    |
 | **Component**     | TulipFleet Enterprise — Dispatcher Web UI                              |
@@ -229,6 +229,26 @@ This ADR records the decision only. Implementation is tracked separately as engi
 - Creative Tim license terms: <https://www.creative-tim.com/license>
 - License Company tier confirmation (snapshot to be added to `docs/legal/`): in-account dashboard at `creative-tim.com/account/products`
 
+## 9.1 Realized Front-End Ground-Truths (v3 - 2026-06-29)
+
+Verified against package.json + live source (src/routes.tsx, MD2 PRO DashboardLayout). The Section 2 decision stands; divergences from the original wording are noted here. Verified, not assumed.
+
+### Build tooling - CRA (Vite migration not done)
+Section 2 listed "Vite (preferred) or CRA as shipped" and Section 5 listed a Vite migration. Realized: the project runs on Create React App - react-scripts@5.0.1, and the start/build/test scripts all call react-scripts. The Vite migration was not performed. CRA is the current build authority; no Vite migration is scheduled.
+
+### Table standard - `<DataTable />` over react-table v7 (NOT MUI DataGrid, NOT TanStack Table v8)
+Vehicle, driver, and task lists use the Material Dashboard wrapper `<DataTable />` (examples/Tables/DataTable), built on react-table v7 (react-table@7.8.0, @types/react-table@7.7.14 - the useTable / usePagination / useSortBy hooks API).
+- Do NOT use raw MUI `<DataGrid>`.
+- Do NOT import from @tanstack/react-table (v8) - it is not a dependency. The only @tanstack/* package here is react-query@5 (server state, not tables).
+- Build lists by reusing `<DataTable columns={...} rows={...} />`; do not hand-roll useReactTable or invent DataGrid props. If the table engine is touched directly, the import is `import { useTable } from "react-table"` (v7).
+
+### Row -> map focus flow
+A row click navigates to the Live Fleet Map with the query string `?focusPlate=${plate}`. The map (Leaflet via react-leaflet@4.2.1) reads focusPlate and calls map.flyTo(...) to center the vehicle.
+Route value (verified src/routes.tsx:65): the map page is `/dashboards/live-fleet-map` - the /dashboards/ segment is required; /live-fleet-map alone does not match and falls back to the default dashboard. NOTE: this is verified for the map page only; MD2 PRO route prefixes vary per group (/dashboards/..., /pages/...). Do not generalize "all routes use /dashboards/"; confirm each target's route field in routes.tsx. A global `<BrowserRouter basename>` has not been verified either way.
+
+### Navbar / sidenav offset - by design (not a bug)
+MD2 PRO DashboardLayout shifts the main content's left margin to clear the sidenav only at the xl breakpoint and above (marginLeft: miniSidenav ? 120px : 274px). Below xl (lg/md/sm) there is no marginLeft: the sidenav is an overlay on top of the content, and selecting a menu item navigates and auto-closes the sidenav. The width-dependent offset is this intentional responsive behavior (Section 4.2, template lock-in for shell components), not a layout bug.
+
 ---
 
 ## 10. Change Log
@@ -237,3 +257,4 @@ This ADR records the decision only. Implementation is tracked separately as engi
 | ------- | ---------- | --------- | -------------------------------------------------------------------------------------------- |
 | 1       | 2026-05-12 | Cem Bakir | Initial draft proposing Material Dashboard 3 PRO React TS as a single template; license verification listed as open item. |
 | 2       | 2026-05-13 | Cem Bakir | Revised after discovering Creative Tim's JSX/TS split for the v3 line. Adopts hybrid two-template strategy (MD3 PRO React + MD2 PRO React TS). License now verified at Company tier with License ID B49B-41AF-1BA8-34DF documented. |
+| 3       | 2026-06-29 | Cem Sahinkaya | Added section 9.1 Realized Front-End Ground-Truths: CRA-not-Vite correction; `<DataTable />`/react-table v7 table standard (not DataGrid, not TanStack v8); ?focusPlate -> Leaflet map.flyTo focus flow with verified /dashboards/live-fleet-map route; navbar xl-breakpoint offset documented as by-design. Verified vs package.json + src/routes.tsx + DashboardLayout. |

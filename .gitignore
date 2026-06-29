@@ -51,4 +51,6 @@ migrations/*_symdiff.sql
 .cursorrules
 claude/
 *.bak
+apply_doc_edits_sira6.py
+task.md
 

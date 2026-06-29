@@ -3,7 +3,7 @@
 | Field             | Value                                                                  |
 | ----------------- | ---------------------------------------------------------------------- |
 | **Status**        | Accepted                                                               |
-| **Version**       | 1                                                                      |
+| **Version**       | 1.2                                                                      |
 | **Date**          | 2026-05-13                                                             |
 | **Decision by**   | Cem Sahinkaya (Founder / Lead Engineer)                                    |
 | **Component**     | TulipFleet Enterprise — Infrastructure                                 |
@@ -231,6 +231,21 @@ Section 7 of the Implementation Plan specifies Docker. The application image is 
 - **Staging (Section 8):** Phase 1 development uses `fleet_tracking_staging` database on the shared PostgreSQL. A dedicated `staging-enterprise-api.tulipfleet.com` host has not been created. Open.
 - **MQTT publish (Section 8):** Not started. Deferred to Mode 2 (per ADR-0005).
 
+### 10.6 Domain & DNS policy (staging vs production) - 2026-06-29
+
+For WSS (MQTT-over-WebSocket) and JWT-bearing endpoints:
+- Staging / local: convenience DNS such as duckdns.org is acceptable.
+- Production: an official domain (.com / .net, or a low-cost TLD behind Cloudflare) is MANDATORY for WSS and any JWT-reuse path, for TLS trust and token-replay security. Dynamic-DNS names are not used in production.
+This refines Section 3.4 for the front-end real-time/auth transport; production reverse proxies (Nginx on fleet-prod-01, Caddy on fleet-enterprise-01, Section 10.3) terminate TLS for these official domains.
+
+### 10.7 Verified dispatcher data path (2026-06-29, live .env + code)
+
+Confirmed live (not from docs) after a fuel-snapshot mismatch:
+- Enterprise backend /opt/enterprise/.env: DATABASE_URL=postgresql://enterprise_backend:***@10.0.0.2:5433/fleet_tracking_staging - it connects over the private network (10.0.0.2 = fleet-prod-01), port 5433, to the staging DB on the prod host.
+- Dispatcher data hooks (useVehicles, useDrivers, useTasks, useLatestLocations) all call enterprise-api.tulipfleet.com/api/dispatcher/...; auth is separate, against api.tulipfleet.com (main fleet prod).
+- Full chain: dispatcher front-end -> enterprise-api.tulipfleet.com -> enterprise backend -> 10.0.0.2:5433/fleet_tracking_staging. The dispatcher therefore shows staging data, not prod.
+This matches Section 10.5's fleet_tracking_staging (DB name); the live .env additionally pins host 10.0.0.2 and port 5433.
+
 ---
 
 ## 11. Change Log
@@ -239,3 +254,4 @@ Section 7 of the Implementation Plan specifies Docker. The application image is 
 | ------- | ---------- | --------- | ----------------------------------------------------------------------------------------------------- |
 | 1       | 2026-05-13 | Cem Sahinkaya | Initial decision: CX32 + subdomain split.                                                             |
 | 1.1     | 2026-05-25 | Cem Sahinkaya | Added Implementation Notes (Section 10) capturing realized state. No decision change.                 |
+| 1.2     | 2026-06-29 | Cem Sahinkaya | Added section 10.6 Domain & DNS policy (duckdns OK for staging/local; official domain mandatory in prod for WSS + JWT-reuse) and section 10.7 Verified dispatcher data path (dispatcher -> enterprise-api -> 10.0.0.2:5433/fleet_tracking_staging, live .env-verified). No decision change. |

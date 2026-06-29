@@ -72,7 +72,7 @@ Tutarlılık:
 - 3 yerleştirme bitince FEAT-007-EXT yakıt göstergesi epic'i kapanır → ROADMAP.md güncelle (Sıra 6 + bu epic DONE).
 
 ## BEKLEYEN — diğer (önceki oturumlardan)
-- 5.4 dispatcher polish (Sıra 6.5)
+- ✅ 5.4 dispatcher polish - TAMAMLANDI (stat cards `032a1f6`, focus-on-map, debounce; bkz. SESSION_NOTES_sira6)
 - replan endpoint (FEAT-004)
 - compliance check endpoint /api/compliance/check (ADR-0012 §4.1)
 - Plan review UI (map + timeline + Kanban)

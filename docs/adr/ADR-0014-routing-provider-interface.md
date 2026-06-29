@@ -171,6 +171,10 @@ The two scattered HERE calls MUST move behind `HereRoutingProvider`:
 
 This is the part of the ADR that removes the lock-in already present, not just the part that prevents future lock-in.
 
+### 5.1 Deployment status (2026-06-29)
+
+Phases 1-3 are complete in code only - NOT yet deployed to production. The Status header ("Accepted") and Change Log 1.4 ("completed") both refer to the code layer in tulipfleet-backend, not to a running production deploy. As of 2026-06-29, production /opt/fleet/backend is ~21 commits behind origin/main; on prod, `grep hereapi.com` must return 0 and routingProvider.computeRoute usage must be present before the migration is assumed live. Do not assume "running in prod" in a later session. Deploy steps + verification: TODO_ACTIVE_sira6.md.
+
 ## 6. Non-Goals (YAGNI)
 
 - No `OrToolsProvider` (ADR-0002 §8 escape hatch; Phase 2, customer-funded).
@@ -211,4 +215,5 @@ This is the part of the ADR that removes the lock-in already present, not just t
 | 1.1     | 2026-06-19 | Cem Bakir | **Accepted.** Refactored capability tracking into an explicit, compile-time flag-object matrix. Approved the cross-contract separation model. Ready for implementation. |
 | 1.2     | 2026-06-19 | Cem Bakir | Added `VrpAppointment` interface and `appointments?` optional field to `VrpProblem` as an extension hook for FEAT-006, without breaking the contract signature. FEAT-001 §4.5 buildHereProblem synchronized to this options-object contract. |
 | 1.3     | 2026-06-27 | Cem Bakir | Correction. VrpJobStatus aligned to live DB authority (routing_jobs_status_check): pending -> running. Per RUNTIME_LAWS.md status law, verified staging + prod. No code change (VRP status layer follows table enum; grep empty for 'pending' in enterprise lib/routes). |
-| 1.4 | 2026-06-28 | Cem Bakir | Migration mandate (§5) completed. Phases 1-3 done: HereRoutingProvider scaffold (services/routing/), route-traffic and drive-conditions handlers migrated behind the provider. Zero hereapi.com / HERE_API_KEY remain in any handler (grep-verified). computeMatrix set false to reflect true boundary (Matrix API deferred to Phase 2). Commits: d2889da, 10a6880, 4847f34. |
+| 1.4 | 2026-06-28 | Cem Bakir | Migration mandate (§5) completed. Phases 1-3 done: HereRoutingProvider scaffold (services/routing/), route-traffic and drive-conditions handlers migrated behind the provider. Zero hereapi.com / HERE_API_KEY remain in any handler (grep-verified). computeMatrix set false to reflect true boundary (Matrix API deferred to Phase 2). Commits: d2889da, 10a6880, 4847f34, 6ff50b1. |
+| 1.5 | 2026-06-29 | Cem Sahinkaya | Added section 5.1 Deployment status: Phases 1-3 are code-layer only, NOT in production (prod ~21 commits behind; verify hereapi.com=0 + routingProvider.computeRoute on prod). Added commit 6ff50b1 (computeMatrix=false) to the 1.4 commit list. Doc-only; no code change. |

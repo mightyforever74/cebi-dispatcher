@@ -43,6 +43,8 @@ BX-TR-42: %47 (186.61L)
 AH-05-KL: %62 (236.25L)
 NL-92-VB: %88 (344.73L)
 - Veri Bütünlüğü Kalkanı: total_km değerleri bilinçli olarak güncellenmedi ve mevcut değerlerinde sabit bırakıldı. Gerekçe: Cap'li kör mesafe hesaplamasının araç odometre değerlerini saptırmasını engellemek.
+- Yakıt staging hizalaması (29.06.2026): yakıt snapshot prod fleet_tracking'e yazılmıştı, ama dispatcher staging (fleet_tracking_staging) okuduğu için ekran eski değerleri (%86/%58/%74/boş) gösteriyordu. Kök sebep: dispatcher -> enterprise-api -> 10.0.0.2:5433/fleet_tracking_staging (ADR-0003 §10.7). Çözüm: 4 Dobbe aracının current_fuel_level'i staging DB'de de aynı değerlere UPDATE edildi (157.25/186.61/236.25/344.73). staging+prod hizalandı.
+- Sıra 5.4 dispatcher UI cilası: TAMAMLANDI - stat cards (ComplexStatisticsCard, commit 032a1f6), focus-on-map (?focusPlate -> map.flyTo, /dashboards/live-fleet-map), debounce.
 
 ## Dersler (kritik, tekrar etmesin)
 

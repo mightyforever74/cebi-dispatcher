@@ -53,7 +53,7 @@ const GlassPanel = styled(Box, {
     const surface = darkMode ? "#141A33" : palette.white.main;
     const background =
       tint === "brand"
-        ? linearGradient(rgba(BRAND_A, 0.16), rgba(BRAND_B, 0.12))
+        ? linearGradient(rgba(BRAND_A, 0.1), rgba(surface, 0.66))
         : rgba(surface, darkMode ? 0.62 : 0.7);
 
     return {

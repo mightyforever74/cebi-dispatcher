@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 
 // Leaflet & react-leaflet
 import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 
 // MUI
 import Chip from "@mui/material/Chip";
@@ -48,6 +48,9 @@ const C = {
   textMuted: "#8f9bb3",
   textFaint: "#65718c",
 };
+
+// Weight class display: 32_plus_t -> "32+ t", 12_18t -> "12-18t"
+const fmtWeight = (w: string): string => w.replace("_plus_t", "+ t").replace(/_/g, "-");
 
 const createVehicleSvgIcon = (truck: VehicleTelemetry, isSelected: boolean) => {
   const color = STATUS_COLOR[truck.status];
@@ -369,7 +372,7 @@ function LiveFleetMap(): JSX.Element {
                       </MDBox>
                       <MDBox display="flex" gap={0.5}>
                         <Chip
-                          label={v.vehicle_weight_class.replace(/_/g, " ")}
+                          label={fmtWeight(v.vehicle_weight_class)}
                           size="small"
                           sx={{
                             fontSize: "9px",
@@ -425,30 +428,7 @@ function LiveFleetMap(): JSX.Element {
                         setTriggerFly(false);
                       },
                     }}
-                  >
-                    <Popup>
-                      <MDBox p={0.5}>
-                        <MDTypography variant="subtitle2" fontWeight="bold" color="dark" mb={1}>
-                          {truck.plate}
-                        </MDTypography>
-                        <MDTypography variant="caption" display="block" color="text">
-                          Weight: <b>{truck.vehicle_weight_class}</b>
-                        </MDTypography>
-                        <MDTypography variant="caption" display="block" color="text">
-                          Emission: <b>{truck.emission_class.toUpperCase()}</b>
-                        </MDTypography>
-                        <MDTypography variant="caption" display="block" color="text">
-                          Speed: <b>{truck.speed_kmh} km/h</b>
-                        </MDTypography>
-                        <MDTypography variant="caption" display="block" color="text">
-                          Status:{" "}
-                          <span style={{ color: STATUS_COLOR[truck.status], fontWeight: "bold" }}>
-                            {truck.status}
-                          </span>
-                        </MDTypography>
-                      </MDBox>
-                    </Popup>
-                  </Marker>
+                  />
                 ))}
               </MapContainer>
 
@@ -530,7 +510,7 @@ function LiveFleetMap(): JSX.Element {
                     { label: "Speed", value: `${selectedVehicle.speed_kmh} km/h` },
                     {
                       label: "Weight",
-                      value: selectedVehicle.vehicle_weight_class.replace(/_/g, " "),
+                      value: fmtWeight(selectedVehicle.vehicle_weight_class),
                     },
                     {
                       label: "Position",
@@ -575,8 +555,8 @@ function LiveFleetMap(): JSX.Element {
                       color: "#fff",
                       fontWeight: 600,
                       fontSize: "12.5px",
-                      background: "linear-gradient(135deg, #7C3AED, #FB7A1E)",
-                      boxShadow: "0 6px 20px rgba(124,58,237,0.35)",
+                      background: "linear-gradient(135deg, #7C3AED, #5B21B6)",
+                      boxShadow: "0 6px 18px rgba(124,58,237,0.3)",
                       transition: "transform 0.2s ease",
                       "&:hover": { transform: "translateY(-1px)" },
                       "&:focus-visible": { outline: "2px solid rgba(124,58,237,0.6)" },

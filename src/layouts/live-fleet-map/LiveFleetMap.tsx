@@ -18,6 +18,7 @@ import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 
 // Material Dashboard 2 PRO React TS
+import GlassPanel from "components/GlassPanel";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import Footer from "examples/Footer";
@@ -450,6 +451,145 @@ function LiveFleetMap(): JSX.Element {
                   </Marker>
                 ))}
               </MapContainer>
+
+              {selectedVehicle && (
+                <GlassPanel
+                  ownerState={{ tint: "brand", edge: true, darkMode: true }}
+                  sx={{
+                    position: "absolute",
+                    bottom: 16,
+                    left: 16,
+                    zIndex: 1000,
+                    width: 260,
+                    p: 2,
+                  }}
+                >
+                  <MDBox
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="flex-start"
+                    mb={1}
+                  >
+                    <MDBox display="flex" alignItems="center" gap={1}>
+                      <span
+                        style={{
+                          width: 9,
+                          height: 9,
+                          borderRadius: "50%",
+                          backgroundColor: STATUS_COLOR[selectedVehicle.status],
+                          boxShadow: `0 0 8px ${STATUS_COLOR[selectedVehicle.status]}`,
+                        }}
+                      />
+                      <MDTypography
+                        variant="h6"
+                        fontWeight="bold"
+                        color="white"
+                        sx={{ fontFamily: "monospace", letterSpacing: "0.5px" }}
+                      >
+                        {selectedVehicle.plate}
+                      </MDTypography>
+                    </MDBox>
+                    <MDBox
+                      component="button"
+                      type="button"
+                      onClick={() => selectVehicle(null)}
+                      aria-label="Close detail panel"
+                      sx={{
+                        border: "none",
+                        background: "transparent",
+                        color: C.textMuted,
+                        cursor: "pointer",
+                        lineHeight: 0,
+                        p: 0.5,
+                        borderRadius: "8px",
+                        "&:hover": { color: "#fff" },
+                        "&:focus-visible": { outline: "2px solid rgba(124,58,237,0.6)" },
+                      }}
+                    >
+                      <Icon fontSize="small">close</Icon>
+                    </MDBox>
+                  </MDBox>
+
+                  <MDBox display="flex" gap={0.5} mb={1.5}>
+                    <Chip
+                      label={selectedVehicle.status}
+                      size="small"
+                      sx={{
+                        textTransform: "capitalize",
+                        fontSize: "10px",
+                        height: "20px",
+                        color: STATUS_COLOR[selectedVehicle.status],
+                        bgcolor: "rgba(255,255,255,0.06)",
+                        border: `1px solid ${STATUS_COLOR[selectedVehicle.status]}`,
+                      }}
+                    />
+                    {emissionChip(selectedVehicle.emission_class)}
+                  </MDBox>
+
+                  {[
+                    { label: "Speed", value: `${selectedVehicle.speed_kmh} km/h` },
+                    {
+                      label: "Weight",
+                      value: selectedVehicle.vehicle_weight_class.replace(/_/g, " "),
+                    },
+                    {
+                      label: "Position",
+                      value: `${selectedVehicle.latitude.toFixed(
+                        4
+                      )}, ${selectedVehicle.longitude.toFixed(4)}`,
+                    },
+                  ].map((row) => (
+                    <MDBox
+                      key={row.label}
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={0.75}
+                    >
+                      <MDTypography variant="caption" sx={{ color: C.textMuted }}>
+                        {row.label}
+                      </MDTypography>
+                      <MDTypography
+                        variant="caption"
+                        fontWeight="bold"
+                        color="white"
+                        sx={{ fontFamily: "monospace" }}
+                      >
+                        {row.value}
+                      </MDTypography>
+                    </MDBox>
+                  ))}
+
+                  <Divider sx={{ my: 1, borderColor: "rgba(255,255,255,0.1)" }} />
+
+                  <MDBox
+                    component="button"
+                    type="button"
+                    onClick={() => handleVehicleSelect(selectedVehicle.id)}
+                    sx={{
+                      width: "100%",
+                      border: "none",
+                      cursor: "pointer",
+                      borderRadius: "10px",
+                      py: 1,
+                      color: "#fff",
+                      fontWeight: 600,
+                      fontSize: "12.5px",
+                      background: "linear-gradient(135deg, #7C3AED, #FB7A1E)",
+                      boxShadow: "0 6px 20px rgba(124,58,237,0.35)",
+                      transition: "transform 0.2s ease",
+                      "&:hover": { transform: "translateY(-1px)" },
+                      "&:focus-visible": { outline: "2px solid rgba(124,58,237,0.6)" },
+                      "@media (prefers-reduced-motion: reduce)": {
+                        transition: "none",
+                        "&:hover": { transform: "none" },
+                      },
+                    }}
+                  >
+                    Center on map
+                  </MDBox>
+                </GlassPanel>
+              )}
 
               <Paper
                 elevation={2}

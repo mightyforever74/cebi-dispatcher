@@ -97,7 +97,7 @@ function VehiclesLayout(): JSX.Element {
             >
               {v.plate_no || "—"}
             </MDTypography>
-            <MDTypography variant="caption" color="text.secondary">
+            <MDTypography variant="caption" color="dark">
               {[v.brand, v.model].filter(Boolean).join(" ") || "—"}
             </MDTypography>
           </MDBox>
@@ -144,7 +144,7 @@ function VehiclesLayout(): JSX.Element {
             {v.last_maintenance_date ? formatDate(v.last_maintenance_date) : "—"}
           </MDTypography>
           {toNum(v.next_maintenance_km) != null && (
-            <MDTypography variant="caption" color="text.secondary">
+            <MDTypography variant="caption" color="dark">
               {toNum(v.next_maintenance_km)!.toLocaleString("nl-NL")} km
             </MDTypography>
           )}
@@ -239,7 +239,7 @@ function VehiclesLayout(): JSX.Element {
         />
 
         {isLoading && (
-          <MDTypography variant="caption" color="text.secondary">
+          <MDTypography variant="caption" color="dark">
             Voertuigen laden...
           </MDTypography>
         )}

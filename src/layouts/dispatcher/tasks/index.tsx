@@ -117,7 +117,7 @@ function TasksLayout(): JSX.Element {
             {t.task_no || "—"}
           </MDTypography>
           {t.title && (
-            <MDTypography variant="caption" color="text.secondary">
+            <MDTypography variant="caption" color="dark">
               {t.title}
             </MDTypography>
           )}
@@ -127,7 +127,7 @@ function TasksLayout(): JSX.Element {
       const routeInfo = (
         <MDBox display="flex" flexDirection="column">
           <MDTypography variant="caption">{t.start_location || "—"}</MDTypography>
-          <MDTypography variant="caption" color="text.secondary">
+          <MDTypography variant="caption" color="dark">
             → {t.end_location || "—"}
           </MDTypography>
         </MDBox>
@@ -141,7 +141,7 @@ function TasksLayout(): JSX.Element {
           {plate ? (
             <Chip label={plate} size="small" variant="outlined" />
           ) : (
-            <MDTypography variant="caption" color="text.secondary">
+            <MDTypography variant="caption" color="dark">
               —
             </MDTypography>
           )}
@@ -152,7 +152,7 @@ function TasksLayout(): JSX.Element {
         <MDBox display="flex" flexDirection="column">
           <MDTypography variant="caption">{formatDateTime(t.scheduled_start)}</MDTypography>
           {t.scheduled_end && (
-            <MDTypography variant="caption" color="text.secondary">
+            <MDTypography variant="caption" color="dark">
               {formatDateTime(t.scheduled_end)}
             </MDTypography>
           )}
@@ -231,14 +231,14 @@ function TasksLayout(): JSX.Element {
         />
 
         {isLoading && (
-          <MDTypography variant="caption" color="text.secondary">
+          <MDTypography variant="caption" color="dark">
             Taken laden...
           </MDTypography>
         )}
 
         {!isLoading && !error && tasks.length === 0 && (
           <MDBox py={3} textAlign="center">
-            <MDTypography variant="body2" color="text.secondary">
+            <MDTypography variant="body2" color="dark">
               Geen taken in dit filter.
             </MDTypography>
           </MDBox>

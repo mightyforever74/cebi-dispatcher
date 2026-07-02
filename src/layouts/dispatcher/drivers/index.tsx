@@ -87,7 +87,7 @@ function DriversLayout(): JSX.Element {
             {fullName}
           </MDTypography>
           {email && (
-            <MDTypography variant="caption" color="text.secondary">
+            <MDTypography variant="caption" color="dark">
               {email}
             </MDTypography>
           )}
@@ -98,7 +98,7 @@ function DriversLayout(): JSX.Element {
         <MDBox display="flex" flexDirection="column" gap={0.5}>
           {d.phone && <MDTypography variant="body2">{d.phone}</MDTypography>}
           {d.license_no && (
-            <MDTypography variant="caption" color="text.secondary">
+            <MDTypography variant="caption" color="dark">
               {d.license_no}
               {d.license_expiry && ` (${formatDate(d.license_expiry)})`}
             </MDTypography>
@@ -177,7 +177,7 @@ function DriversLayout(): JSX.Element {
         />
 
         {isLoading && (
-          <MDTypography variant="caption" color="text.secondary">
+          <MDTypography variant="caption" color="dark">
             Chauffeurs laden...
           </MDTypography>
         )}

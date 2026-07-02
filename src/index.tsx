@@ -2,7 +2,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "App";
-import theme from "assets/theme";
+import themeDark from "assets/theme-dark";
 import { MaterialUIControllerProvider } from "context";
 import Basic from "layouts/authentication/sign-in/basic";
 import { createRoot } from "react-dom/client";
@@ -35,7 +35,7 @@ function AuthGate() {
 root.render(
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={themeDark}>
         <CssBaseline />
         <MaterialUIControllerProvider>
           <AuthGate />

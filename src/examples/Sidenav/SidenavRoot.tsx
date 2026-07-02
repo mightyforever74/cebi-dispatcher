@@ -27,7 +27,7 @@ export default styled(Drawer)(({ theme, ownerState }: { theme?: Theme | any; own
   const { pxToRem, linearGradient } = functions;
 
   let backgroundValue = darkMode
-    ? background.sidenav
+    ? functions.rgba(background.sidenav, 0.72)
     : linearGradient(gradients.dark.main, gradients.dark.state);
 
   if (transparentSidenav) {
@@ -85,6 +85,8 @@ export default styled(Drawer)(({ theme, ownerState }: { theme?: Theme | any; own
     "& .MuiDrawer-paper": {
       boxShadow: xxl,
       border: "none",
+      backdropFilter:
+        darkMode && !transparentSidenav && !whiteSidenav ? "saturate(140%) blur(18px)" : "none",
 
       ...(miniSidenav ? drawerCloseStyles() : drawerOpenStyles()),
     },

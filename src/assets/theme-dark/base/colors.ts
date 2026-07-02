@@ -173,8 +173,8 @@ const colors: Types = {
   },
 
   primary: {
-    main: "#e91e63",
-    focus: "#e91e63",
+    main: "#7C3AED",
+    focus: "#6D28D9",
   },
 
   secondary: {
@@ -226,8 +226,13 @@ const colors: Types = {
 
   gradients: {
     primary: {
-      main: "#EC407A",
-      state: "#D81B60",
+      main: "#A855F7",
+      state: "#7C3AED",
+    },
+
+    brand: {
+      main: "#7C3AED",
+      state: "#FB7A1E",
     },
 
     secondary: {
@@ -371,7 +376,7 @@ const colors: Types = {
   },
 
   coloredShadows: {
-    primary: "#e91e62",
+    primary: "#7c3aed",
     secondary: "#110e0e",
     info: "#00bbd4",
     success: "#4caf4f",

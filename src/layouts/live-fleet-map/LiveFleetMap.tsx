@@ -42,7 +42,7 @@ const C = {
   panelBg: "#151a30",
   panelBgSel: "#222b45",
   border: "#2c3454",
-  accent: "#17c1e8",
+  accent: "#7C3AED", // brand violet (palette.gradients.brand.main)
   ze: "#00bcd4",
   inputBg: "#131826",
   textMuted: "#8f9bb3",
@@ -56,7 +56,7 @@ const createVehicleSvgIcon = (truck: VehicleTelemetry, isSelected: boolean) => {
   const color = STATUS_COLOR[truck.status];
   const stroke = isSelected ? C.accent : "#ffffff";
   const strokeWidth = isSelected ? 3 : 1.5;
-  const glow = isSelected ? "filter: drop-shadow(0 0 8px rgba(23,193,232,0.9));" : "";
+  const glow = isSelected ? "filter: drop-shadow(0 0 8px rgba(124,58,237,0.9));" : "";
 
   const html = `
     <div style="transform: rotate(${truck.heading}deg); width:32px; height:32px; display:flex; align-items:center; justify-content:center; ${glow}">

@@ -47,13 +47,16 @@ const GlassPanel = styled(Box, {
     const { palette, functions, borders, boxShadows } = theme;
     const { rgba, linearGradient, pxToRem } = functions;
     const { borderRadius } = borders;
+    // Prefer sealed brand token (ADR-0001 A); BRAND_A/B are the fallback.
+    const brandA = palette.gradients?.brand?.main ?? BRAND_A;
+    const brandB = palette.gradients?.brand?.state ?? BRAND_B;
 
     const { blur = 16, tint = "neutral", edge = false, darkMode = true } = ownerState;
 
     const surface = darkMode ? "#141A33" : palette.white.main;
     const background =
       tint === "brand"
-        ? linearGradient(rgba(BRAND_A, 0.1), rgba(surface, 0.66))
+        ? linearGradient(rgba(brandA, 0.1), rgba(surface, 0.66))
         : rgba(surface, darkMode ? 0.62 : 0.7);
 
     return {
@@ -74,7 +77,7 @@ const GlassPanel = styled(Box, {
           insetBlock: 0,
           left: 0,
           width: pxToRem(3),
-          background: linearGradient(BRAND_A, BRAND_B),
+          background: linearGradient(brandA, brandB),
         },
       }),
 

@@ -99,6 +99,25 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const handleOpenMenu = (event: any) => setOpenMenu(event.currentTarget);
   const handleCloseMenu = () => setOpenMenu(false);
 
+  // TulipFleet ops mailto: uyarilari (mock alici; Settings > E-posta Entegrasyonu ile
+  // senkronizasyon ayri is - bkz. EmailIntegration bileseni)
+  const notificationEmail = "dispatcher@tulipfleet.nl";
+  const mailtoZeZone = `mailto:${notificationEmail}?subject=${encodeURIComponent(
+    "ZE-Zone Ihlali - AH-05-KL"
+  )}&body=${encodeURIComponent(
+    "Arac AH-05-KL, Amsterdam Sifir Emisyon (ZE) bolgesinde ihlal tespit edildi. Lutfen inceleyin."
+  )}`;
+  const mailtoDispatchDelay = `mailto:${notificationEmail}?subject=${encodeURIComponent(
+    "Sevk Onayi Gecikti - RD-NL-78"
+  )}&body=${encodeURIComponent(
+    "RD-NL-78 plakali aracin surucusu, atanan gorevi 10 dakika icinde onaylamadi."
+  )}`;
+  const mailtoDeviceOffline = `mailto:${notificationEmail}?subject=${encodeURIComponent(
+    "Telemetri Baglantisi Koptu - BX-TR-42"
+  )}&body=${encodeURIComponent(
+    "BX-TR-42 plakali aractan telemetri verisi alinamiyor. Cihaz durumunu kontrol edin."
+  )}`;
+
   // Render the notifications menu
   const renderMenu = () => (
     <Menu
@@ -112,9 +131,39 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
       onClose={handleCloseMenu}
       sx={{ mt: 2 }}
     >
-      <NotificationItem icon={<Icon>email</Icon>} title="Check new messages" />
-      <NotificationItem icon={<Icon>podcasts</Icon>} title="Manage Podcast sessions" />
-      <NotificationItem icon={<Icon>shopping_cart</Icon>} title="Payment successfully completed" />
+      <NotificationItem
+        icon={
+          <Icon color="warning" fontSize="small">
+            eco
+          </Icon>
+        }
+        title="AH-05-KL: ZE-Zone ihlali (Amsterdam)"
+        component="a"
+        href={mailtoZeZone}
+        onClick={handleCloseMenu}
+      />
+      <NotificationItem
+        icon={
+          <Icon color="error" fontSize="small">
+            assignment_late
+          </Icon>
+        }
+        title="RD-NL-78: Sevk onayi gecikti (10 dk)"
+        component="a"
+        href={mailtoDispatchDelay}
+        onClick={handleCloseMenu}
+      />
+      <NotificationItem
+        icon={
+          <Icon color="secondary" fontSize="small">
+            signal_wifi_off
+          </Icon>
+        }
+        title="BX-TR-42: Telemetri baglantisi koptu"
+        component="a"
+        href={mailtoDeviceOffline}
+        onClick={handleCloseMenu}
+      />
     </Menu>
   );
 
@@ -189,7 +238,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
                 sx={navbarIconButton}
                 onClick={handleOpenMenu}
               >
-                <MDBadge badgeContent={9} color="error" size="xs" circular>
+                <MDBadge badgeContent={3} color="error" size="xs" circular>
                   <Icon sx={iconsStyle}>notifications</Icon>
                 </MDBadge>
               </IconButton>

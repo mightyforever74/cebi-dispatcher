@@ -27,7 +27,7 @@ import BasicInfo from "layouts/pages/account/settings/components/BasicInfo";
 import ChangePassword from "layouts/pages/account/settings/components/ChangePassword";
 import Authentication from "layouts/pages/account/settings/components/Authentication";
 import Accounts from "layouts/pages/account/settings/components/Accounts";
-import Notifications from "layouts/pages/account/settings/components/Notifications";
+import EmailIntegration from "layouts/pages/account/settings/components/EmailIntegration";
 import Sessions from "layouts/pages/account/settings/components/Sessions";
 import DeleteAccount from "layouts/pages/account/settings/components/DeleteAccount";
 
@@ -58,7 +58,7 @@ function Settings(): JSX.Element {
                   <Accounts />
                 </Grid>
                 <Grid item xs={12}>
-                  <Notifications />
+                  <EmailIntegration />
                 </Grid>
                 <Grid item xs={12}>
                   <Sessions />

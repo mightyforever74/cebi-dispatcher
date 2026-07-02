@@ -41,6 +41,7 @@ interface BadgeColorsTypes {
 }
 
 interface Types {
+  mode?: "light" | "dark";
   background:
     | {
         default: string;
@@ -146,6 +147,7 @@ interface Types {
 }
 
 const colors: Types = {
+  mode: "dark",
   background: {
     default: "#1a2035",
     sidenav: "#1f283e",
@@ -155,6 +157,9 @@ const colors: Types = {
   text: {
     main: "#ffffffcc",
     focus: "#ffffffcc",
+    primary: "#ECEEF7",
+    secondary: "#8f9bb3",
+    disabled: "#65718c",
   },
 
   transparent: {

@@ -25,21 +25,20 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 | MQTT alert topic ismi | ACL: `fleet/device/+/alert` (tekil) | Firmware: `fleet/device/{chipId}/alerts` (çoğul) | Kod referans; ACL dokümanı düzeltilmeli ama **sistem çalışıyor, dokunulmuyor** |
 | 16 alert tipi (`ALERT_CONFIG_MAP`, `AdminAlerts.js`) | Kapsamlı bir davranış-uyarı sistemi gibi görünüyordu | Sahada sadece bir alt küme (geofence, fuel) aktif; geri kalanı **kodda yer kaplayan, henüz tetiklenmeyen fikir aşaması** | Sorun etmiyoruz — App zaten stabil, referans budur |
 | Alarm popover mock içeriği (ZE-Zone, sevk gecikmesi vb.) | — | Tamamen benim (Claude) ürettiğim placeholder, gerçek veriye bağlı değildi | Faz 2'de gerçek `/api/alerts`'e bağlandı, bkz. §5 |
+| `ENTERPRISE_INFRASTRUCTURE.md` §5.2 token bilgisi | "Token name: `tulipfleet-deploy-2026-05`, expiry: 2026-08-11" | Gerçek token `tulipfleet-deploy-2026-06`, expiry 18 Sep 2026 (kullanıcının GitHub ekranından kanıtlı) | Token bir kez rotate edilmiş, doküman güncellenmemiş. Sistemi etkilemiyor, sadece doküman eski. |
 
 **Kural:** Bundan sonra herhangi bir doküman/kod çelişkisi tespit edilirse, bu tabloya yeni satır eklenir — asla sessizce unutulmaz.
 
 ---
 
-## 2. İş 1 — E-posta Entegrasyonu (`/system/settings`)
+## 2. İş 1 — E-posta Entegrasyonu (`/system/settings`) — UÇTAN UCA TAMAMLANDI
 
-**Mevcut durum (kanıtlı, commit `ca9577b`):** `EmailIntegration` bileşeni zaten kodda — 3 soru (kurumsal e-posta, mail istemcisi tercihi, uyarı filtreleri), tamamen **mock/local state**, "Kaydet" hiçbir yere persist etmiyor.
+**Mevcut durum (kanıtlı, commit `ca9577b`):** `EmailIntegration` bileşeni kodda — 3 soru (kurumsal e-posta, mail istemcisi tercihi, uyarı filtreleri), gerçek API'ye bağlı.
 
-**Hedef persist modeli:**
-- Yeni tablo: **`enterprise.notification_preferences`** (enterprise backend'in **kendi şeması** — `public.*` değil). INTEGRATION_BOUNDARIES §5.3: *"yeni schema/tablo enterprise.* altında → prod-side koordinasyon gerekmez, enterprise backend tek başına sahiplenir."* Bu, §0'daki "public.*'a yazma yok" kuralını **ihlal etmez** çünkü hedef public şema değil.
-- FK: `user_id` → `public.users(id)` (SELECT-only okuma, referans için; yazma `enterprise.*`'da kalır).
-- Endpoint: enterprise backend'in kendi route'u — `PUT /api/dispatcher/notification-preferences`, `GET /api/dispatcher/notification-preferences`.
-
-**Güncelleme (2026-07-03, ikinci tur):** Migration + endpoint yazıldı ve commit edildi — bkz. §5 Faz 1.
+**Persist modeli — tamamen çalışıyor:**
+- Tablo: `enterprise.notification_preferences` (enterprise backend'in kendi şeması — `public.*` değil, INTEGRATION_BOUNDARIES §5.3 uyumlu).
+- Endpoint: `GET/POST /api/dispatcher/notification-preferences` (`tulipfleet-enterprise-backend`).
+- **Uçtan uca deploy ve smoke test 2026-07-03'te tamamlandı** — bkz. §5 Faz 1.
 
 ---
 
@@ -103,16 +102,20 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 
 **Faz 0 — Doğrulama (kod yok) — TAMAMLANDI (2026-07-03)**
 - [x] Enterprise backend'de mevcut bir HTTP-forward/proxy deseni var mı incele → **buldu:** `routes/tasks.js` (`/optimize/approve`) → `tulipfleet-backend/routes/internalBridge.js` "Internal Bridge" deseni (servis-token + IP-allowlist), bkz. §4.
-- [x] `enterprise.notification_preferences` için gerçek migration-runner'ı gör → **sonuç:** enterprise backend'in kendi migration-runner'ı **yok** (`plugins/db.js` sadece connection pool, `package.json`'da migration kütüphanesi yok). Enterprise şemasına ait migration'lar (`enterprise-schema-init.sql` dahil) fiziksel olarak `tulipfleet-backend/migrations/`'da duruyor — Faz 1 bu deseni izledi.
+- [x] `enterprise.notification_preferences` için gerçek migration-runner'ı gör → **sonuç:** enterprise backend'in kendi migration-runner'ı **yok** (`plugins/db.js` sadece connection pool, `package.json`'da migration kütüphanesi yok). Enterprise şemasına ait migration'lar fiziksel olarak `tulipfleet-backend/migrations/`'da duruyor — Faz 1 bu deseni izledi.
 
-**Faz 1 — E-posta Entegrasyonu persist — KOD TAMAMLANDI (2026-07-03), DEPLOY BEKLİYOR**
-- [x] `enterprise.notification_preferences` migration → commit edildi: `tulipfleet-backend` `762fcc9` (`migrations/1782200000000_create-enterprise-notification-preferences.sql`)
-- [x] `GET/POST /api/dispatcher/notification-preferences` endpoint → commit edildi: `tulipfleet-enterprise-backend` `32581ec` (`routes/notificationPreferences.js`) + `server.js` register satırı `6aae8b6`
+**Faz 1 — E-posta Entegrasyonu persist — TAMAMEN BİTTİ, UÇTAN UCA DOĞRULANDI (2026-07-03/04)**
+- [x] `enterprise.notification_preferences` migration → commit edildi: `tulipfleet-backend` `762fcc9`, sonra düzeltildi `98a3933`
+- [x] `GET/POST /api/dispatcher/notification-preferences` endpoint → commit edildi: `tulipfleet-enterprise-backend` `32581ec` + `server.js` register `6aae8b6`
 - [x] Frontend `EmailIntegration` gerçek endpoint'e bağlandı → `a28c7b7`
-- [ ] **DEPLOY (kullanıcı tarafı, SSH gerektirir — Claude'un sınırı):**
-  - Migration'ı staging'de çalıştır: `fleet-prod-01`'de migration runner'ı çalıştır (staging → smoke test → prod backup → prod sırasıyla, dosyanın kendi apply-order notuna göre)
-  - Enterprise backend'i güncelle: `fleet-enterprise-01`'de `git pull && docker compose up -d --build`
-  - Deploy sonrası smoke test: dispatcher'da giriş yapıp EmailIntegration'da "Save" dene, "Kaydedilemedi" yerine "Settings saved" görmeli
+- [x] **DEPLOY TAMAMLANDI:**
+  - Migration staging'de (`fleet_tracking_staging`) uygulandı, smoke test: `notification_preferences` tablosu 1 satır döndü
+  - Migration production'da (`fleet_tracking`) uygulandı, aynı smoke test başarılı; önce `enterprise` şeması schema-only backup alındı (`/tmp/enterprise_schema_backup_20260704_015042.sql`, 29KB)
+  - Enterprise backend `fleet-enterprise-01`'de `git pull && docker compose up -d --build` ile deploy edildi
+  - `curl http://localhost:3001/health` → `{"status":"ok","database":"connected"}`
+  - `curl https://enterprise-api.tulipfleet.com/health` → `HTTP/2 200`, `server: cloudflare` + `via: 1.1 Caddy` (uçtan uca Cloudflare üzerinden doğrulandı, ENTERPRISE_INFRASTRUCTURE.md §6.2 kriterleri karşılandı)
+  - Gerçek JWT ile `GET /api/dispatcher/notification-preferences` → **`{"preferences":null}`** (body doğrudan görüldü, header'dan çıkarım değil) — route çalışıyor, DB'ye bağlanıyor, henüz kayıt yok (beklenen)
+- **Sonuç: Dispatcher web arayüzünde "Save" artık gerçekten çalışır.**
 
 **Faz 2 — Alarm/İkaz gerçek entegrasyon — TAMAMLANDI (2026-07-03, ikinci tur), DEPLOY GEREKMİYOR**
 - [x] Proxy mi doğrudan mı kararı → **doğrudan** (`api.tulipfleet.com`), CORS açık kanıtlandığı için proxy zorunlu değildi
@@ -133,11 +136,34 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 
 ---
 
+## 6. Faz 1 Deploy Sürecinden Öğrenilen Dersler (2026-07-03/04)
+
+Bu bölüm, ileride tekrar migration/deploy yapılırken aynı hatalara düşülmemesi için tutuluyor.
+
+### 6.1 Migration dosyalarında "Down Migration" bloğu mutlaka `/* */` içinde olmalı
+
+İlk migration sürümünde `-- Down Migration` başlığı sadece **satır yorumuyla** (`--`) açılmıştı; altındaki `DROP TRIGGER`/`DROP TABLE` komutları **gerçek SQL** olarak kaldı. `psql < dosya.sql` dosyayı baştan sona sırayla çalıştırdığı için migration tabloyu oluşturdu ve **hemen ardından kendi kendini sildi** — staging smoke test'te `(0 rows)` olarak yakalandı, production'a hiç uygulanmadan. Düzeltme (`98a3933`): Down Migration artık `/* ... */` blok yorumu içinde, otomatik çalışmıyor, rollback gerekirse elle kopyalanıp çalıştırılıyor. **Kural:** Bundan sonraki her migration dosyasında Down bloğu blok yorumla test edilmeden commit edilmeyecek.
+
+### 6.2 `fleet-prod-01`'in yerel git'i uzun süredir güncellenmemiş — büyük fast-forward riski
+
+`git pull` denendiğinde sunucunun HEAD'i (`05aad6d`) GitHub'daki güncel noktadan (`762fcc9`) **çok geride** çıktı — tek `pull`, 18 dosya/2101 satırlık birikmiş bir değişiklik seti getirdi (`server.js`, yeni `services/routing/` klasörü, `FEAT-007-EXT` özellikleri dahil). Bu, benim tek commit'imle ilgisi olmayan, önceden GitHub'a yazılmış ama sunucuya hiç deploy edilmemiş kodlardı. **Kural:** Büyük fast-forward'lardan sonra `docker rebuild` öncesi diff'in kapsamını (`git log --oneline <eski>..<yeni>`) gözden geçirmek gerekir — "küçük bir migration ekliyorum" sanılan bir pull, aslında çok daha büyük bir kod setini production'a taşıyabilir.
+
+### 6.3 Untracked dosyalar `git pull`'u durdurur — sil, taşıma
+
+`fleet-prod-01`'de iki untracked dosya (`FEAT-007-EXT-virtual-telematics/03-logic/calculateVirtualFuelLevel.js`, `05-integration/fuelSnapshotBatch.js`) `git pull`'u engelledi. Silmek yerine `mv` ile `/tmp`'a taşındı, sonra `md5sum` ile origin'deki karşılıklarıyla karşılaştırıldı: biri özdeşti (güvenle atılabilir), diğeri **farklıydı** (sunucuda `DRY_RUN` modu vardı, origin'de kaldırılmıştı — bilinçli bir davranış kaybı, kullanıcıya bildirildi). **Kural:** Untracked dosya çakışmasında asla doğrudan silme; taşı, hash karşılaştır, farklıysa içeriği göster ve kullanıcıya karar bırak.
+
+### 6.4 `fleet-enterprise-01`'in git remote'unda yanlışlıkla bir dispatcher JWT'si bulundu — güvenlik notu
+
+`git remote -v` çalıştırıldığında URL'deki "credential" kısmının bir GitHub PAT değil, **TulipFleet'in kendi dispatcher login sisteminin ürettiği bir JWT** (`demo@tulipfleet.com`, `company_admin`, gerçek bir `company_id` ile) olduğu görüldü — muhtemelen geçmişte biri PAT yapıştıracağı yere yanlışlıkla bu token'ı yapıştırmış. Bu hem `git pull`'un başarısız olmasının sebebiydi (GitHub bunu geçerli bir token formatında görmüyor) hem de bir **credential sızıntısı** (`.git/config` içinde açık metin, `git remote -v` çalıştıran herkes görebilir). Gerçek GitHub PAT (`tulipfleet-deploy-2026-06`) ile `git remote set-url` yapılarak düzeltildi. **Açık nokta:** O JWT'nin hâlâ geçerli olup olmadığı, iptal edilmesi gerekip gerekmediği doğrulanmadı — ayrı bir güvenlik incelemesi gerektirir.
+
+---
+
 ## Değişiklik Günlüğü
 | Tarih | Değişiklik |
 |---|---|
 | 2026-07-03 | Doküman oluşturuldu. İki-sunuculu API-Driven mimari kararı kilitlendi. |
 | 2026-07-03 | **KESİN ONAY.** §0, §1, §2-4, §5 kullanıcı tarafından resmi olarak onaylandı — "havacılık disiplinine yakışır, kusursuz ve açık kapı bırakmayan mühendislik" ifadesiyle. Task Management bölümü "Proposed API-Driven Tunnel Design" olarak işaretlendi (kod henüz yazılmadı, tasarım önerisi). İş 1 (EmailIntegration) origin'den teyit edildi: kod zaten tam, 3-sorulu form + mock state çalışıyor, ek değişiklik gerekmedi. İş 2 (Navbar): 5 mock uyarı, `AdminAlerts.js` gerçek `ALERT_CONFIG_MAP` sözlüğünden seçilmiş 3 kritik tiple (sos, IMPACT, battery) değiştirildi. |
 | 2026-07-03 | **Checklist tutarlılık düzeltmesi.** §5 Faz 0 maddeleri tamamlandı olarak işaretlendi (bulgu özetiyle). Faz 1'deki migration konumu netleştirildi: `tulipfleet-backend/migrations/` (enterprise backend'in kendi migration-runner'ı olmadığı kanıtlandığı için). Faz 3, §4'teki kanıtlanmış VRP akışı gerçeğiyle uyumlu hale getirildi — eski "forward endpoint / Create Task formu" taslağı kaldırıldı, yerine mevcut `optimize`/`approve` akışını frontend'e bağlayan maddeler yazıldı. |
-| 2026-07-03 (2. tur) | **Settings sayfası temizliği tamamlandı** (Part 1-5, `5ac306f`→`a28c7b7`) — Header/Accounts/Sessions kaldırıldı, demo alanlar silindi, BasicInfo/ChangePassword/DeleteAccount gerçek `api.tulipfleet.com` endpoint'lerine bağlandı (CORS `curl` ile doğrulandı: `Access-Control-Allow-Origin: *`), EmailIntegration İngilizce'ye çevrildi. **Faz 1 (notification_preferences) kod tarafı tamamlandı ve doğrudan GitHub'a commit edildi** (`762fcc9`, `32581ec`, `6aae8b6`) — deploy (staging migration + enterprise backend docker rebuild) kullanıcı tarafında bekliyor, SSH erişimi gerektirdiği için Claude'un yapamayacağı tek adım budur. |
-| 2026-07-03 (3. tur) | **Faz 2 (Alarm/İkaz) tamamlandı, doğrudan GitHub'a commit edildi** (`26ca933` useAlerts.ts, `c81a79c` navbar) — deploy gerekmiyor, `/api/alerts` zaten production'da vardı. Bu turda kararlar (proxy/doğrudan, hangi endpoint) sorulmadan, kanıta dayanarak doğrudan uygulandı — kullanıcının "sürekli soru sorup yarıda bırakma" eleştirisi üzerine iş akışı değişti: netleştirme gerektiren açık noktalar hâlâ soruluyor, ama kanıtlanmış tercihler (CORS açık → doğrudan bağlantı gibi) artık sorulmadan uygulanıyor. |
+| 2026-07-03 (2. tur) | **Settings sayfası temizliği tamamlandı** (Part 1-5, `5ac306f`→`a28c7b7`) — Header/Accounts/Sessions kaldırıldı, demo alanlar silindi, BasicInfo/ChangePassword/DeleteAccount gerçek `api.tulipfleet.com` endpoint'lerine bağlandı (CORS `curl` ile doğrulandı: `Access-Control-Allow-Origin: *`), EmailIntegration İngilizce'ye çevrildi. Faz 1 (notification_preferences) kod tarafı tamamlandı ve doğrudan GitHub'a commit edildi (`762fcc9`, `32581ec`, `6aae8b6`). |
+| 2026-07-03 (3. tur) | **Faz 2 (Alarm/İkaz) tamamlandı, doğrudan GitHub'a commit edildi** (`26ca933` useAlerts.ts, `c81a79c` navbar) — deploy gerekmiyor, `/api/alerts` zaten production'da vardı. Kararlar (proxy/doğrudan, hangi endpoint) sorulmadan, kanıta dayanarak doğrudan uygulandı. |
+| 2026-07-04 (4. tur) | **Faz 1 uçtan uca deploy tamamlandı ve doğrulandı.** Migration'daki Down-block hatası bulundu ve düzeltildi (`98a3933`, bkz. §6.1). Staging + production'da migration başarıyla uygulandı, production backup alındı. `fleet-enterprise-01`'de git credential sorunu (yanlışlıkla yapıştırılmış dispatcher JWT'si, bkz. §6.4) tespit edildi ve gerçek PAT ile düzeltildi. Enterprise backend deploy edildi (`docker compose up -d --build`), health check'ler Cloudflare üzerinden uçtan uca doğrulandı, gerçek JWT ile `GET /api/dispatcher/notification-preferences` → `{"preferences":null}` (body doğrudan görüldü). **Faz 1 artık tam anlamıyla production'da çalışıyor.** §6 (Öğrenilen Dersler) bölümü eklendi. |

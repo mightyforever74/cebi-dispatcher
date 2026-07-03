@@ -1,17 +1,14 @@
 /**
 =========================================================
-* Material Dashboard 2 PRO React TS - v1.0.2
+* TulipFleet Dispatcher — Change Password
 =========================================================
-
-* Product Page: https://www.creative-tim.com/product/material-dashboard-2-pro-react-ts
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+* Gercek API baglantisi: PUT /api/user/change-password.
+* Requirements listesi mobil ChangePasswordScreen.js'ten kanitli gercek
+* kurallarla degistirildi (ozel karakter/sayi kurallari MD2 demo idi, yoktu).
+=========================================================
 */
+
+import { useState } from "react";
 
 // @mui material components
 import Card from "@mui/material/Card";
@@ -23,17 +20,25 @@ import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
 
+// Real API
+import { useChangePassword } from "hooks/useUserAccount";
+
 function ChangePassword(): JSX.Element {
+  const changePasswordMutation = useChangePassword();
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formError, setFormError] = useState("");
+
   const passwordRequirements = [
-    "One special characters",
     "Min 6 characters",
-    "One number (2 are recommended)",
-    "Change it often",
+    "New password and confirmation must match",
+    "New password must be different from current password",
   ];
 
   const renderPasswordRequirements = passwordRequirements.map((item, key) => {
     const itemKey = `element-${key}`;
-
     return (
       <MDBox key={itemKey} component="li" color="text" fontSize="1.25rem" lineHeight={1}>
         <MDTypography variant="button" color="text" fontWeight="regular" verticalAlign="middle">
@@ -42,6 +47,36 @@ function ChangePassword(): JSX.Element {
       </MDBox>
     );
   });
+
+  const handleUpdate = () => {
+    setFormError("");
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setFormError("All fields are required");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setFormError("New password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setFormError("New passwords do not match");
+      return;
+    }
+    if (currentPassword === newPassword) {
+      setFormError("New password must be different from current password");
+      return;
+    }
+    changePasswordMutation.mutate(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        },
+      }
+    );
+  };
 
   return (
     <Card id="change-password">
@@ -54,6 +89,10 @@ function ChangePassword(): JSX.Element {
             <MDInput
               fullWidth
               label="Current Password"
+              value={currentPassword}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setCurrentPassword(e.target.value)
+              }
               inputProps={{ type: "password", autoComplete: "" }}
             />
           </Grid>
@@ -61,6 +100,8 @@ function ChangePassword(): JSX.Element {
             <MDInput
               fullWidth
               label="New Password"
+              value={newPassword}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
               inputProps={{ type: "password", autoComplete: "" }}
             />
           </Grid>
@@ -68,10 +109,35 @@ function ChangePassword(): JSX.Element {
             <MDInput
               fullWidth
               label="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setConfirmPassword(e.target.value)
+              }
               inputProps={{ type: "password", autoComplete: "" }}
             />
           </Grid>
         </Grid>
+        {formError && (
+          <MDBox mt={1}>
+            <MDTypography variant="caption" color="error" fontWeight="bold">
+              {formError}
+            </MDTypography>
+          </MDBox>
+        )}
+        {changePasswordMutation.isError && !formError && (
+          <MDBox mt={1}>
+            <MDTypography variant="caption" color="error" fontWeight="bold">
+              Could not change password — check your current password
+            </MDTypography>
+          </MDBox>
+        )}
+        {changePasswordMutation.isSuccess && (
+          <MDBox mt={1}>
+            <MDTypography variant="caption" color="success" fontWeight="bold">
+              Password updated
+            </MDTypography>
+          </MDBox>
+        )}
         <MDBox mt={6} mb={1}>
           <MDTypography variant="h5">Password requirements</MDTypography>
         </MDBox>
@@ -85,8 +151,14 @@ function ChangePassword(): JSX.Element {
             {renderPasswordRequirements}
           </MDBox>
           <MDBox ml="auto">
-            <MDButton variant="gradient" color="dark" size="small">
-              update password
+            <MDButton
+              variant="gradient"
+              color="dark"
+              size="small"
+              onClick={handleUpdate}
+              disabled={changePasswordMutation.isPending}
+            >
+              {changePasswordMutation.isPending ? "updating..." : "update password"}
             </MDButton>
           </MDBox>
         </MDBox>

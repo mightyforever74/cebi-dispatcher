@@ -38,7 +38,8 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 **Persist modeli — tamamen çalışıyor:**
 - Tablo: `enterprise.notification_preferences` (enterprise backend'in kendi şeması — `public.*` değil, INTEGRATION_BOUNDARIES §5.3 uyumlu).
 - Endpoint: `GET/POST /api/dispatcher/notification-preferences` (`tulipfleet-enterprise-backend`).
-- **Uçtan uca deploy ve smoke test 2026-07-03'te tamamlandı** — bkz. §5 Faz 1.
+- **Uçtan uca deploy, smoke test ve canlı kullanıcı testi 2026-07-03/04'te tamamlandı** — bkz. §5 Faz 1.
+- **Önemli:** Enterprise backend Phase 1 mimarisi gereği `fleet_tracking_staging`'e bağlı (`INTEGRATION_BOUNDARIES.md` §3.1, kasıtlı karar — "production cutover for enterprise is a separate decision"). Gerçek veri şu an staging'de oluşuyor, production'daki aynı isimli tablo boş duruyor ama zararsız.
 
 ---
 
@@ -104,7 +105,7 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 - [x] Enterprise backend'de mevcut bir HTTP-forward/proxy deseni var mı incele → **buldu:** `routes/tasks.js` (`/optimize/approve`) → `tulipfleet-backend/routes/internalBridge.js` "Internal Bridge" deseni (servis-token + IP-allowlist), bkz. §4.
 - [x] `enterprise.notification_preferences` için gerçek migration-runner'ı gör → **sonuç:** enterprise backend'in kendi migration-runner'ı **yok** (`plugins/db.js` sadece connection pool, `package.json`'da migration kütüphanesi yok). Enterprise şemasına ait migration'lar fiziksel olarak `tulipfleet-backend/migrations/`'da duruyor — Faz 1 bu deseni izledi.
 
-**Faz 1 — E-posta Entegrasyonu persist — TAMAMEN BİTTİ, UÇTAN UCA DOĞRULANDI (2026-07-03/04)**
+**Faz 1 — E-posta Entegrasyonu persist — TAMAMEN BİTTİ, CANLI KULLANICI TESTİYLE DOĞRULANDI (2026-07-03/04)**
 - [x] `enterprise.notification_preferences` migration → commit edildi: `tulipfleet-backend` `762fcc9`, sonra düzeltildi `98a3933`
 - [x] `GET/POST /api/dispatcher/notification-preferences` endpoint → commit edildi: `tulipfleet-enterprise-backend` `32581ec` + `server.js` register `6aae8b6`
 - [x] Frontend `EmailIntegration` gerçek endpoint'e bağlandı → `a28c7b7`
@@ -115,7 +116,8 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
   - `curl http://localhost:3001/health` → `{"status":"ok","database":"connected"}`
   - `curl https://enterprise-api.tulipfleet.com/health` → `HTTP/2 200`, `server: cloudflare` + `via: 1.1 Caddy` (uçtan uca Cloudflare üzerinden doğrulandı, ENTERPRISE_INFRASTRUCTURE.md §6.2 kriterleri karşılandı)
   - Gerçek JWT ile `GET /api/dispatcher/notification-preferences` → **`{"preferences":null}`** (body doğrudan görüldü, header'dan çıkarım değil) — route çalışıyor, DB'ye bağlanıyor, henüz kayıt yok (beklenen)
-- **Sonuç: Dispatcher web arayüzünde "Save" artık gerçekten çalışır.**
+- [x] **CANLI KULLANICI TESTİ (2026-07-04):** Kullanıcı dispatcher'da gerçekten giriş yapıp formu doldurup "Save" dedi → "Settings saved" göründü. `fleet_tracking` (production) sorgulandığında `(0 rows)` çıkınca önce hata sanıldı — ama `fleet_tracking_staging` sorgulandığında **gerçek kayıt bulundu** (`notification_email=info@tulipfleet.com`, `mail_client=web`, doğru `updated_at`, backend log'unda `POST ... 200`). **Bu bir hata değil, kasıtlı bir mimari karar:** `INTEGRATION_BOUNDARIES.md` §3.1 açıkça belirtiyor — "Phase 1 dispatcher development connects here [staging]. Production cutover for enterprise is a separate decision recorded in ROADMAP." Enterprise backend'in `.env`'i kasıtlı olarak staging'e bağlı. Production'daki (`fleet_tracking`) `notification_preferences` tablosu şu an boş duruyor — zararsız, ileride cutover kararı alındığında zaten hazır olacak.
+- **Sonuç: Dispatcher web arayüzünde "Save" gerçekten çalışıyor, canlı olarak doğrulandı — Phase 1 mimarisine tam uygun şekilde staging veritabanına yazıyor.**
 
 **Faz 2 — Alarm/İkaz gerçek entegrasyon — TAMAMLANDI (2026-07-03, ikinci tur), DEPLOY GEREKMİYOR**
 - [x] Proxy mi doğrudan mı kararı → **doğrudan** (`api.tulipfleet.com`), CORS açık kanıtlandığı için proxy zorunlu değildi
@@ -156,6 +158,10 @@ Bu bölüm, ileride tekrar migration/deploy yapılırken aynı hatalara düşül
 
 `git remote -v` çalıştırıldığında URL'deki "credential" kısmının bir GitHub PAT değil, **TulipFleet'in kendi dispatcher login sisteminin ürettiği bir JWT** (`demo@tulipfleet.com`, `company_admin`, gerçek bir `company_id` ile) olduğu görüldü — muhtemelen geçmişte biri PAT yapıştıracağı yere yanlışlıkla bu token'ı yapıştırmış. Bu hem `git pull`'un başarısız olmasının sebebiydi (GitHub bunu geçerli bir token formatında görmüyor) hem de bir **credential sızıntısı** (`.git/config` içinde açık metin, `git remote -v` çalıştıran herkes görebilir). Gerçek GitHub PAT (`tulipfleet-deploy-2026-06`) ile `git remote set-url` yapılarak düzeltildi. **Açık nokta:** O JWT'nin hâlâ geçerli olup olmadığı, iptal edilmesi gerekip gerekmediği doğrulanmadı — ayrı bir güvenlik incelemesi gerektirir.
 
+### 6.5 "Settings saved" görmek, production'a yazıldığı anlamına gelmez — çok-veritabanlı sistemlerde her zaman gerçek satırı sorgula
+
+Canlı testte kullanıcı "Settings saved" gördü, ama production DB'de `(0 rows)` çıkınca kısa süreliğine "hata mı bu" diye tereddüt yaşandı. Gerçek sebep: enterprise backend, Phase 1 mimarisi gereği kasıtlı olarak staging'e bağlı (`INTEGRATION_BOUNDARIES.md` §3.1) — hata değildi. **Kural:** İki-veritabanlı (staging/production) bir sistemde "başarılı" UI mesajı yeterli kanıt değildir; hangi DB'ye yazıldığı `.env`'deki `DATABASE_URL`'den ya da doğrudan ilgili DB'yi sorgulayarak teyit edilmeli — production'da `(0 rows)` görmek otomatik olarak "hata" anlamına gelmez, önce staging'i de kontrol et.
+
 ---
 
 ## Değişiklik Günlüğü
@@ -166,4 +172,5 @@ Bu bölüm, ileride tekrar migration/deploy yapılırken aynı hatalara düşül
 | 2026-07-03 | **Checklist tutarlılık düzeltmesi.** §5 Faz 0 maddeleri tamamlandı olarak işaretlendi (bulgu özetiyle). Faz 1'deki migration konumu netleştirildi: `tulipfleet-backend/migrations/` (enterprise backend'in kendi migration-runner'ı olmadığı kanıtlandığı için). Faz 3, §4'teki kanıtlanmış VRP akışı gerçeğiyle uyumlu hale getirildi — eski "forward endpoint / Create Task formu" taslağı kaldırıldı, yerine mevcut `optimize`/`approve` akışını frontend'e bağlayan maddeler yazıldı. |
 | 2026-07-03 (2. tur) | **Settings sayfası temizliği tamamlandı** (Part 1-5, `5ac306f`→`a28c7b7`) — Header/Accounts/Sessions kaldırıldı, demo alanlar silindi, BasicInfo/ChangePassword/DeleteAccount gerçek `api.tulipfleet.com` endpoint'lerine bağlandı (CORS `curl` ile doğrulandı: `Access-Control-Allow-Origin: *`), EmailIntegration İngilizce'ye çevrildi. Faz 1 (notification_preferences) kod tarafı tamamlandı ve doğrudan GitHub'a commit edildi (`762fcc9`, `32581ec`, `6aae8b6`). |
 | 2026-07-03 (3. tur) | **Faz 2 (Alarm/İkaz) tamamlandı, doğrudan GitHub'a commit edildi** (`26ca933` useAlerts.ts, `c81a79c` navbar) — deploy gerekmiyor, `/api/alerts` zaten production'da vardı. Kararlar (proxy/doğrudan, hangi endpoint) sorulmadan, kanıta dayanarak doğrudan uygulandı. |
-| 2026-07-04 (4. tur) | **Faz 1 uçtan uca deploy tamamlandı ve doğrulandı.** Migration'daki Down-block hatası bulundu ve düzeltildi (`98a3933`, bkz. §6.1). Staging + production'da migration başarıyla uygulandı, production backup alındı. `fleet-enterprise-01`'de git credential sorunu (yanlışlıkla yapıştırılmış dispatcher JWT'si, bkz. §6.4) tespit edildi ve gerçek PAT ile düzeltildi. Enterprise backend deploy edildi (`docker compose up -d --build`), health check'ler Cloudflare üzerinden uçtan uca doğrulandı, gerçek JWT ile `GET /api/dispatcher/notification-preferences` → `{"preferences":null}` (body doğrudan görüldü). **Faz 1 artık tam anlamıyla production'da çalışıyor.** §6 (Öğrenilen Dersler) bölümü eklendi. |
+| 2026-07-04 (4. tur) | **Faz 1 uçtan uca deploy tamamlandı ve doğrulandı.** Migration'daki Down-block hatası bulundu ve düzeltildi (`98a3933`, bkz. §6.1). Staging + production'da migration başarıyla uygulandı, production backup alındı. `fleet-enterprise-01`'de git credential sorunu (yanlışlıkla yapıştırılmış dispatcher JWT'si, bkz. §6.4) tespit edildi ve gerçek PAT ile düzeltildi. Enterprise backend deploy edildi (`docker compose up -d --build`), health check'ler Cloudflare üzerinden uçtan uca doğrulandı. §6 (Öğrenilen Dersler) bölümü eklendi. |
+| 2026-07-04 (5. tur) | **Canlı kullanıcı testi tamamlandı.** Kullanıcı dispatcher'da gerçekten "Save" dedi, "Settings saved" gördü. Production DB'de `(0 rows)` görülünce kısa bir tereddüt yaşandı, ama `fleet_tracking_staging`'de gerçek kayıt bulundu — `INTEGRATION_BOUNDARIES.md` §3.1'in kasıtlı Phase 1 kararıyla (enterprise backend staging'e bağlı) tam uyumlu, hata değil. §6.5 bu ders için eklendi. **Faz 1 artık hem kod hem deploy hem canlı kullanıcı testiyle tam olarak kapandı.** |

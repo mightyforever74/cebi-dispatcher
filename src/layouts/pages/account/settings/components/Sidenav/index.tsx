@@ -29,14 +29,15 @@ function Sidenav(): JSX.Element {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
 
+  // profile (Header silindi) ve accounts/sessions (bilesenler silindi) linkleri
+  // kaldirildi. "notifications" -> "email-integration" duzeltildi: eski href
+  // hicbir Card id'sine karsilik gelmiyordu (kirik link, gercek EmailIntegration
+  // bileseninin id'si "email-integration").
   const sidenavItems = [
-    { icon: "person", label: "profile", href: "profile" },
     { icon: "receipt_long", label: "basic info", href: "basic-info" },
     { icon: "lock", label: "change password", href: "change-password" },
     { icon: "security", label: "2FA", href: "2fa" },
-    { icon: "badge", label: "accounts", href: "accounts" },
-    { icon: "campaign", label: "notifications", href: "notifications" },
-    { icon: "settings_applications", label: "sessions", href: "sessions" },
+    { icon: "campaign", label: "email integration", href: "email-integration" },
     { icon: "delete", label: "delete account", href: "delete-account" },
   ];
 

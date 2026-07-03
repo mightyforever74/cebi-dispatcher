@@ -8,7 +8,7 @@
 =========================================================
 */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // @mui material components
 import Card from "@mui/material/Card";
@@ -27,6 +27,12 @@ import MDButton from "components/MDButton";
 // Settings page components
 import FormField from "layouts/pages/account/components/FormField";
 
+// Real API — GET/POST /api/dispatcher/notification-preferences
+import {
+  useNotificationPreferences,
+  useSaveNotificationPreferences,
+} from "hooks/useNotificationPreferences";
+
 type MailClient = "native" | "web";
 
 interface AlertPrefs {
@@ -36,6 +42,9 @@ interface AlertPrefs {
 }
 
 function EmailIntegration(): JSX.Element {
+  const { data: savedPrefs, isLoading: loadingPrefs } = useNotificationPreferences();
+  const saveMutation = useSaveNotificationPreferences();
+
   const [email, setEmail] = useState("dispatcher@tulipfleet.nl");
   const [mailClient, setMailClient] = useState<MailClient>("native");
   const [alerts, setAlerts] = useState<AlertPrefs>({
@@ -43,15 +52,30 @@ function EmailIntegration(): JSX.Element {
     dispatchDelay: false,
     deviceOffline: true,
   });
-  const [saved, setSaved] = useState(false);
+
+  // Backend'den gelen kayitli tercihler yuklenince local edit-buffer'i doldur.
+  useEffect(() => {
+    if (!savedPrefs) return;
+    setEmail(savedPrefs.notification_email);
+    setMailClient(savedPrefs.mail_client);
+    setAlerts({
+      zeZone: savedPrefs.alert_ze_zone,
+      dispatchDelay: savedPrefs.alert_dispatch_delay,
+      deviceOffline: savedPrefs.alert_device_offline,
+    });
+  }, [savedPrefs]);
 
   const toggleAlert = (key: keyof AlertPrefs) => () =>
     setAlerts((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const handleSave = () => {
-    // Mock kaydetme: gercek persist icin bir endpoint/tablo gerekiyor (ayri is).
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    saveMutation.mutate({
+      notification_email: email,
+      mail_client: mailClient,
+      alert_ze_zone: alerts.zeZone,
+      alert_dispatch_delay: alerts.dispatchDelay,
+      alert_device_offline: alerts.deviceOffline,
+    });
   };
 
   return (
@@ -168,12 +192,22 @@ function EmailIntegration(): JSX.Element {
 
           <Grid item xs={12}>
             <MDBox display="flex" alignItems="center" gap={2}>
-              <MDButton variant="gradient" color="info" onClick={handleSave}>
-                Kaydet
+              <MDButton
+                variant="gradient"
+                color="info"
+                onClick={handleSave}
+                disabled={saveMutation.isPending || loadingPrefs}
+              >
+                {saveMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
               </MDButton>
-              {saved && (
+              {saveMutation.isSuccess && (
                 <MDTypography variant="caption" color="success" fontWeight="bold">
-                  Ayarlar kaydedildi (demo — backend entegrasyonu bekleniyor)
+                  Ayarlar kaydedildi
+                </MDTypography>
+              )}
+              {saveMutation.isError && (
+                <MDTypography variant="caption" color="error" fontWeight="bold">
+                  Kaydedilemedi — tekrar deneyin
                 </MDTypography>
               )}
             </MDBox>

@@ -12,6 +12,7 @@
 // ── Dispatcher — canlı operasyonel ekranlar ──
 import Drivers from "layouts/dispatcher/drivers";
 import Tasks from "layouts/dispatcher/tasks";
+import OptimizeTask from "layouts/dispatcher/tasks/optimize";
 import Vehicles from "layouts/dispatcher/vehicles";
 import LiveFleetMap from "layouts/live-fleet-map/LiveFleetMap";
 
@@ -74,6 +75,14 @@ const routes = [
     route: "/dispatcher/tasks",
     component: <Tasks />,
     noCollapse: true,
+  },
+  // Sidenav'da GORUNMEZ (type/name/icon yok) - /dispatcher/tasks sayfasindaki
+  // "Yeni Gorev Olustur" butonundan erisilir. App.tsx getRoutes() sadece
+  // route+component alanlarina bakar, type alanini kontrol etmez.
+  {
+    key: "task-optimize",
+    route: "/dispatcher/tasks/optimize",
+    component: <OptimizeTask />,
   },
 
   // ═══════════ GRUP 2 — YAPAY ZEKÂ & OPTİMİZASYON (gated) ═══════════

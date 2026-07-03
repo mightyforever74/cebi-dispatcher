@@ -24,7 +24,7 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 |---|---|---|---|
 | MQTT alert topic ismi | ACL: `fleet/device/+/alert` (tekil) | Firmware: `fleet/device/{chipId}/alerts` (çoğul) | Kod referans; ACL dokümanı düzeltilmeli ama **sistem çalışıyor, dokunulmuyor** |
 | 16 alert tipi (`ALERT_CONFIG_MAP`, `AdminAlerts.js`) | Kapsamlı bir davranış-uyarı sistemi gibi görünüyordu | Sahada sadece bir alt küme (geofence, fuel) aktif; geri kalanı **kodda yer kaplayan, henüz tetiklenmeyen fikir aşaması** | Sorun etmiyoruz — App zaten stabil, referans budur |
-| Alarm popover mock içeriği (ZE-Zone, sevk gecikmesi vb.) | — | Tamamen benim (Claude) ürettiğim placeholder, gerçek veriye bağlı değildi | Bu turda temizleniyor (bkz. §3) |
+| Alarm popover mock içeriği (ZE-Zone, sevk gecikmesi vb.) | — | Tamamen benim (Claude) ürettiğim placeholder, gerçek veriye bağlı değildi | Faz 2'de gerçek `/api/alerts`'e bağlandı, bkz. §5 |
 
 **Kural:** Bundan sonra herhangi bir doküman/kod çelişkisi tespit edilirse, bu tabloya yeni satır eklenir — asla sessizce unutulmaz.
 
@@ -43,19 +43,18 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 
 ---
 
-## 3. İş 2 — Alarm/İkaz Popover Demo Temizliği
+## 3. İş 2 — Alarm/İkaz Popover — TAMAMLANDI (2026-07-03, ikinci tur)
 
-**Mevcut durum:** Navbar zil ikonu altında 5 tamamen mock `mailto:` uyarısı (ZE-Zone, sevk gecikmesi, telemetri kopması, düşük yakıt) — hiçbiri gerçek veriye bağlı değil.
+**Önceki durum:** Navbar zil ikonu altında 5 tamamen mock `mailto:` uyarısı (ZE-Zone, sevk gecikmesi, telemetri kopması, düşük yakıt) — hiçbiri gerçek veriye bağlı değildi.
 
-**Hedef model (§0 ilkesiyle tutarlı — okuma, yazma değil):**
-- Dispatcher, ana backend'in gerçek `GET /api/alerts` (server.js:2147, kanıtlı endpoint) verisini **okur**.
-- `resolve` aksiyonu da aynı ilkeyle: ana backend'in `PUT /api/alerts/:id/resolve`'ına gider — enterprise backend DB'ye dokunmaz, sadece HTTP proxy/forward yapar.
+**Karar (verildi, sorulmadan uygulandı):** **Doğrudan bağlantı** (`api.tulipfleet.com`), proxy değil — CORS zaten açık kanıtlandığı için (`Access-Control-Allow-Origin: *`, curl testi) ve BasicInfo/ChangePassword/DeleteAccount'taki desenle tutarlı olduğu için.
 
-**Açık karar noktası (henüz kanıtlanmadı, varsaymıyorum):** Dispatcher frontend bu veriye **doğrudan** `api.tulipfleet.com`'a mı bağlanacak (company_id scoped JWT ile — ENTERPRISE_INFRASTRUCTURE §6.3'teki smoke-test deseninde aynı JWT her iki backend'de de geçerli), yoksa `enterprise-api.tulipfleet.com` üzerinden **proxy** mi edilecek? **Öneri:** proxy — dispatcher zaten tüm veri için `enterprise-api` desenini kullanıyor (tutarlılık), ama bu enterprise backend'de yeni bir forward-endpoint yazımı gerektirir.
-
-**Not (2026-07-03, ikinci tur):** Faz 1'in CORS bulgusuyla bu açık nokta netleşti — `api.tulipfleet.com` CORS'u tamamen açık (`Access-Control-Allow-Origin: *`, curl ile kanıtlandı). Yani **doğrudan bağlantı da teknik olarak mümkün**, proxy zorunlu değil. Öneri hâlâ proxy (tutarlılık) ama artık bu bir tercih meselesi, teknik engel değil.
-
-**Alert tipi sözlüğü** (gerçek, `AdminAlerts.js`'den kanıtlı — mock'un yerini bunlar alacak): `HARD_BRAKE, HARD_ACCEL, HARD_TURN, SHARP_TURN, IMPACT, OVERSPEED, speed, geofence, geofence_entry, geofence_exit, fuel, maintenance, battery, idle, sos, default`.
+**Uygulanan model:**
+- `GET /api/alerts` (mobil `alertsAPI.getAll`'dan kanıtlı) → gerçek uyarı listesi, `res.alerts || (Array.isArray(res) ? res : [])` defensive parse deseni.
+- `PUT /api/alerts/:id/resolve` (body: `{resolution}`) → tıklanınca çağrılır, `is_resolved=true` yapar.
+- 16-tip sözlüğü `AdminAlerts.js`'deki `ALERT_CONFIG_MAP` ile birebir eşlendi (severity: critical/warning/info → error/warning/info renk).
+- Panel başlığı "🔥 Hot Alert Station" (İngilizce), footer'da "Setup Your Mailbox" → `/system/settings`.
+- `refetchInterval: 60s` — periyodik otomatik yenileme, "sıcak" hissi için.
 
 ---
 
@@ -115,10 +114,11 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
   - Enterprise backend'i güncelle: `fleet-enterprise-01`'de `git pull && docker compose up -d --build`
   - Deploy sonrası smoke test: dispatcher'da giriş yapıp EmailIntegration'da "Save" dene, "Kaydedilemedi" yerine "Settings saved" görmeli
 
-**Faz 2 — Alarm/İkaz gerçek entegrasyon**
-- [ ] Proxy mi doğrudan mı kararını ver (öneri: proxy — ama artık CORS açık olduğu kanıtlandığı için ikisi de teknik olarak mümkün, §3 notuna bkz.)
-- [ ] Mock 5 uyarıyı kaldır, gerçek `GET /api/alerts` + `PUT /api/alerts/:id/resolve` bağla
-- [ ] 16-tip sözlüğünü (ikon/renk/i18n) `AdminAlerts.js`'deki `ALERT_CONFIG_MAP` ile birebir eşle
+**Faz 2 — Alarm/İkaz gerçek entegrasyon — TAMAMLANDI (2026-07-03, ikinci tur), DEPLOY GEREKMİYOR**
+- [x] Proxy mi doğrudan mı kararı → **doğrudan** (`api.tulipfleet.com`), CORS açık kanıtlandığı için proxy zorunlu değildi
+- [x] Mock 5 uyarı kaldırıldı, gerçek `GET /api/alerts` + `PUT /api/alerts/:id/resolve` bağlandı → commit `26ca933` (`src/hooks/useAlerts.ts`) + `c81a79c` (navbar)
+- [x] 16-tip sözlüğü `AdminAlerts.js`'deki `ALERT_CONFIG_MAP` ile birebir eşlendi (icon Ionicons→MUI çevirisiyle)
+- **Not:** Bu faz enterprise/ana backend'de hiçbir değişiklik gerektirmedi — `/api/alerts` zaten production'da vardı (mobil app kullanıyor). Sadece frontend değişti, deploy gerekmiyor, `git pull` sonrası hemen aktif.
 
 **Faz 3 — Task Management temeli (§4'teki VRP akışı gerçeğiyle uyumlu — forward endpoint/Create Task formu YOK, eski taslak kaldırıldı)**
 - [ ] Dispatcher frontend: harita/liste üzerinden araç + nokta seçimi → `POST /dispatcher/tasks/optimize` çağrısı (tasks[], vehicles[] — tek task da `tasks=[1 eleman]` olarak buradan geçer)
@@ -140,3 +140,4 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 | 2026-07-03 | **KESİN ONAY.** §0, §1, §2-4, §5 kullanıcı tarafından resmi olarak onaylandı — "havacılık disiplinine yakışır, kusursuz ve açık kapı bırakmayan mühendislik" ifadesiyle. Task Management bölümü "Proposed API-Driven Tunnel Design" olarak işaretlendi (kod henüz yazılmadı, tasarım önerisi). İş 1 (EmailIntegration) origin'den teyit edildi: kod zaten tam, 3-sorulu form + mock state çalışıyor, ek değişiklik gerekmedi. İş 2 (Navbar): 5 mock uyarı, `AdminAlerts.js` gerçek `ALERT_CONFIG_MAP` sözlüğünden seçilmiş 3 kritik tiple (sos, IMPACT, battery) değiştirildi. |
 | 2026-07-03 | **Checklist tutarlılık düzeltmesi.** §5 Faz 0 maddeleri tamamlandı olarak işaretlendi (bulgu özetiyle). Faz 1'deki migration konumu netleştirildi: `tulipfleet-backend/migrations/` (enterprise backend'in kendi migration-runner'ı olmadığı kanıtlandığı için). Faz 3, §4'teki kanıtlanmış VRP akışı gerçeğiyle uyumlu hale getirildi — eski "forward endpoint / Create Task formu" taslağı kaldırıldı, yerine mevcut `optimize`/`approve` akışını frontend'e bağlayan maddeler yazıldı. |
 | 2026-07-03 (2. tur) | **Settings sayfası temizliği tamamlandı** (Part 1-5, `5ac306f`→`a28c7b7`) — Header/Accounts/Sessions kaldırıldı, demo alanlar silindi, BasicInfo/ChangePassword/DeleteAccount gerçek `api.tulipfleet.com` endpoint'lerine bağlandı (CORS `curl` ile doğrulandı: `Access-Control-Allow-Origin: *`), EmailIntegration İngilizce'ye çevrildi. **Faz 1 (notification_preferences) kod tarafı tamamlandı ve doğrudan GitHub'a commit edildi** (`762fcc9`, `32581ec`, `6aae8b6`) — deploy (staging migration + enterprise backend docker rebuild) kullanıcı tarafında bekliyor, SSH erişimi gerektirdiği için Claude'un yapamayacağı tek adım budur. |
+| 2026-07-03 (3. tur) | **Faz 2 (Alarm/İkaz) tamamlandı, doğrudan GitHub'a commit edildi** (`26ca933` useAlerts.ts, `c81a79c` navbar) — deploy gerekmiyor, `/api/alerts` zaten production'da vardı. Bu turda kararlar (proxy/doğrudan, hangi endpoint) sorulmadan, kanıta dayanarak doğrudan uygulandı — kullanıcının "sürekli soru sorup yarıda bırakma" eleştirisi üzerine iş akışı değişti: netleştirme gerektiren açık noktalar hâlâ soruluyor, ama kanıtlanmış tercihler (CORS açık → doğrudan bağlantı gibi) artık sorulmadan uygulanıyor. |

@@ -1,10 +1,9 @@
 /**
 =========================================================
-* TulipFleet Dispatcher — E-posta ve Bildirim Entegrasyonu
+* TulipFleet Dispatcher — Email & Notification Integration
 =========================================================
-* /system/settings sayfasinin "Notifications" (MD2 demo) blogunun
-* yerini alir. Mock state ile calisir; kaydetme backend'e persist
-* ETMEZ - bu ayri bir is (bkz. ilgili ADR).
+* Replaces /system/settings page's "Notifications" (MD2 demo) block.
+* Connected to real API: GET/POST /api/dispatcher/notification-preferences.
 =========================================================
 */
 
@@ -53,7 +52,7 @@ function EmailIntegration(): JSX.Element {
     deviceOffline: true,
   });
 
-  // Backend'den gelen kayitli tercihler yuklenince local edit-buffer'i doldur.
+  // Fill local edit-buffer once saved preferences arrive from backend.
   useEffect(() => {
     if (!savedPrefs) return;
     setEmail(savedPrefs.notification_email);
@@ -82,11 +81,10 @@ function EmailIntegration(): JSX.Element {
     <Card id="email-integration">
       <MDBox p={3} lineHeight={1}>
         <MDBox mb={1}>
-          <MDTypography variant="h5">E-posta ve Bildirim Entegrasyonu</MDTypography>
+          <MDTypography variant="h5">Email & Notification Integration</MDTypography>
         </MDBox>
         <MDTypography variant="button" color="text">
-          Sistem bildirimlerinin ve sevk (dispatch) ozetlerinin nereye ve nasil gonderilecegini
-          buradan yonetin.
+          Manage where and how system notifications and dispatch summaries are sent.
         </MDTypography>
       </MDBox>
 
@@ -100,11 +98,11 @@ function EmailIntegration(): JSX.Element {
               display="block"
               mb={1}
             >
-              Sistem bildirimlerinin ve sevk ozetlerinin gonderilecegi ana kurumsal e-posta
-              adresiniz nedir?
+              What is the main corporate email address for system notifications and dispatch
+              summaries?
             </MDTypography>
             <FormField
-              label="Kurumsal E-posta Adresi"
+              label="Corporate Email Address"
               placeholder="dispatcher@tulipfleet.nl"
               value={email}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
@@ -120,7 +118,7 @@ function EmailIntegration(): JSX.Element {
               display="block"
               mb={1}
             >
-              Mesaj ikonuna tikladiginizda hangi e-posta programini kullanmak istersiniz?
+              Which email program would you like to open when clicking the message icon?
             </MDTypography>
             <RadioGroup
               value={mailClient}
@@ -133,7 +131,7 @@ function EmailIntegration(): JSX.Element {
                   <MDBox display="flex" alignItems="center" gap={0.5}>
                     <Icon fontSize="small">mail</Icon>
                     <MDTypography variant="button" fontWeight="regular">
-                      Sistem Varsayilani (Outlook, Apple Mail, Windows Mail)
+                      System Default (Outlook, Apple Mail, Windows Mail)
                     </MDTypography>
                   </MDBox>
                 }
@@ -145,7 +143,7 @@ function EmailIntegration(): JSX.Element {
                   <MDBox display="flex" alignItems="center" gap={0.5}>
                     <Icon fontSize="small">language</Icon>
                     <MDTypography variant="button" fontWeight="regular">
-                      Web Tabanli (Gmail / Outlook Web)
+                      Web-Based (Gmail / Outlook Web)
                     </MDTypography>
                   </MDBox>
                 }
@@ -161,13 +159,13 @@ function EmailIntegration(): JSX.Element {
               display="block"
               mb={1}
             >
-              Mesajlar ikonunun sadece sayi gostermeyip, arka planda otomatik calisarak sizi canli
-              uyarmasini istediginiz kritik durumlari secin:
+              Select the critical situations where you want the messages icon to actively alert you
+              in real time, not just show a count:
             </MDTypography>
             <MDBox display="flex" flexDirection="column">
               <FormControlLabel
                 control={<Checkbox checked={alerts.zeZone} onChange={toggleAlert("zeZone")} />}
-                label="Arac ZE-Zone (Sifir Emisyon) ihlali yaptiginda otomatik mail taslagi hazirla"
+                label="Prepare an automatic mail draft when a vehicle commits a ZE-Zone (Zero Emission) violation"
               />
               <FormControlLabel
                 control={
@@ -176,7 +174,7 @@ function EmailIntegration(): JSX.Element {
                     onChange={toggleAlert("dispatchDelay")}
                   />
                 }
-                label="Surucu yeni atanan gorevi 10 dakika icinde onaylamadiysa ikaz ver"
+                label="Alert if the driver does not confirm a newly assigned task within 10 minutes"
               />
               <FormControlLabel
                 control={
@@ -185,7 +183,7 @@ function EmailIntegration(): JSX.Element {
                     onChange={toggleAlert("deviceOffline")}
                   />
                 }
-                label="Cihaz baglantisi (telemetri) koptugunda kritik uyari firlat"
+                label="Trigger a critical alert when the device (telemetry) connection is lost"
               />
             </MDBox>
           </Grid>
@@ -198,16 +196,16 @@ function EmailIntegration(): JSX.Element {
                 onClick={handleSave}
                 disabled={saveMutation.isPending || loadingPrefs}
               >
-                {saveMutation.isPending ? "Kaydediliyor..." : "Kaydet"}
+                {saveMutation.isPending ? "Saving..." : "Save"}
               </MDButton>
               {saveMutation.isSuccess && (
                 <MDTypography variant="caption" color="success" fontWeight="bold">
-                  Ayarlar kaydedildi
+                  Settings saved
                 </MDTypography>
               )}
               {saveMutation.isError && (
                 <MDTypography variant="caption" color="error" fontWeight="bold">
-                  Kaydedilemedi — tekrar deneyin
+                  Could not save — try again
                 </MDTypography>
               )}
             </MDBox>

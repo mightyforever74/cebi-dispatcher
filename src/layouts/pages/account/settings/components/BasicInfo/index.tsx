@@ -1,22 +1,17 @@
 /**
 =========================================================
-* Material Dashboard 2 PRO React TS - v1.0.2
+* TulipFleet Dispatcher — Basic Info
 =========================================================
-
-* Product Page: https://www.creative-tim.com/product/material-dashboard-2-pro-react-ts
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+* Demo temizligi (Sira 6): gender/birth-date, confirmation email,
+* your location, language+skills kaldirildi (TulipFleet modelinde
+* karsiligi yok). Phone Number: gercek users.phone'a baglama
+* ayri bir is (CORS + response sekli dogrulanmadan yapilmadi).
+=========================================================
 */
 
 // @material-ui core components
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
-import Autocomplete from "@mui/material/Autocomplete";
 
 // Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
@@ -24,9 +19,6 @@ import MDTypography from "components/MDTypography";
 
 // Settings page components
 import FormField from "layouts/pages/account/components/FormField";
-
-// Data
-import selectData from "layouts/pages/account/settings/components/BasicInfo/data/selectData";
 
 function BasicInfo(): JSX.Element {
   return (
@@ -37,58 +29,10 @@ function BasicInfo(): JSX.Element {
       <MDBox component="form" pb={3} px={3}>
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6}>
-            <FormField label="First Name" placeholder="Alec" />
+            <FormField label="First Name" placeholder="First name" />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <FormField label="Last Name" placeholder="Thompson" />
-          </Grid>
-          <Grid item xs={12}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={4}>
-                <Autocomplete
-                  defaultValue="Male"
-                  options={selectData.gender}
-                  renderInput={(params) => (
-                    <FormField {...params} label="I'm" InputLabelProps={{ shrink: true }} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={8}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={5}>
-                    <Autocomplete
-                      defaultValue="February"
-                      options={selectData.birthDate}
-                      renderInput={(params) => (
-                        <FormField
-                          {...params}
-                          label="Birth Date"
-                          InputLabelProps={{ shrink: true }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Autocomplete
-                      defaultValue="1"
-                      options={selectData.days}
-                      renderInput={(params) => (
-                        <FormField {...params} InputLabelProps={{ shrink: true }} />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
-                    <Autocomplete
-                      defaultValue="2021"
-                      options={selectData.years}
-                      renderInput={(params) => (
-                        <FormField {...params} InputLabelProps={{ shrink: true }} />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
+            <FormField label="Last Name" placeholder="Last name" />
           </Grid>
           <Grid item xs={12} sm={6}>
             <FormField
@@ -99,30 +43,9 @@ function BasicInfo(): JSX.Element {
           </Grid>
           <Grid item xs={12} sm={6}>
             <FormField
-              label="confirmation email"
-              placeholder="example@email.com"
-              inputProps={{ type: "email" }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FormField label="your location" placeholder="Sydney, A" />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <FormField
               label="Phone Number"
-              placeholder="+40 735 631 620"
+              placeholder="+31 6 00 000 000"
               inputProps={{ type: "number" }}
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <FormField label="Language" placeholder="English" />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Autocomplete
-              multiple
-              defaultValue={["react", "angular"]}
-              options={selectData.skills}
-              renderInput={(params) => <FormField {...params} InputLabelProps={{ shrink: true }} />}
             />
           </Grid>
         </Grid>

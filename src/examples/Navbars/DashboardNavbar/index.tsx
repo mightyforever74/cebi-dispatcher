@@ -54,11 +54,48 @@ import {
   setOpenConfigurator,
 } from "context";
 
+// Real API — GET/PUT /api/alerts (api.tulipfleet.com)
+import { useAlerts, useResolveAlert, type Alert } from "hooks/useAlerts";
+
 // Declaring prop types for DashboardNavbar
 interface Props {
   absolute?: boolean;
   light?: boolean;
   isMini?: boolean;
+}
+
+// ── Alert type dictionary — kanıtlı, AdminAlerts.js ALERT_CONFIG_MAP ile
+// birebir eşleşiyor (icon isimleri Ionicons'tan MUI Material Icons'a
+// çevrildi, severity/renk eşlemesi aynı kaldı).
+type Severity = "critical" | "warning" | "info";
+
+const ALERT_CONFIG: Record<string, { severity: Severity; icon: string }> = {
+  HARD_BRAKE: { severity: "critical", icon: "warning" },
+  HARD_ACCEL: { severity: "warning", icon: "trending_up" },
+  HARD_TURN: { severity: "warning", icon: "turn_right" },
+  SHARP_TURN: { severity: "warning", icon: "turn_right" },
+  IMPACT: { severity: "critical", icon: "car_crash" },
+  OVERSPEED: { severity: "critical", icon: "speed" },
+  speed: { severity: "critical", icon: "speed" },
+  geofence: { severity: "warning", icon: "location_on" },
+  geofence_entry: { severity: "info", icon: "location_on" },
+  geofence_exit: { severity: "warning", icon: "location_off" },
+  fuel: { severity: "info", icon: "local_gas_station" },
+  maintenance: { severity: "warning", icon: "build" },
+  battery: { severity: "critical", icon: "battery_alert" },
+  idle: { severity: "info", icon: "schedule" },
+  sos: { severity: "critical", icon: "sos" },
+  default: { severity: "info", icon: "notifications" },
+};
+
+const SEVERITY_COLOR: Record<Severity, "error" | "warning" | "info"> = {
+  critical: "error",
+  warning: "warning",
+  info: "info",
+};
+
+function getAlertConfig(type: string | undefined) {
+  return ALERT_CONFIG[type || "default"] || ALERT_CONFIG.default;
 }
 
 function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
@@ -101,93 +138,35 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const handleOpenMenu = (event: any) => setOpenMenu(event.currentTarget);
   const handleCloseMenu = () => setOpenMenu(false);
 
-  // ── TulipFleet Anlik Sicak Uyari Istasyonu ─────────────────────────────
-  // Bu bir e-posta kutusu DEGIL: sadece kritik operasyonel olaylarin listesi.
-  // Tiklaninca (a) o uyari "okundu" sayilir (badge sayisi duser) ve
-  // (b) mailto: ile varsayilan mail programi onceden doldurulmus taslakla acilir.
-  //
-  // ONEMLI - DOGRULANMIS DURUM (2026-07-02, backend arastirmasi):
-  // tulipfleet-backend ve tulipfleet-enterprise-backend repolarinda
-  // confirmation_email / notification_email / mail_client / notification_prefs
-  // gibi hicbir DB kolonu/route YOK. Bu liste ve Settings > EmailIntegration
-  // formu su an tamamen MOCK/frontend-only calisir, hicbir yere persist etmez.
-  // Gercek zamanli (WSS/SSE) tetikleme de backend'de kurulu degil - bu component
-  // bir prototip/UI iskeleti, canli veri kaynagi ayri bir is (bkz. ADR backlog).
+  // ── TulipFleet Hot Alert Station ────────────────────────────────────────
+  // Gercek API'ye baglandi (2026-07-03, Faz 2): GET /api/alerts (api.tulipfleet.com,
+  // dogrudan baglanti - CORS acik oldugu curl ile kanitlandi). Bu bir e-posta
+  // kutusu DEGIL: sadece kritik operasyonel olaylarin (gercek backend verisi)
+  // listesi. Tiklaninca (a) PUT /api/alerts/:id/resolve cagrilir (is_resolved=true)
+  // ve (b) mailto: ile mail programi acilir (dispatcher kayit tutabilsin diye).
   const notificationEmail = "dispatcher@tulipfleet.nl";
 
-  interface AlertNotification {
-    id: string;
-    icon: string;
-    iconColor: "warning" | "error" | "secondary" | "info" | "success";
-    title: string;
-    mailtoSubject: string;
-    mailtoBody: string;
-    read: boolean;
-  }
+  const { data: alertsData, isLoading: loadingAlerts } = useAlerts();
+  const resolveMutation = useResolveAlert();
 
-  const [notifications, setNotifications] = useState<AlertNotification[]>([
-    {
-      id: "1",
-      icon: "eco",
-      iconColor: "warning",
-      title: "AH-05-KL: ZE-Zone ihlali (Amsterdam)",
-      mailtoSubject: "ZE-Zone Ihlali - AH-05-KL",
-      mailtoBody:
-        "Arac AH-05-KL, Amsterdam Sifir Emisyon (ZE) bolgesinde ihlal tespit edildi. Lutfen inceleyin.",
-      read: false,
-    },
-    {
-      id: "2",
-      icon: "assignment_late",
-      iconColor: "error",
-      title: "RD-NL-78: Sevk onayi gecikti (10 dk)",
-      mailtoSubject: "Sevk Onayi Gecikti - RD-NL-78",
-      mailtoBody: "RD-NL-78 plakali aracin surucusu, atanan gorevi 10 dakika icinde onaylamadi.",
-      read: false,
-    },
-    {
-      id: "3",
-      icon: "signal_wifi_off",
-      iconColor: "secondary",
-      title: "BX-TR-42: Telemetri baglantisi koptu",
-      mailtoSubject: "Telemetri Baglantisi Koptu - BX-TR-42",
-      mailtoBody:
-        "BX-TR-42 plakali aractan telemetri verisi alinamiyor. Cihaz durumunu kontrol edin.",
-      read: false,
-    },
-    {
-      id: "4",
-      icon: "eco",
-      iconColor: "warning",
-      title: "NL-92-VB: ZE-Zone ihlali (Rotterdam)",
-      mailtoSubject: "ZE-Zone Ihlali - NL-92-VB",
-      mailtoBody:
-        "Arac NL-92-VB, Rotterdam Sifir Emisyon (ZE) bolgesinde ihlal tespit edildi. Lutfen inceleyin.",
-      read: false,
-    },
-    {
-      id: "5",
-      icon: "battery_alert",
-      iconColor: "error",
-      title: "AH-05-KL: Dusuk yakit seviyesi (%8)",
-      mailtoSubject: "Dusuk Yakit Seviyesi - AH-05-KL",
-      mailtoBody: "AH-05-KL plakali aracin yakit seviyesi kritik esigin (%10) altina dustu.",
-      read: true,
-    },
-  ]);
+  const alerts = alertsData || [];
+  const activeAlerts = alerts.filter((a) => !a.is_resolved).slice(0, 10);
+  const unreadCount = activeAlerts.length;
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const buildMailto = (subject: string, body: string) =>
-    `mailto:${notificationEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
-      body
-    )}`;
-
-  const handleAlertClick = (id: string) => () => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const buildMailto = (alert: Alert) => {
+    const alertType = alert.alert_type || alert.type || "Alert";
+    const subject = `${alertType}${alert.vehicle_plate ? " - " + alert.vehicle_plate : ""}`;
+    const body = alert.description || alert.title || "See dispatcher for details.";
+    return `mailto:${notificationEmail}?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
   };
 
-  // Render the notifications menu ("Anlik Sicak Uyari Istasyonu")
+  const handleAlertClick = (alert: Alert) => () => {
+    resolveMutation.mutate({ id: alert.id });
+  };
+
+  // Render the notifications menu ("Hot Alert Station")
   const renderMenu = () => (
     <Menu
       anchorEl={openMenu}
@@ -203,30 +182,51 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
     >
       <MDBox px={2} pt={1.5} pb={1}>
         <MDTypography variant="button" fontWeight="bold" color="text">
-          🔥 Anlik Sicak Uyari Istasyonu
+          🔥 Hot Alert Station
         </MDTypography>
         <MDTypography variant="caption" color="text" display="block">
-          Tiklayinca ilgili mail programiniz acilir
+          Click to resolve and open your mail program
         </MDTypography>
       </MDBox>
       <Divider sx={{ my: 0.5 }} />
 
       <MDBox sx={{ maxHeight: 260, overflowY: "auto" }}>
-        {notifications.map((n) => (
-          <NotificationItem
-            key={n.id}
-            icon={
-              <Icon color={n.iconColor} fontSize="small">
-                {n.icon}
-              </Icon>
-            }
-            title={n.title}
-            component="a"
-            href={buildMailto(n.mailtoSubject, n.mailtoBody)}
-            onClick={handleAlertClick(n.id)}
-            sx={{ opacity: n.read ? 0.5 : 1 }}
-          />
-        ))}
+        {loadingAlerts && (
+          <MDBox px={2} py={2}>
+            <MDTypography variant="caption" color="text">
+              Loading...
+            </MDTypography>
+          </MDBox>
+        )}
+        {!loadingAlerts && activeAlerts.length === 0 && (
+          <MDBox px={2} py={2}>
+            <MDTypography variant="caption" color="text">
+              No active alerts
+            </MDTypography>
+          </MDBox>
+        )}
+        {activeAlerts.map((alert) => {
+          const config = getAlertConfig(alert.alert_type || alert.type);
+          const label =
+            alert.title ||
+            `${alert.alert_type || alert.type || "Alert"}${
+              alert.vehicle_plate ? " — " + alert.vehicle_plate : ""
+            }`;
+          return (
+            <NotificationItem
+              key={alert.id}
+              icon={
+                <Icon color={SEVERITY_COLOR[config.severity]} fontSize="small">
+                  {config.icon}
+                </Icon>
+              }
+              title={label}
+              component="a"
+              href={buildMailto(alert)}
+              onClick={handleAlertClick(alert)}
+            />
+          );
+        })}
       </MDBox>
 
       <Divider sx={{ my: 0.5 }} />
@@ -236,7 +236,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
             settings
           </Icon>
         }
-        title="Posta Kutusu Ayarlarini Duzenle"
+        title="Setup Your Mailbox"
         component={Link}
         to="/system/settings"
         onClick={handleCloseMenu}

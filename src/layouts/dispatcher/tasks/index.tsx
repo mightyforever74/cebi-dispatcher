@@ -1,6 +1,7 @@
 import { Chip, Tab, Tabs } from "@mui/material";
 import MDBadge from "components/MDBadge";
 import MDBox from "components/MDBox";
+import MDButton from "components/MDButton";
 import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -9,6 +10,7 @@ import useDrivers from "hooks/useDrivers";
 import useTasks, { TaskFilter } from "hooks/useTasks";
 import useVehicles from "hooks/useVehicles";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toNum } from "utils/toNum";
 
 type BadgeColor =
@@ -22,6 +24,7 @@ type BadgeColor =
   | "dark";
 
 function TasksLayout(): JSX.Element {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<TaskFilter>("all");
   const { data: tasks = [], isLoading, error } = useTasks(filter);
   const { data: drivers = [] } = useDrivers();
@@ -206,9 +209,19 @@ function TasksLayout(): JSX.Element {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
-        <MDTypography variant="h5" gutterBottom>
-          Taken
-        </MDTypography>
+        <MDBox display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+          <MDTypography variant="h5" gutterBottom>
+            Taken
+          </MDTypography>
+          <MDButton
+            variant="gradient"
+            color="info"
+            size="small"
+            onClick={() => navigate("/dispatcher/tasks/optimize")}
+          >
+            + Nieuwe Taak
+          </MDButton>
+        </MDBox>
 
         <MDBox mb={2}>
           <Tabs

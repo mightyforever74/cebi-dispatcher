@@ -39,7 +39,7 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 - FK: `user_id` → `public.users(id)` (SELECT-only okuma, referans için; yazma `enterprise.*`'da kalır).
 - Endpoint: enterprise backend'in kendi route'u — `PUT /api/dispatcher/notification-preferences`, `GET /api/dispatcher/notification-preferences`.
 
-**Açık nokta:** Migration + endpoint henüz yazılmadı. Ayrı bir oturumda, `tulipfleet-enterprise-backend` reposunun gerçek migration-runner'ı görülerek yapılmalı — varsaymadan.
+**Güncelleme (2026-07-03, ikinci tur):** Migration + endpoint yazıldı ve commit edildi — bkz. §5 Faz 1.
 
 ---
 
@@ -52,6 +52,8 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 - `resolve` aksiyonu da aynı ilkeyle: ana backend'in `PUT /api/alerts/:id/resolve`'ına gider — enterprise backend DB'ye dokunmaz, sadece HTTP proxy/forward yapar.
 
 **Açık karar noktası (henüz kanıtlanmadı, varsaymıyorum):** Dispatcher frontend bu veriye **doğrudan** `api.tulipfleet.com`'a mı bağlanacak (company_id scoped JWT ile — ENTERPRISE_INFRASTRUCTURE §6.3'teki smoke-test deseninde aynı JWT her iki backend'de de geçerli), yoksa `enterprise-api.tulipfleet.com` üzerinden **proxy** mi edilecek? **Öneri:** proxy — dispatcher zaten tüm veri için `enterprise-api` desenini kullanıyor (tutarlılık), ama bu enterprise backend'de yeni bir forward-endpoint yazımı gerektirir.
+
+**Not (2026-07-03, ikinci tur):** Faz 1'in CORS bulgusuyla bu açık nokta netleşti — `api.tulipfleet.com` CORS'u tamamen açık (`Access-Control-Allow-Origin: *`, curl ile kanıtlandı). Yani **doğrudan bağlantı da teknik olarak mümkün**, proxy zorunlu değil. Öneri hâlâ proxy (tutarlılık) ama artık bu bir tercih meselesi, teknik engel değil.
 
 **Alert tipi sözlüğü** (gerçek, `AdminAlerts.js`'den kanıtlı — mock'un yerini bunlar alacak): `HARD_BRAKE, HARD_ACCEL, HARD_TURN, SHARP_TURN, IMPACT, OVERSPEED, speed, geofence, geofence_entry, geofence_exit, fuel, maintenance, battery, idle, sos, default`.
 
@@ -92,7 +94,6 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 4. **`public.tasks.enterprise_dispatch_task_id`** FK kolonu zaten var (muhtemelen `add-tasks-enterprise-dispatch-task-id` migration'ı) — iki sistemi eşleştiren köprü.
 
 **Açık noktalar (varsaymıyorum, doğrulanmadı):**
-- Enterprise backend'in kendi migration mekanizması bulunamadı (`lib/`'de yok) — enterprise şemasına ait migration'lar (`enterprise-schema-init.sql` dahil) fiziksel olarak `tulipfleet-backend/migrations/`'da duruyor. Faz 1'de `enterprise.notification_preferences` migration'ının nereye yazılacağı bu yüzden netleşmeli.
 - `getRoutingProvider()`'ın gerçek sağlayıcısı (HERE Tour Planning dolu mu, mock/null mu) doğrulanmadı — SYSTEM_TOPOLOGY.md daha önce "Tour Planning: YOK" demişti, ama burada bir factory/interface zaten çağrılıyor; çelişki olabilir, ayrı incelenmeli.
 - **`enterprise.behavior_events` — düzeltme (2026-07-03):** Bu tablo `docs/SCHEMA_REFERENCE.md`'de (canlı `\d` çıktısı, son doğrulama 2026-06-18) yok — **henüz gerçek değil.** Ama "halüsinasyon" demek yanlıştı: tablo gerçekten var olan `FEAT-007-driver-performance-coaching.md` ve `FEAT-010` blueprint dokümanlarında tanımlı — sorun, bu "tasarım niyeti" dokümanlarının canlı şemayla karıştırılmasıydı. **Kanıt hiyerarşisi kuralı (bundan sonra geçerli):** `docs/SCHEMA_REFERENCE.md` + `ROADMAP.md`'deki "Done/✅" işaretli maddeler = kanıt; `FEAT-*` spec dosyaları = tasarım niyeti, henüz production değil. ADR'ler bile bazen hatalı olabilir — örnek: ADR-0011 "drivers.skills kolonu var" diyor ama SCHEMA_REFERENCE bunu açıkça yalanlıyor (yetkinlik `enterprise.dispatch_tasks.skill_required`'da tutulur). Çelişki halinde SCHEMA_REFERENCE her zaman kazanır.
 - `FEAT-105` (AI Agent: PDF/email order parsing) ve `FN-09` (`POST /api/webhooks/orders/external`, `FEAT-003` spec'inde) — ROADMAP/ADR-0011'e göre **Phase 2, customer-funded, henüz spec aşamasında.** "Setup your mailbox" özelliği bu kapsamda; production'da doğrulanamaz çünkü henüz yazılmadı.
@@ -103,15 +104,19 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 
 **Faz 0 — Doğrulama (kod yok) — TAMAMLANDI (2026-07-03)**
 - [x] Enterprise backend'de mevcut bir HTTP-forward/proxy deseni var mı incele → **buldu:** `routes/tasks.js` (`/optimize/approve`) → `tulipfleet-backend/routes/internalBridge.js` "Internal Bridge" deseni (servis-token + IP-allowlist), bkz. §4.
-- [x] `enterprise.notification_preferences` için gerçek migration-runner'ı gör → **sonuç:** enterprise backend'in kendi migration-runner'ı **yok** (`plugins/db.js` sadece connection pool, `package.json`'da migration kütüphanesi yok). Enterprise şemasına ait migration'lar (`enterprise-schema-init.sql` dahil) fiziksel olarak `tulipfleet-backend/migrations/`'da duruyor — Faz 1 bu deseni izleyecek.
+- [x] `enterprise.notification_preferences` için gerçek migration-runner'ı gör → **sonuç:** enterprise backend'in kendi migration-runner'ı **yok** (`plugins/db.js` sadece connection pool, `package.json`'da migration kütüphanesi yok). Enterprise şemasına ait migration'lar (`enterprise-schema-init.sql` dahil) fiziksel olarak `tulipfleet-backend/migrations/`'da duruyor — Faz 1 bu deseni izledi.
 
-**Faz 1 — E-posta Entegrasyonu persist**
-- [ ] `enterprise.notification_preferences` migration → **`tulipfleet-backend/migrations/`** reposuna yazılır (Faz 0 bulgusu: enterprise backend'in kendi migration-runner'ı yok; dosya `enterprise-schema-init.sql` deseniyle aynı yerde durur). "Prod koordinasyonu gerekmez" (INTEGRATION_BOUNDARIES §5.3) GRANT/onay süreci içindir, dosyanın deposunu değiştirmez.
-- [ ] `GET/POST /api/dispatcher/notification-preferences` endpoint (enterprise backend, `PUT` değil — `server.js` CORS `methods` listesinde PUT yok, kanıtlı)
-- [ ] Frontend `EmailIntegration`'ı mock state'ten bu endpoint'e bağla (dispatcher'ın HTTP client deseni önce bulunmalı — açık nokta)
+**Faz 1 — E-posta Entegrasyonu persist — KOD TAMAMLANDI (2026-07-03), DEPLOY BEKLİYOR**
+- [x] `enterprise.notification_preferences` migration → commit edildi: `tulipfleet-backend` `762fcc9` (`migrations/1782200000000_create-enterprise-notification-preferences.sql`)
+- [x] `GET/POST /api/dispatcher/notification-preferences` endpoint → commit edildi: `tulipfleet-enterprise-backend` `32581ec` (`routes/notificationPreferences.js`) + `server.js` register satırı `6aae8b6`
+- [x] Frontend `EmailIntegration` gerçek endpoint'e bağlandı → `a28c7b7`
+- [ ] **DEPLOY (kullanıcı tarafı, SSH gerektirir — Claude'un sınırı):**
+  - Migration'ı staging'de çalıştır: `fleet-prod-01`'de migration runner'ı çalıştır (staging → smoke test → prod backup → prod sırasıyla, dosyanın kendi apply-order notuna göre)
+  - Enterprise backend'i güncelle: `fleet-enterprise-01`'de `git pull && docker compose up -d --build`
+  - Deploy sonrası smoke test: dispatcher'da giriş yapıp EmailIntegration'da "Save" dene, "Kaydedilemedi" yerine "Settings saved" görmeli
 
 **Faz 2 — Alarm/İkaz gerçek entegrasyon**
-- [ ] Proxy mi doğrudan mı kararını ver (öneri: proxy)
+- [ ] Proxy mi doğrudan mı kararını ver (öneri: proxy — ama artık CORS açık olduğu kanıtlandığı için ikisi de teknik olarak mümkün, §3 notuna bkz.)
 - [ ] Mock 5 uyarıyı kaldır, gerçek `GET /api/alerts` + `PUT /api/alerts/:id/resolve` bağla
 - [ ] 16-tip sözlüğünü (ikon/renk/i18n) `AdminAlerts.js`'deki `ALERT_CONFIG_MAP` ile birebir eşle
 
@@ -133,4 +138,5 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 |---|---|
 | 2026-07-03 | Doküman oluşturuldu. İki-sunuculu API-Driven mimari kararı kilitlendi. |
 | 2026-07-03 | **KESİN ONAY.** §0, §1, §2-4, §5 kullanıcı tarafından resmi olarak onaylandı — "havacılık disiplinine yakışır, kusursuz ve açık kapı bırakmayan mühendislik" ifadesiyle. Task Management bölümü "Proposed API-Driven Tunnel Design" olarak işaretlendi (kod henüz yazılmadı, tasarım önerisi). İş 1 (EmailIntegration) origin'den teyit edildi: kod zaten tam, 3-sorulu form + mock state çalışıyor, ek değişiklik gerekmedi. İş 2 (Navbar): 5 mock uyarı, `AdminAlerts.js` gerçek `ALERT_CONFIG_MAP` sözlüğünden seçilmiş 3 kritik tiple (sos, IMPACT, battery) değiştirildi. |
-| 2026-07-03 | **Checklist tutarlılık düzeltmesi.** §5 Faz 0 maddeleri tamamlandı olarak işaretlendi (bulgu özetiyle). Faz 1'deki migration konumu netleştirildi: `tulipfleet-backend/migrations/` (enterprise backend'in kendi migration-runner'ı olmadığı kanıtlandığı için). Faz 3, §4'teki kanıtlanmış VRP akışı gerçeğiyle uyumlu hale getirildi — eski "forward endpoint / Create Task formu" taslağı kaldırıldı, yerine mevcut `optimize`/`approve` akışını frontend'e bağlayan maddeler yazıldı.
+| 2026-07-03 | **Checklist tutarlılık düzeltmesi.** §5 Faz 0 maddeleri tamamlandı olarak işaretlendi (bulgu özetiyle). Faz 1'deki migration konumu netleştirildi: `tulipfleet-backend/migrations/` (enterprise backend'in kendi migration-runner'ı olmadığı kanıtlandığı için). Faz 3, §4'teki kanıtlanmış VRP akışı gerçeğiyle uyumlu hale getirildi — eski "forward endpoint / Create Task formu" taslağı kaldırıldı, yerine mevcut `optimize`/`approve` akışını frontend'e bağlayan maddeler yazıldı. |
+| 2026-07-03 (2. tur) | **Settings sayfası temizliği tamamlandı** (Part 1-5, `5ac306f`→`a28c7b7`) — Header/Accounts/Sessions kaldırıldı, demo alanlar silindi, BasicInfo/ChangePassword/DeleteAccount gerçek `api.tulipfleet.com` endpoint'lerine bağlandı (CORS `curl` ile doğrulandı: `Access-Control-Allow-Origin: *`), EmailIntegration İngilizce'ye çevrildi. **Faz 1 (notification_preferences) kod tarafı tamamlandı ve doğrudan GitHub'a commit edildi** (`762fcc9`, `32581ec`, `6aae8b6`) — deploy (staging migration + enterprise backend docker rebuild) kullanıcı tarafında bekliyor, SSH erişimi gerektirdiği için Claude'un yapamayacağı tek adım budur. |

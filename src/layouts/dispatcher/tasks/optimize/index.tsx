@@ -39,7 +39,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 
 // Real API
-import useVehicles from "hooks/useVehicles";
+import useVehicles, { Vehicle } from "hooks/useVehicles";
 import {
   useSubmitOptimization,
   usePollOptimization,
@@ -239,7 +239,7 @@ function OptimizeTask(): JSX.Element {
             </MDTypography>
             {loadingVehicles && <MDTypography variant="caption">Loading vehicles...</MDTypography>}
             <MDBox display="flex" flexWrap="wrap" gap={1} mb={3}>
-              {vehicles.map((v) => (
+              {vehicles.map((v: Vehicle) => (
                 <FormControlLabel
                   key={v.id}
                   control={

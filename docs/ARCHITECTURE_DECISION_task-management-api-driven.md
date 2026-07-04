@@ -26,6 +26,7 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 | 16 alert tipi (`ALERT_CONFIG_MAP`, `AdminAlerts.js`) | Kapsamlı bir davranış-uyarı sistemi gibi görünüyordu | Sahada sadece bir alt küme (geofence, fuel) aktif; geri kalanı **kodda yer kaplayan, henüz tetiklenmeyen fikir aşaması** | Sorun etmiyoruz — App zaten stabil, referans budur |
 | Alarm popover mock içeriği (ZE-Zone, sevk gecikmesi vb.) | — | Tamamen benim (Claude) ürettiğim placeholder, gerçek veriye bağlı değildi | Faz 2'de gerçek `/api/alerts`'e bağlandı, bkz. §5 |
 | `ENTERPRISE_INFRASTRUCTURE.md` §5.2 token bilgisi | "Token name: `tulipfleet-deploy-2026-05`, expiry: 2026-08-11" | Gerçek token `tulipfleet-deploy-2026-06`, expiry 18 Sep 2026 (kullanıcının GitHub ekranından kanıtlı) | Token bir kez rotate edilmiş, doküman güncellenmemiş. Sistemi etkilemiyor, sadece doküman eski. |
+| `ENTERPRISE_INFRASTRUCTURE.md` §5.3 `.env` alan listesi | `NODE_ENV, PORT, HOST, DATABASE_URL, JWT_SECRET, MQTT_*, LOG_LEVEL` — `INTERNAL_BRIDGE_TOKEN`/`INTERNAL_CORE_API_URL` hiç yok | Bu iki değişken gerçekte gerekliydi (routes/tasks.js approve akışı) ama enterprise `.env`'inde hiç tanımlı değildi | Faz 3'te eklendi (bkz. §5 Faz 3, §6.6-6.8). Doküman bu iki alanı hiç listelememiş — eksik doküman, kod bunu ortaya çıkardı. |
 
 **Kural:** Bundan sonra herhangi bir doküman/kod çelişkisi tespit edilirse, bu tabloya yeni satır eklenir — asla sessizce unutulmaz.
 
@@ -58,12 +59,12 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 
 ---
 
-## 4. İş 3 — Task Management Temeli
-### GERÇEK, ÇALIŞAN Kod — "Proposed" Değil (2026-07-03 kod incelemesiyle doğrulandı)
+## 4. İş 3 — Task Management Temeli — UÇTAN UCA TAMAMLANDI (2026-07-04)
+### GERÇEK, ÇALIŞAN Kod — "Proposed" Değil (2026-07-03 kod incelemesiyle doğrulandı, 2026-07-04 canlı testle kanıtlandı)
 
-> **Durum notu:** Bu mimari **zaten inşa edilmiş ve çalışıyor** — `tulipfleet-enterprise-backend/routes/tasks.js` ve `tulipfleet-backend/routes/internalBridge.js`'ten birebir okundu. Önceki "Proposed API-Driven Tunnel / JWT Proxy" taslağı **yanlış varsayımdı**, gerçek kod farklı ve daha güvenli bir model kullanıyor — aşağıda düzeltildi.
+> **Durum notu:** Bu mimari **zaten inşa edilmiş ve çalışıyor** — `tulipfleet-enterprise-backend/routes/tasks.js` ve `tulipfleet-backend/routes/internalBridge.js`'ten birebir okundu, sonra frontend'e bağlanıp canlı olarak test edildi. Önceki "Proposed API-Driven Tunnel / JWT Proxy" taslağı **yanlış varsayımdı**, gerçek kod farklı ve daha güvenli bir model kullanıyor — aşağıda düzeltildi.
 
-**Gerçek zincir (VRP/batch-optimize akışı, tekli task formu yok — bilinçli mimari karar §4.1):**
+**Gerçek zincir (VRP/batch-optimize akışı, tekli task formu yok — bilinçli mimari karar §4.1) — CANLI DOĞRULANDI:**
 ```
 Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
   → enterprise-api: POST /dispatcher/tasks/optimize
@@ -74,9 +75,9 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
        ├─ job tamamlanmış mı kontrol (enterprise.routing_jobs)
        ├─ draft dispatch_tasks'ları round-robin araca ata, 'assigned' yap
        ├─ public.drivers SELECT (assigned_vehicle_id → user_id, SELECT-only kurala uygun)
-       └─ axios.POST → INTERNAL_CORE_API_URL (ana backend'in "Internal Bridge"i)
+       └─ axios.POST → INTERNAL_CORE_API_URL (ana backend'in "Internal Bridge"i, STAGING portu 3001)
               header: X-Internal-Bridge-Token (SABİT servis-token — JWT DEĞİL)
-                → ana backend: POST /api/internal/bridge/tasks
+                → ana backend (staging): POST /api/internal/bridge/tasks
                      güvenlik: (a) token env'de yoksa fail-closed 503,
                                (b) IP allowlist — SADECE localhost/private-network
                                    (10./172.16./192.168.), (c) token eşleşmezse 401
@@ -86,14 +87,17 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
                          enterprise_dispatch_task_id FK kolonu zaten şemada var)
 ```
 
+**Kanıt (2026-07-04, gerçek dispatcher testi):** Amsterdam Centraal → Rotterdam Centraal task'ı optimize edildi, onaylandı. `fleet_tracking_staging.public.tasks` sorgusu: `task_no=TLP-26-00003`, `status=assigned`, `enterprise_dispatch_task_id` **dolu** (`350b6c07-...`), `vehicle_id` mock'un sabit filosundan biri, `created_at` test anına birebir denk geliyor. Zincirin **her halkası** (frontend → optimize → poll → approve → Internal Bridge → `public.tasks` INSERT) gerçek verilerle doğrulandı.
+
 **Kritik düzeltmeler (önceki taslağa göre):**
 1. **JWT forward YOK.** Kullanıcı token'ı sadece enterprise backend'e kadar gidiyor. Ana backend'e giden istek **sabit servis-token (`INTERNAL_BRIDGE_TOKEN`) + IP-allowlist** ile korunuyor — JWT expiry/scope karışmıyor, ayrıca network-seviyeli ikinci katman var. "Tünel" bu ikisinin toplamı.
 2. **Kargo/zaman-penceresi alanları zaten şemada** — `enterprise.dispatch_tasks` (`enterprise-schema-init.sql`, ADR-0004 v2, 2026-05-13): `time_window_start`, `time_window_end` (timestamptz), `capacity_required` (jsonb), `skill_required` (text[]). Önceki "Kademe 1/2 iteratif ekleme gerekiyor" kararı **yanlış çıkarımdı** — mobil `public.tasks` tarafına bakıp genelleme yapmıştım, enterprise `dispatch_tasks` tarafında zaten vardı. **Bu alanlar için ek migration gerekmiyor.**
 3. **Basit tek-task formu yok, VRP akışı korunuyor** — kullanıcı kararı: "tekerleği yeniden icat etmeyelim." Dispatcher UI, tek task'ı da `tasks=[1 eleman]` olarak optimize+approve akışından geçirecek.
-4. **`public.tasks.enterprise_dispatch_task_id`** FK kolonu zaten var (muhtemelen `add-tasks-enterprise-dispatch-task-id` migration'ı) — iki sistemi eşleştiren köprü.
+4. **`public.tasks.enterprise_dispatch_task_id`** FK kolonu zaten var (muhtemelen `add-tasks-enterprise-dispatch-task-id` migration'ı) — iki sistemi eşleştiren köprü, canlı testte gerçekten doldu.
+5. **Internal Bridge, production (3000) değil STAGING (3001) portuna gider** — enterprise backend `fleet_tracking_staging`'e yazdığı için (§2'deki kasıtlı Phase 1 kararı), draft task da orada; bridge production'a gitseydi `enterprise_dispatch_task_id` farklı database'lerdeki verileri eşleştirmeye çalışırdı. Bkz. §6.8.
 
 **Açık noktalar (varsaymıyorum, doğrulanmadı):**
-- `getRoutingProvider()`'ın gerçek sağlayıcısı (HERE Tour Planning dolu mu, mock/null mu) doğrulanmadı — SYSTEM_TOPOLOGY.md daha önce "Tour Planning: YOK" demişti, ama burada bir factory/interface zaten çağrılıyor; çelişki olabilir, ayrı incelenmeli.
+- `getRoutingProvider()`'ın gerçek sağlayıcısı **doğrulandı: mock.** `lib/routing/factory.js`'de HERE Tour Planning entegrasyonu yorum satırında ("Future expansion gate, July 2026 sprint") — `ROUTING_PROVIDER=here-tour` ayarlansa bile kod her zaman `MockRoutingProvider` döndürüyor. Mock, seçilen `vehicles[]`'i fiilen kullanmıyor; approve aşamasında her zaman sabit 4 test aracı (Dobbe filosu) arasında round-robin dağıtım yapıyor — bu, dispatcher UI'ında açık bir uyarı olarak kullanıcıya gösteriliyor.
 - **`enterprise.behavior_events` — düzeltme (2026-07-03):** Bu tablo `docs/SCHEMA_REFERENCE.md`'de (canlı `\d` çıktısı, son doğrulama 2026-06-18) yok — **henüz gerçek değil.** Ama "halüsinasyon" demek yanlıştı: tablo gerçekten var olan `FEAT-007-driver-performance-coaching.md` ve `FEAT-010` blueprint dokümanlarında tanımlı — sorun, bu "tasarım niyeti" dokümanlarının canlı şemayla karıştırılmasıydı. **Kanıt hiyerarşisi kuralı (bundan sonra geçerli):** `docs/SCHEMA_REFERENCE.md` + `ROADMAP.md`'deki "Done/✅" işaretli maddeler = kanıt; `FEAT-*` spec dosyaları = tasarım niyeti, henüz production değil. ADR'ler bile bazen hatalı olabilir — örnek: ADR-0011 "drivers.skills kolonu var" diyor ama SCHEMA_REFERENCE bunu açıkça yalanlıyor (yetkinlik `enterprise.dispatch_tasks.skill_required`'da tutulur). Çelişki halinde SCHEMA_REFERENCE her zaman kazanır.
 - `FEAT-105` (AI Agent: PDF/email order parsing) ve `FN-09` (`POST /api/webhooks/orders/external`, `FEAT-003` spec'inde) — ROADMAP/ADR-0011'e göre **Phase 2, customer-funded, henüz spec aşamasında.** "Setup your mailbox" özelliği bu kapsamda; production'da doğrulanamaz çünkü henüz yazılmadı.
 
@@ -125,12 +129,18 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 - [x] 16-tip sözlüğü `AdminAlerts.js`'deki `ALERT_CONFIG_MAP` ile birebir eşlendi (icon Ionicons→MUI çevirisiyle)
 - **Not:** Bu faz enterprise/ana backend'de hiçbir değişiklik gerektirmedi — `/api/alerts` zaten production'da vardı (mobil app kullanıyor). Sadece frontend değişti, deploy gerekmiyor, `git pull` sonrası hemen aktif.
 
-**Faz 3 — Task Management temeli (§4'teki VRP akışı gerçeğiyle uyumlu — forward endpoint/Create Task formu YOK, eski taslak kaldırıldı)**
-- [ ] Dispatcher frontend: harita/liste üzerinden araç + nokta seçimi → `POST /dispatcher/tasks/optimize` çağrısı (tasks[], vehicles[] — tek task da `tasks=[1 eleman]` olarak buradan geçer)
-- [ ] Job durumu takibi: `GET /dispatcher/tasks/optimize/poll/:id` polling
-- [ ] Onay ekranı: `POST /dispatcher/tasks/optimize/approve` — operatör planı onaylar, Internal Bridge üzerinden `public.tasks`'a otomatik düşer
-- [ ] `routes.tsx`'e yeni route + sidenav girişi (form değil, optimize/approve akışının UI'ı)
-- [ ] Enterprise backend ve ana backend'de kod değişikliği **gerekmiyor** — `routes/tasks.js` ve `internalBridge.js` zaten production'da çalışıyor; bu faz sadece frontend'i mevcut akışa bağlıyor.
+**Faz 3 — Task Management temeli — TAMAMEN BİTTİ, UÇTAN UCA CANLI TESTLE DOĞRULANDI (2026-07-04)**
+- [x] Dispatcher frontend: pickup/dropoff adres+koordinat girişi + araç seçimi → `POST /dispatcher/tasks/optimize` çağrısı → commit `4259597` (`useTaskOptimization.ts`), `5315d8b` (`OptimizeTask` sayfası), `139ba2d` (route), `c1e8010` ("Nieuwe Taak" butonu)
+- [x] Job durumu takibi: `GET /dispatcher/tasks/optimize/poll/:id` — 2sn'de bir otomatik polling, mock ~6sn'de tamamlanıyor
+- [x] Onay ekranı: `POST /dispatcher/tasks/optimize/approve` — operatör planı onaylar, Internal Bridge üzerinden `public.tasks`'a otomatik düşer
+- [x] `routes.tsx`'e route eklendi (`/dispatcher/tasks/optimize`), **sidenav'da görünmez** (type/name/icon yok) — Tasks sayfasındaki "Nieuwe Taak" butonundan erişilir
+- [x] 3 TypeScript implicit-any hatası düzeltildi (`d97c4d0` navbar, `85b189a` optimize sayfası) — `Alert`/`Vehicle` tipleri type-only import yerine normal import yapıldı
+- [x] **ALTYAPI DÜZELTMELERİ (kod değil, sunucu yapılandırması):**
+  - `INTERNAL_BRIDGE_TOKEN` + `INTERNAL_CORE_API_URL` enterprise backend `.env`'inde hiç yoktu, eklendi (bkz. §6.6-6.8)
+  - Ana backend'in production portu (3000) `127.0.0.1`'e bağlıydı, geçici olarak `10.0.0.2`'ye taşınınca **production kısa süreliğine kırıldı** (nginx `localhost:3000`'e bağımlıydı) — hemen fark edilip geri alındı, sonra **çift-bind** (`127.0.0.1` + `10.0.0.2` birlikte) ile güvenli şekilde çözüldü (bkz. §6.6)
+  - Internal Bridge production yerine **staging'e (port 3001)** yönlendirildi — enterprise backend zaten staging DB'sine yazdığı için tutarlılık gereği (bkz. §6.8). Port 3001 zaten `0.0.0.0`'a bağlıydı, Docker riski yoktu, ama UFW'de port için hiç kural yoktu (`default deny`) — private-network-only bir UFW kuralı eklendi (bkz. §6.7)
+- [x] **CANLI TEST (2026-07-04):** Amsterdam→Rotterdam task'ı optimize edildi, onaylandı, `public.tasks`'ta gerçek satır (`TLP-26-00003`) doğrulandı — zincirin her halkası kanıtlı.
+- **Bilinen sınır (kullanıcıya UI'da açıkça gösteriliyor):** Routing motoru şu an mock — gerçek HERE Tour Planning entegrasyonu Temmuz 2026 sprint'i için planlı, henüz yazılmadı. Seçilen araçlar fiilen kullanılmıyor, sonuç her zaman sabit 4 test aracı arasında dağıtılıyor.
 
 **Genel proje kuralı (her faza uygulanır):**
 - [ ] Her yeni entegrasyonda alan-adı uyumluluk kontrolü (`is_resolved` örneğindeki gibi sessiz isim hatalarına karşı)
@@ -138,7 +148,7 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 
 ---
 
-## 6. Faz 1 Deploy Sürecinden Öğrenilen Dersler (2026-07-03/04)
+## 6. Deploy Süreçlerinden Öğrenilen Dersler (2026-07-03/04)
 
 Bu bölüm, ileride tekrar migration/deploy yapılırken aynı hatalara düşülmemesi için tutuluyor.
 
@@ -162,6 +172,22 @@ Bu bölüm, ileride tekrar migration/deploy yapılırken aynı hatalara düşül
 
 Canlı testte kullanıcı "Settings saved" gördü, ama production DB'de `(0 rows)` çıkınca kısa süreliğine "hata mı bu" diye tereddüt yaşandı. Gerçek sebep: enterprise backend, Phase 1 mimarisi gereği kasıtlı olarak staging'e bağlı (`INTEGRATION_BOUNDARIES.md` §3.1) — hata değildi. **Kural:** İki-veritabanlı (staging/production) bir sistemde "başarılı" UI mesajı yeterli kanıt değildir; hangi DB'ye yazıldığı `.env`'deki `DATABASE_URL`'den ya da doğrudan ilgili DB'yi sorgulayarak teyit edilmeli — production'da `(0 rows)` görmek otomatik olarak "hata" anlamına gelmez, önce staging'i de kontrol et.
 
+### 6.6 Docker port binding'i değiştirmek (`127.0.0.1` → private IP) production'ı kırabilir — her zaman çift-bind kullan
+
+Internal Bridge testinde `fleet-backend`'in port 3000'i `127.0.0.1`'e bağlıydı, `fleet-enterprise-01`'den erişilemiyordu. Port mapping'i doğrudan `10.0.0.2:3000:3000` olarak **değiştirmek** (replace), nginx'in `proxy_pass http://localhost:3000` kullanmasından dolayı **production API'yi anında kırdı** (`api.tulipfleet.com/health` → 502). Hemen fark edilip geri alındı, sonra doğru çözüm uygulandı: `ports:` altına **her iki adresi de** ekleyerek çift-bind yapmak (`"127.0.0.1:3000:3000"` VE `"10.0.0.2:3000:3000"` birlikte). Bu, mevcut hiçbir tüketiciyi (nginx) etkilemeden yeni bir erişim yolu ekler. **Kural:** Bir portu yeni bir arayüze açarken asla mevcut binding'i değiştirme, yanına ekle. Her port binding değişikliğinden hemen sonra hem `localhost`'tan hem dışarıdan (`curl https://api.tulipfleet.com/health`) health check yap.
+
+### 6.7 UFW `default deny` altında Docker container'ları görünmez kalabilir, native/PM2 process'ler görünmez kalmaz
+
+Port 3000 (Docker container) UFW'de hiç kural olmamasına rağmen erişilebilirdi — Docker'ın kendi iptables kuralları (`DOCKER-USER` zinciri) UFW'nin `default deny`'inin önüne geçebiliyor. Ama port 3001 (staging, PM2 native process, Docker değil) için de kural yoktu ve bu sefer **gerçekten** erişim `timeout` (curl exit code 28) ile engellendi — UFW native process'lere karşı devrede kaldı. **Kural:** Docker container'ları için UFW kuralı gerekmeyebilir (kanıtlanmadan varsayma), ama PM2/native process'ler için PostgreSQL'in izlediği aynı desenle (`ufw allow in on <interface> from 10.0.0.0/16 to any port <port> proto tcp`) mutlaka açık bir kural gerekir.
+
+### 6.8 Internal Bridge'in hedef portu, kaynak backend'in bağlı olduğu veritabanına göre seçilmeli
+
+Enterprise backend `fleet_tracking_staging`'e yazıyor (§2'deki kasıtlı Phase 1 kararı). `INTERNAL_CORE_API_URL`'i ilk aklımıza gelen production portuna (3000, `fleet_tracking`) yönlendirseydik, `enterprise_dispatch_task_id` FK'sı iki farklı database'deki verileri eşleştirmeye çalışırdı — teknik olarak "çalışırdı" ama semantik olarak yanlış olurdu (draft staging'de, onaylanmış kayıt production'da, birbirini hiç görmezdi). Doğru hedef **staging portu (3001)** oldu. **Kural:** Cross-server bir entegrasyon kurarken, hangi portun/database'in "doğru" olduğunu port numarasından değil, veri akışının tutarlılığından (hangi DB'ye yazılıyor, hangi DB'den okunacak) türet.
+
+### 6.9 PM2'nin `env <id>` komutu güncel `.env` değerlerini göstermeyebilir — gerçek davranışla test et
+
+`pm2 restart fleet-staging --update-env` sonrası `pm2 env 0 | grep INTERNAL_BRIDGE_TOKEN` boş döndü — bu, token'ın yüklenmediği izlenimini verdi. Ama gerçek bir istekle (bilerek yanlış bir token göndererek) test edilince `401 Unauthorized` (`"token mismatched"`) alındı — bu, token'ın **aslında yüklendiğini** kanıtladı (uygulama muhtemelen `dotenv` ile `.env`'i kendi okuyor, PM2'nin env kaydına yansımıyor). **Kural:** Env değişkenlerinin yüklenip yüklenmediğini `pm2 env`/`printenv` gibi dolaylı araçlarla değil, uygulamanın gerçek davranışıyla (doğru/yanlış girdiyle isteği tetikleyip beklenen hata kodunu görerek) test et.
+
 ---
 
 ## Değişiklik Günlüğü
@@ -173,4 +199,5 @@ Canlı testte kullanıcı "Settings saved" gördü, ama production DB'de `(0 row
 | 2026-07-03 (2. tur) | **Settings sayfası temizliği tamamlandı** (Part 1-5, `5ac306f`→`a28c7b7`) — Header/Accounts/Sessions kaldırıldı, demo alanlar silindi, BasicInfo/ChangePassword/DeleteAccount gerçek `api.tulipfleet.com` endpoint'lerine bağlandı (CORS `curl` ile doğrulandı: `Access-Control-Allow-Origin: *`), EmailIntegration İngilizce'ye çevrildi. Faz 1 (notification_preferences) kod tarafı tamamlandı ve doğrudan GitHub'a commit edildi (`762fcc9`, `32581ec`, `6aae8b6`). |
 | 2026-07-03 (3. tur) | **Faz 2 (Alarm/İkaz) tamamlandı, doğrudan GitHub'a commit edildi** (`26ca933` useAlerts.ts, `c81a79c` navbar) — deploy gerekmiyor, `/api/alerts` zaten production'da vardı. Kararlar (proxy/doğrudan, hangi endpoint) sorulmadan, kanıta dayanarak doğrudan uygulandı. |
 | 2026-07-04 (4. tur) | **Faz 1 uçtan uca deploy tamamlandı ve doğrulandı.** Migration'daki Down-block hatası bulundu ve düzeltildi (`98a3933`, bkz. §6.1). Staging + production'da migration başarıyla uygulandı, production backup alındı. `fleet-enterprise-01`'de git credential sorunu (yanlışlıkla yapıştırılmış dispatcher JWT'si, bkz. §6.4) tespit edildi ve gerçek PAT ile düzeltildi. Enterprise backend deploy edildi (`docker compose up -d --build`), health check'ler Cloudflare üzerinden uçtan uca doğrulandı. §6 (Öğrenilen Dersler) bölümü eklendi. |
-| 2026-07-04 (5. tur) | **Canlı kullanıcı testi tamamlandı.** Kullanıcı dispatcher'da gerçekten "Save" dedi, "Settings saved" gördü. Production DB'de `(0 rows)` görülünce kısa bir tereddüt yaşandı, ama `fleet_tracking_staging`'de gerçek kayıt bulundu — `INTEGRATION_BOUNDARIES.md` §3.1'in kasıtlı Phase 1 kararıyla (enterprise backend staging'e bağlı) tam uyumlu, hata değil. §6.5 bu ders için eklendi. **Faz 1 artık hem kod hem deploy hem canlı kullanıcı testiyle tam olarak kapandı.** |
+| 2026-07-04 (5. tur) | **Canlı kullanıcı testi tamamlandı (Faz 1).** Kullanıcı dispatcher'da gerçekten "Save" dedi, "Settings saved" gördü. Production DB'de `(0 rows)` görülünce kısa bir tereddüt yaşandı, ama `fleet_tracking_staging`'de gerçek kayıt bulundu — `INTEGRATION_BOUNDARIES.md` §3.1'in kasıtlı Phase 1 kararıyla (enterprise backend staging'e bağlı) tam uyumlu, hata değil. §6.5 bu ders için eklendi. **Faz 1 artık hem kod hem deploy hem canlı kullanıcı testiyle tam olarak kapandı.** |
+| 2026-07-04 (6. tur) | **Faz 3 (Task Management) tamamen bitti, uçtan uca canlı testle doğrulandı.** Frontend (hook + sayfa + route + buton, 4 commit) doğrudan GitHub'a yazıldı, sonra 3 TypeScript implicit-any hatası düzeltildi. Canlı testte Internal Bridge'in hiç yapılandırılmadığı ortaya çıktı (`INTERNAL_BRIDGE_TOKEN`/`INTERNAL_CORE_API_URL` enterprise `.env`'inde yoktu) — düzeltme sürecinde bir port-binding değişikliği kısa süreliğine **production'ı kırdı** (nginx→localhost:3000 bağımlılığı, hemen fark edilip geri alındı), sonra çift-bind ile güvenli çözüldü. UFW'de native process (PM2 staging, port 3001) için eksik kural bulunup eklendi. Internal Bridge'in production değil **staging** portuna yönlendirilmesi gerektiği (veri tutarlılığı gereği) tespit edildi. Sonunda Amsterdam→Rotterdam task'ı optimize edilip onaylandı, `public.tasks`'ta gerçek satır (`TLP-26-00003`, `enterprise_dispatch_task_id` dolu) doğrulandı. §6.6-6.9 dört yeni ders olarak eklendi. **Faz 1, Faz 2, Faz 3 — üçü de tam anlamıyla production'da (staging mimarisiyle tutarlı şekilde) çalışıyor.** |

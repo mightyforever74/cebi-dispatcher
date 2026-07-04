@@ -55,7 +55,7 @@ import {
 } from "context";
 
 // Real API — GET/PUT /api/alerts (api.tulipfleet.com)
-import { useAlerts, useResolveAlert, type Alert } from "hooks/useAlerts";
+import { useAlerts, useResolveAlert, Alert } from "hooks/useAlerts";
 
 // Declaring prop types for DashboardNavbar
 interface Props {
@@ -149,8 +149,8 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const { data: alertsData, isLoading: loadingAlerts } = useAlerts();
   const resolveMutation = useResolveAlert();
 
-  const alerts = alertsData || [];
-  const activeAlerts = alerts.filter((a) => !a.is_resolved).slice(0, 10);
+  const alerts: Alert[] = alertsData || [];
+  const activeAlerts = alerts.filter((a: Alert) => !a.is_resolved).slice(0, 10);
   const unreadCount = activeAlerts.length;
 
   const buildMailto = (alert: Alert) => {
@@ -205,7 +205,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
             </MDTypography>
           </MDBox>
         )}
-        {activeAlerts.map((alert) => {
+        {activeAlerts.map((alert: Alert) => {
           const config = getAlertConfig(alert.alert_type || alert.type);
           const label =
             alert.title ||

@@ -27,6 +27,7 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 | Alarm popover mock içeriği (ZE-Zone, sevk gecikmesi vb.) | — | Tamamen benim (Claude) ürettiğim placeholder, gerçek veriye bağlı değildi | Faz 2'de gerçek `/api/alerts`'e bağlandı, bkz. §5 |
 | `ENTERPRISE_INFRASTRUCTURE.md` §5.2 token bilgisi | "Token name: `tulipfleet-deploy-2026-05`, expiry: 2026-08-11" | Gerçek token `tulipfleet-deploy-2026-06`, expiry 18 Sep 2026 (kullanıcının GitHub ekranından kanıtlı) | Token bir kez rotate edilmiş, doküman güncellenmemiş. Sistemi etkilemiyor, sadece doküman eski. |
 | `ENTERPRISE_INFRASTRUCTURE.md` §5.3 `.env` alan listesi | `NODE_ENV, PORT, HOST, DATABASE_URL, JWT_SECRET, MQTT_*, LOG_LEVEL` — `INTERNAL_BRIDGE_TOKEN`/`INTERNAL_CORE_API_URL` hiç yok | Bu iki değişken gerçekte gerekliydi (routes/tasks.js approve akışı) ama enterprise `.env`'inde hiç tanımlı değildi | Faz 3'te eklendi (bkz. §5 Faz 3, §6.6-6.8). Doküman bu iki alanı hiç listelememiş — eksik doküman, kod bunu ortaya çıkardı. |
+| `/api/driver/tasks` status filtresi vs. proje geneli | Filtre: `pending, pending_review, accepted, in_progress` — `assigned` yok | `assigned`, `fleet-stats`/vehicle-silme/driver-silme sorgularında "aktif görev" kategorisine zaten dahil (3 ayrı yerde kanıtlı) | Kod içi tutarsızlık, doküman değil — bkz. §4.1 ve §6.11. Endpoint'in filtresi eksik, düzeltilecek. |
 
 **Kural:** Bundan sonra herhangi bir doküman/kod çelişkisi tespit edilirse, bu tabloya yeni satır eklenir — asla sessizce unutulmaz.
 
@@ -59,7 +60,7 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 
 ---
 
-## 4. İş 3 — Task Management Temeli — UÇTAN UCA TAMAMLANDI (2026-07-04), AMA SÜRÜCÜYE BİLDİRİM AYRI BİR AÇIK İŞ
+## 4. İş 3 — Task Management Temeli — UÇTAN UCA TAMAMLANDI (2026-07-04), AMA SÜRÜCÜYE GÖRÜNÜRLÜK/BİLDİRİM AYRI BİR AÇIK İŞ
 ### GERÇEK, ÇALIŞAN Kod — "Proposed" Değil (2026-07-03 kod incelemesiyle doğrulandı, 2026-07-04 canlı testle kanıtlandı)
 
 > **Durum notu:** Bu mimari **zaten inşa edilmiş ve çalışıyor** — `tulipfleet-enterprise-backend/routes/tasks.js` ve `tulipfleet-backend/routes/internalBridge.js`'ten birebir okundu, sonra frontend'e bağlanıp canlı olarak test edildi. Önceki "Proposed API-Driven Tunnel / JWT Proxy" taslağı **yanlış varsayımdı**, gerçek kod farklı ve daha güvenli bir model kullanıyor — aşağıda düzeltildi.
@@ -83,9 +84,9 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
                                    (10./172.16./192.168.), (c) token eşleşmezse 401
                      ├─ users.id → drivers.id çevirisi (SELECT)
                      ├─ atomik task_no üretimi (company_task_counters, ON CONFLICT DO UPDATE)
-                     └─ public.tasks INSERT (ana backend'in KENDİ rolüyle;
+                     └─ public.tasks INSERT (ana backend'in KENDİ rolüyle, status='assigned';
                          enterprise_dispatch_task_id FK kolonu zaten şemada var)
-                         ⚠ BURADA DURUYOR — sürücüye haber verilmiyor, bkz. §4.1
+                         ⚠ BURADA DURUYOR — sürücü ekranında görünmüyor + haber verilmiyor, bkz. §4.1
 ```
 
 **Kanıt (2026-07-04, gerçek dispatcher testi):** Amsterdam Centraal → Rotterdam Centraal task'ı optimize edildi, onaylandı. `fleet_tracking_staging.public.tasks` sorgusu: `task_no=TLP-26-00003`, `status=assigned`, `enterprise_dispatch_task_id` **dolu** (`350b6c07-...`), `vehicle_id` mock'un sabit filosundan biri, `created_at` test anına birebir denk geliyor. Zincirin **her halkası** (frontend → optimize → poll → approve → Internal Bridge → `public.tasks` INSERT) gerçek verilerle doğrulandı.
@@ -97,18 +98,35 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 4. **`public.tasks.enterprise_dispatch_task_id`** FK kolonu zaten var (muhtemelen `add-tasks-enterprise-dispatch-task-id` migration'ı) — iki sistemi eşleştiren köprü, canlı testte gerçekten doldu.
 5. **Internal Bridge, production (3000) değil STAGING (3001) portuna gider** — enterprise backend `fleet_tracking_staging`'e yazdığı için (§2'deki kasıtlı Phase 1 kararı), draft task da orada; bridge production'a gitseydi `enterprise_dispatch_task_id` farklı database'lerdeki verileri eşleştirmeye çalışırdı. Bkz. §6.8.
 
-### 4.1 KRİTİK AÇIK NOKTA (2026-07-04, kullanıcı gözlemi, kod incelemesiyle doğrulandı): Sürücüye görev bildirimi yok
+### 4.1 KRİTİK AÇIK NOKTA (2026-07-04, kullanıcı gözlemi, kod incelemesiyle KESİN kanıtlandı): İki ayrı, birbirini besleyen bug
 
 **Kullanıcının sorusu:** "Task oluşturduk, şoför/araçla ilişkilendirdik ama görevi şoföre GÖNDERMEYİ dispatcher'dan tasarlamadık — bu mobil app'te de test edilmeli, gönderildi mi görülmeli."
 
-**Doğrulama (varsaymadan, gerçek koddan):**
-- `internalBridge.js`'in `POST /api/internal/bridge/tasks` handler'ı **sadece** `public.tasks` INSERT yapıyor — hiçbir push notification tetikleme kodu içermiyor. GitHub code search ile `sendPushNotification` ana backend'de **0 sonuç** verdi.
-- Mobil tarafta push token altyapısı **var** (`usePushNotifications.js`: Expo push token alınıp `pushAPI.register(token)` ile backend'e kaydediliyor) — yani mobil app bildirim almaya **hazır**, ama backend'in bunu **tetikleyen** bir kod yolu bulunamadı.
-- `status='assigned'` teorik olarak mobil `DriverTasks.js`'in "queued" (kuyruk) filtresinde zaten var (`["pending_review", "accepted", "pending", "assigned"].includes(t.status)`) — yani sürücü **uygulamayı manuel açıp bakarsa** görevi görebilir, ama **proaktif bir bildirim yok**.
+**BUG #1 — `assigned` statüsü sürücü endpoint'inin filtresinde yok (kesin, kod-kanıtlı):**
+`GET /api/driver/tasks` (server.js, sürücünün "Taken/Görevlerim" ekranının çektiği endpoint) şu status filtresini kullanıyor:
+```javascript
+statusFilter = `t.status IN ('pending', 'pending_review', 'accepted', 'in_progress')`;
+```
+`'assigned'` bu listede **yok**. Ama `assigned`, projenin genelinde meşru bir "aktif görev" durumu — aynı server.js içinde **üç ayrı yerde** kanıtlı:
+- `/api/admin/fleet-stats`: `status IN ('accepted','assigned','in_progress','pending_review')` → "active" sayacına dahil
+- `DELETE /api/vehicles/:id`: `status IN ('assigned', 'in_progress')` → aktif görevi olan araç silinemez
+- `DELETE /api/drivers/:id`: aynı kontrol, sürücü için
 
-**Sonuç:** Task Management akışı "sessiz" — dispatcher görevi onaylıyor, veritabanına düşüyor, ama sürücü haberdar olmuyor (push yok) ve bu **mobil app üzerinde hiç test edilmedi.** Bu, Faz 3'ün "tamamlandı" sayılması için eksik bir parça — akış teknik olarak çalışıyor ama iş süreci olarak yarım.
+Yani `assigned`, sistemin geri kalanında "aktif, silinemez, sayılabilir" bir durum olarak tanınıyor, **sadece sürücünün kendi görev listesinde unutulmuş.** Bu, Internal Bridge'in `status='assigned'` ile yazdığı hiçbir task'ın, **staging/production DB ayrımından bağımsız olarak**, sürücü ekranında hiçbir zaman görünmeyeceği anlamına geliyor — DB doğru olsa bile bug tek başına yeterli bir engel.
 
-**Bu, ayrı bir faz olarak ele alınmalı** (mola sonrası): (a) mobil app'te gerçekten bu task'ın göründüğünü canlı test etmek, (b) eksikse, `internalBridge.js`'e ya da ayrı bir servise push tetikleme eklemek — `pushAPI` altyapısı zaten var, sadece task INSERT'inden sonra çağrılması gerekiyor.
+**Mühendislik kararı (kullanıcıyla birlikte verildi):** Task'ı `accepted` veya `pending_review` gibi başka bir statüye "dönüştürmek" yerine (bu, sürücünün vermediği bir onayı simüle eder, iş mantığını bozar), **doğru çözüm: `GET /api/driver/tasks`'ın status filtresine `'assigned'`'ı eklemek.** En dar kapsamlı, projenin kendi tutarlılığıyla (fleet-stats + silme kontrolleri) uyumlu yama. Uygulama ADIM 2'de (ayrı bir mesajda) yapılacak.
+
+**BUG #2 — Push notification altyapısı var ama hiç tetiklenmiyor (kesin, kod-kanıtlı):**
+- `internalBridge.js`'in `POST /api/internal/bridge/tasks` handler'ı **sadece** `public.tasks` INSERT yapıyor — hiçbir push tetikleme kodu içermiyor. GitHub code search: `sendPushNotification` ana backend'de **0 sonuç.**
+- Mobil push kayıt altyapısı **çalışıyor**: `POST /api/push/register` var, Expo token `users.expo_push_token` sütununa yazılıyor (mobil `usePushNotifications.js` → `pushAPI.register(token)` ile eşleşiyor).
+- Ama `expo_push_token` alanı server.js'in **hiçbir başka yerinde okunmuyor/kullanılmıyor** — token sadakatle kaydediliyor, hiç gönderim için kullanılmıyor. Atıl bir altyapı.
+
+**Sonuç:** Task Management akışı "sessiz" olmasının **iki** ayrı, birbirinden bağımsız sebebi var: (1) task teknik olarak sürücünün sorgusunda hiç görünmüyor, (2) görünse bile proaktif bir bildirim yok. İkisi de ayrı ayrı düzeltilmeli.
+
+**Uygulama planı (kullanıcıyla üzerinde anlaşıldı — iki adımlı hibrit):**
+- **ADIM 1 (bu tur):** Bulguları dokümana mühürle — done, bu bölüm.
+- **ADIM 2 (sıradaki mesaj):** BUG #1 için cerrahi yama (`GET /api/driver/tasks` filtresine `assigned` ekle) — GitHub'a doğrudan commit.
+- **ADIM 3 (sonraki oturum/faz):** BUG #2 için push tetikleme — `internalBridge.js`'e mi, ayrı bir servise mi eklenecek kararı, mevcut sürücü-atama akışlarının (`CreateTaskScreen.js`) push gönderip göndermediği incelendikten sonra verilecek.
 
 **Açık noktalar (varsaymıyorum, doğrulanmadı):**
 - `getRoutingProvider()`'ın gerçek sağlayıcısı **doğrulandı: mock.** `lib/routing/factory.js`'de HERE Tour Planning entegrasyonu yorum satırında ("Future expansion gate, July 2026 sprint") — `ROUTING_PROVIDER=here-tour` ayarlansa bile kod her zaman `MockRoutingProvider` döndürüyor. Mock, seçilen `vehicles[]`'i fiilen kullanmıyor; approve aşamasında her zaman sabit 4 test aracı (Dobbe filosu) arasında round-robin dağıtım yapıyor — bu, dispatcher UI'ında açık bir uyarı olarak kullanıcıya gösteriliyor.
@@ -155,13 +173,13 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
   - Internal Bridge production yerine **staging'e (port 3001)** yönlendirildi — enterprise backend zaten staging DB'sine yazdığı için tutarlılık gereği (bkz. §6.8). Port 3001 zaten `0.0.0.0`'a bağlıydı, Docker riski yoktu, ama UFW'de port için hiç kural yoktu (`default deny`) — private-network-only bir UFW kuralı eklendi (bkz. §6.7)
 - [x] **CANLI TEST (2026-07-04):** Amsterdam→Rotterdam task'ı optimize edildi, onaylandı, `public.tasks`'ta gerçek satır (`TLP-26-00003`) doğrulandı — zincirin her halkası kanıtlı.
 - **Bilinen sınır #1 (kullanıcıya UI'da açıkça gösteriliyor):** Routing motoru şu an mock — gerçek HERE Tour Planning entegrasyonu Temmuz 2026 sprint'i için planlı, henüz yazılmadı. Seçilen araçlar fiilen kullanılmıyor, sonuç her zaman sabit 4 test aracı arasında dağıtılıyor.
-- **Bilinen sınır #2 (kullanıcı gözlemi, 2026-07-04):** `public.tasks` INSERT sonrası **sürücüye hiçbir bildirim gitmiyor** — bkz. §4.1. Bu, Faz 3'ün "iş süreci" anlamında yarım kalan kısmı; ayrı bir faz (Faz 4) olarak ele alınmalı.
+- **Bilinen sınır #2 (kullanıcı gözlemi, 2026-07-04, kod-kanıtlı):** `public.tasks` INSERT sonrası görev **sürücünün kendi endpoint'inde görünmüyor** (`assigned` filtre dışı, BUG #1) **ve** hiçbir push bildirimi gitmiyor (BUG #2) — bkz. §4.1.
 
-**Faz 4 — Sürücü Bildirimi ve Mobil App Doğrulaması — HENÜZ BAŞLANMADI (2026-07-04'te açıldı)**
-- [ ] Mobil app'te (gerçek bir sürücü hesabıyla) `TLP-26-00003` gibi bir test task'ının göründüğünü canlı doğrula — `DriverTasks.js`'in "queued" listesi teorik olarak göstermeli (`status='assigned'` zaten filtrede), ama hiç test edilmedi
-- [ ] Eğer görev listede görünmüyorsa, mobil tarafın task çekme mekanizmasını (polling mi, hangi endpoint) incele
-- [ ] Push notification'ın gerçekten tetiklenip tetiklenmediğini test et — `internalBridge.js`'de hiç yok, muhtemelen eklenmesi gerekecek (`pushAPI` altyapısı zaten var, `services/` altında ayrı bir bildirim servisi olabilir, incelenmeli)
-- [ ] Karar noktası: bildirim `internalBridge.js`'e mi eklenmeli, yoksa ayrı bir yerde mi (örn. ana backend'in kendi task-assignment akışıyla ortak bir servis) olmalı — kod tekrarını önlemek için mevcut sürücü-atama akışlarının (`CreateTaskScreen.js`'in kullandığı yol) bildirim gönderip göndermediği önce incelenmeli
+**Faz 4 — Sürücü Görünürlüğü ve Bildirimi — BAŞLADI (2026-07-04)**
+- [x] Kök sebep analizi tamamlandı — iki ayrı bug kesin kod kanıtıyla tespit edildi (§4.1)
+- [ ] **ADIM 2 (sıradaki):** `GET /api/driver/tasks` status filtresine `'assigned'` ekle — cerrahi yama, doğrudan GitHub'a commit
+- [ ] Yama sonrası canlı doğrulama: Pieter'in JWT'siyle tekrar `/api/driver/tasks` çağrılıp `TLP-26-00003`'ün göründüğünü teyit et
+- [ ] **ADIM 3:** Push notification tetikleme — `internalBridge.js`'e mi, ayrı bir servise mi eklenecek kararı, önce `CreateTaskScreen.js`'in kullandığı mevcut atama akışının push gönderip göndermediği incelendikten sonra verilecek
 
 **Genel proje kuralı (her faza uygulanır):**
 - [ ] Her yeni entegrasyonda alan-adı uyumluluk kontrolü (`is_resolved` örneğindeki gibi sessiz isim hatalarına karşı)
@@ -213,6 +231,10 @@ Enterprise backend `fleet_tracking_staging`'e yazıyor (§2'deki kasıtlı Phase
 
 Faz 3, teknik olarak (frontend → backend → veritabanı) baştan sona doğrulandı ve bu gerçek bir başarıydı. Ama kullanıcının sorduğu basit soru ("mobil appte test edildi mi, gönderildi mi görülmeli") gösterdi ki bir veritabanı satırının oluşması, **iş sürecinin** (sürücünün görevden haberdar olması) tamamlandığı anlamına gelmiyor. **Kural:** "Uçtan uca test edildi" derken hangi ucun neresi olduğunu netleştir — bir API zincirinin veritabanına ulaşması ile bir insan kullanıcının (bu durumda sürücünün) o bilgiyi gerçekten alması farklı "uç"lardır, ikisi de ayrı ayrı doğrulanmalı.
 
+### 6.11 Bir sunucuya tekrar tekrar SSH ile grep atmak yerine, dosyayı bir kez çekip yerel/GitHub arama araçlarıyla ara
+
+Task status filtresi bug'ını bulmak için sunucuda `grep`/`cat` ile server.js'i defalarca aramak yerine, dosyanın (253KB) tamamı GitHub'dan bir kez çekilip yerel bir dosyaya kaydedildi, sonra hem GitHub code search hem de yerel `grep` ile aynı dosya üzerinde hızlıca birden fazla arama yapıldı — hem daha hızlı hem daha güvenilir (SSH oturum/pencere karışıklığı riski yok). **Kural:** Aynı büyük dosyada birden fazla arama yapılacaksa, dosyayı sunucuda tekrar tekrar aratmak yerine bir kez çekip yerelde/GitHub'da ara.
+
 ---
 
 ## Değişiklik Günlüğü
@@ -226,4 +248,4 @@ Faz 3, teknik olarak (frontend → backend → veritabanı) baştan sona doğrul
 | 2026-07-04 (4. tur) | **Faz 1 uçtan uca deploy tamamlandı ve doğrulandı.** Migration'daki Down-block hatası bulundu ve düzeltildi (`98a3933`, bkz. §6.1). Staging + production'da migration başarıyla uygulandı, production backup alındı. `fleet-enterprise-01`'de git credential sorunu (yanlışlıkla yapıştırılmış dispatcher JWT'si, bkz. §6.4) tespit edildi ve gerçek PAT ile düzeltildi. Enterprise backend deploy edildi (`docker compose up -d --build`), health check'ler Cloudflare üzerinden uçtan uca doğrulandı. §6 (Öğrenilen Dersler) bölümü eklendi. |
 | 2026-07-04 (5. tur) | **Canlı kullanıcı testi tamamlandı (Faz 1).** Kullanıcı dispatcher'da gerçekten "Save" dedi, "Settings saved" gördü. Production DB'de `(0 rows)` görülünce kısa bir tereddüt yaşandı, ama `fleet_tracking_staging`'de gerçek kayıt bulundu — `INTEGRATION_BOUNDARIES.md` §3.1'in kasıtlı Phase 1 kararıyla (enterprise backend staging'e bağlı) tam uyumlu, hata değil. §6.5 bu ders için eklendi. **Faz 1 artık hem kod hem deploy hem canlı kullanıcı testiyle tam olarak kapandı.** |
 | 2026-07-04 (6. tur) | **Faz 3 (Task Management) tamamen bitti, uçtan uca canlı testle doğrulandı.** Frontend (hook + sayfa + route + buton, 4 commit) doğrudan GitHub'a yazıldı, sonra 3 TypeScript implicit-any hatası düzeltildi. Canlı testte Internal Bridge'in hiç yapılandırılmadığı ortaya çıktı (`INTERNAL_BRIDGE_TOKEN`/`INTERNAL_CORE_API_URL` enterprise `.env`'inde yoktu) — düzeltme sürecinde bir port-binding değişikliği kısa süreliğine **production'ı kırdı** (nginx→localhost:3000 bağımlılığı, hemen fark edilip geri alındı), sonra çift-bind ile güvenli çözüldü. UFW'de native process (PM2 staging, port 3001) için eksik kural bulunup eklendi. Internal Bridge'in production değil **staging** portuna yönlendirilmesi gerektiği (veri tutarlılığı gereği) tespit edildi. Sonunda Amsterdam→Rotterdam task'ı optimize edilip onaylandı, `public.tasks`'ta gerçek satır (`TLP-26-00003`, `enterprise_dispatch_task_id` dolu) doğrulandı. §6.6-6.9 dört yeni ders olarak eklendi. |
-| 2026-07-04 (7. tur) | **Kullanıcı kritik bir açık nokta buldu: sürücüye görev bildirimi hiç yok.** Kod incelemesiyle doğrulandı — `internalBridge.js` sadece `public.tasks` INSERT yapıyor, push notification tetiklemiyor (`sendPushNotification` ana backend'de 0 arama sonucu). Mobil tarafta push altyapısı (`usePushNotifications.js`, Expo token) hazır ama backend tetiklemiyor. `status='assigned'` mobil "queued" filtresinde teorik olarak var ama hiç canlı test edilmedi. §4.1 (yeni açık nokta bölümü) ve Faz 4 (yeni, henüz başlanmamış faz: sürücü bildirimi + mobil doğrulama) eklendi. §6.10 ("uçtan uca" ile "iş süreci tamamlandı" arasındaki fark) yeni ders olarak eklendi. **Mola verildi — Faz 4 sonraki oturumda ele alınacak.** |
+| 2026-07-04 (7. tur) | **İki ayrı, kesin kod-kanıtlı bug tespit edildi.** (1) `GET /api/driver/tasks` status filtresinde `'assigned'` eksik — proje genelinde (fleet-stats, vehicle/driver silme kontrolleri) zaten "aktif" sayılan bir statü, sadece sürücü endpoint'inde unutulmuş. Mühendislik kararı: task'ın statüsünü değiştirmek yerine endpoint filtresine `assigned` eklemek (en dar kapsamlı, tutarlı yama). (2) Push notification altyapısı (`POST /api/push/register`, `users.expo_push_token`) çalışıyor ama `expo_push_token` server.js'in hiçbir yerinde okunmuyor — token kaydediliyor, hiç kullanılmıyor. İki adımlı hibrit plan kabul edildi: ADIM 1 dokümana mühürleme (bu tur), ADIM 2 BUG #1 için cerrahi kod yaması (sıradaki), ADIM 3 BUG #2 için push tetikleme (ayrı, daha sonra). §4.1 genişletildi, Faz 4 "BAŞLADI" olarak güncellendi, §6.11 (büyük dosyada tekrar arama yerine tek seferlik çekim) yeni ders olarak eklendi. |

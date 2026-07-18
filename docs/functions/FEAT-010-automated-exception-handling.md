@@ -7,7 +7,7 @@
 | **Frequency rating** | Common |
 | **Cem note** | — (wishlist'te ek not yok) |
 | **Tulipfleet Phase** | Phase 1 (rule-based detection + Mode 1 Advisory notification) + Phase 2 (FEAT-101 Mode 2 Exception-based auto-action) |
-| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-30); **v1.3'te Cem'in mühendislik incelemesiyle 3 fonksiyon eklendi/genişletildi (2026-07-18)** |
+| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-30); **v1.3'te Cem'in mühendislik incelemesiyle 3 fonksiyon eklendi/genişletildi (2026-07-18)**; **v1.4'te "sıfır iş gücü" UI davranışları netleştirildi (2026-07-18)** |
 | **Pilot note** | Onuncu pilot. Tek iterasyonda **9/10** skor. **§number fabrikasyon = 0** ✅ (F9'daki §188 hatası tekrarlanmadı). Yeni paradigma: **"orkestratör feature"** — 4-5 FEAT'in detection'ını consume edip action'ına route ediyor. |
 
 ---
@@ -36,6 +36,8 @@ Wishlist "AI agents" diyor — bu **TulipFleet için yanıltıcı okuma.** ADR-0
 
 **v1.3 mühendislik incelemesi doğrulaması (2026-07-18):** Cem'in sorduğu "AI tabanlı yapmamakla hata mı ettik?" sorusuna spec'in kendi cevabı: **hayır.** Aşağıdaki üç ekleme (FN-16 sürücüye soru sorma, FN-03 iki-senaryo ayrımı, FN-17 şablon hazırlama) **hiçbiri ML/AI kullanmaz** — hepsi deterministic kural + insan (sürücü veya dispatcher) girdisi ile çözülür. Bu, ADR-0010 disiplininin doğru uygulandığının somut kanıtı: "akıllı" davranış, tahmin motorundan değil, doğru anda doğru insana doğru soruyu sormaktan geliyor.
 
+**v1.4 "sıfır iş gücü" prensibi (2026-07-18):** Cem'in ikinci turdaki gözlemi bu prensibi bir adım ileri taşıdı: sadece exception tipini ayırmak yetmez, her tipin dispatcher'a **hiçbir ekstra manuel adım gerektirmeyen** somut bir aksiyon sunması gerekir. Bkz. §3.3.1.
+
 ### 1.3 İş mantığı
 
 ```
@@ -43,7 +45,8 @@ Wishlist "AI agents" diyor — bu **TulipFleet için yanıltıcı okuma.** ADR-0
    1. ETA deviation (FEAT-005:FN-04 üzerine) — trafik varsa alternatif rota,
       yoksa sürücüye sebep sorulur (FN-16, v1.3 EKLENDİ)
    2. Traffic impact (FEAT-002:FN-10 trafficTriggerDetector)
-   3. Driver no-show (v1.3'te iki alt-senaryoya ayrıldı: offline vs location-mismatch)
+   3. Driver no-show (v1.3'te iki alt-senaryoya ayrıldı: offline vs location-mismatch;
+      v1.4'te her ikisi için de "sıfır iş gücü" dispatcher aksiyonu tanımlandı)
    4. Dock appointment slip (FEAT-006:FN-03 conflict) — v1.3'te otomatik
       şablon hazırlama eklendi (FN-17, gönderim hâlâ Phase 2)
    5. Compliance zone breach imminent (ADR-0012 §4 — KONSOLIDASYONDA EKLENDİ;
@@ -64,7 +67,8 @@ Wishlist "AI agents" diyor — bu **TulipFleet için yanıltıcı okuma.** ADR-0
         ├─── "advisory" ───▶ notifyDispatcherException (FN-09)
         │                    + <ExceptionToast /> (FN-12)
         │                    + <ExceptionStatusPanel /> (FN-13)
-        │                    + <ResolutionActionPanel /> (FN-14)
+        │                    + <ResolutionActionPanel /> (FN-14, v1.4: exception_type'a
+        │                      göre özelleşmiş, "sıfır iş gücü" aksiyon butonları)
         │                    + Dispatcher resolves via FN-11
         │
         └─── "auto" (Phase 2) ─▶ executeAutoResolution (FN-15)
@@ -82,6 +86,7 @@ Wishlist "AI agents" diyor — bu **TulipFleet için yanıltıcı okuma.** ADR-0
 - Phase 1: Dispatcher resolve endpoint + UI
 - **Phase 1 (v1.3 EKLENDİ): Sürücüye gecikme sebebi sorma** (önlenemez durum tespit edilince, push/modal ile)
 - **Phase 1 (v1.3 EKLENDİ): Sürücü çevrimdışı / konum-uyumsuz ayrımı** (iki farklı exception tipi)
+- **Phase 1 (v1.4 EKLENDİ): Her iki alt-senaryo için "sıfır iş gücü" dispatcher aksiyonu** — `driver_offline` için tek-tık push/arama, `driver_location_mismatch` için mevcut Live Fleet Map'e otomatik odaklanma
 - **Phase 1 (v1.3 EKLENDİ): Dock çakışması için otomatik bildirim şablonu hazırlama** (gönderim değil, dispatcher onayına sunma)
 - Phase 2: Policy-based auto-action (Mode 2 Exception)
 - Phase 2: Grace period revert window
@@ -95,6 +100,7 @@ Wishlist "AI agents" diyor — bu **TulipFleet için yanıltıcı okuma.** ADR-0
 - **Predictive failure detection** — FEAT-024 Phase 2 (ayrı feature, ML-bazlı)
 - **Email/SMS otomatik GÖNDERİMİ** — Phase 2+ (mevcut backend pattern yok, UNCERTAINTIES #6). **v1.3 netleştirmesi:** Şablon **hazırlama** ve dispatcher panelinde **gösterme** Phase 1'de var (FN-17) — dispatcher'ın "onayla ve gönder" dediği an gerçekleşecek otomatik gönderim altyapısı (SendGrid/Mailgun entegrasyonu) hâlâ Phase 2'de.
 - **Hava durumu tabanlı otomatik ETA ayarlaması (FEAT-005-EXT)** — ayrı spec yazılana kadar kapsam dışı. **v1.3 kısmi çözüm:** FN-16 ile sürücüye doğrudan sorularak bu boşluk Phase 1'de dolduruluyor (otomatik hava verisi entegrasyonu değil, insan girdisiyle).
+- **Otomatik telefon araması (gerçek bir çağrı başlatma)** — Phase 1'de sadece `tel:` link (dispatcher'ın kendi telefonu/tarayıcısı üzerinden manuel arama tetikler), otomatik/sunucu-taraflı çağrı sistemi (Twilio vb.) kapsam dışı (v1.4 EKLENDİ, bkz. §3.3.1).
 
 ### 1.6 Mimari netleştirme — planlama vs canlı izleme sorumluluk ayrımı (v1.3 EKLENDİ, 2026-07-18)
 
@@ -147,9 +153,9 @@ Bu, **AI kullanmadan** "akıllı" görünen bir davranış üretir: sistem kendi
 | 11 | FEAT-010-FN-11 | backend | `POST /api/dispatcher/exceptions/:id/resolve` | id, action, comment, **resolved_by (JWT.user_id)** | Success | enterprise.exception_events | enterprise.exception_events (audit fields), public.tasks (optional) | — | ADR-0005 §4.1 — "Modify one or more assignments (drag-and-drop in the Kanban view; reorder visits in the timeline)." | 1 | **FEAT-001:FN-013** approve pattern |
 | 12 | FEAT-010-FN-12 | frontend | `<ExceptionToast />` | alertData | UI Component | — | — | — | ADR-0001 §3.6 — "Notistack — Lightweight Snackbar for non-blocking alerts" | 1 | — |
 | 13 | FEAT-010-FN-13 | frontend | `<ExceptionStatusPanel />` | filterStatus | UI Component | enterprise.exception_events | — | — | ADR-0001 §3.6 — "React Table — Vehicle / driver / task lists with sort, filter, paging" | 1 | — |
-| 14 | FEAT-010-FN-14 | frontend | `<ResolutionActionPanel />` (**v1.3: FN-17 şablon çıktısını gösterecek şekilde genişletildi**) | exceptionId | UI Component | enterprise.exception_events.detection_payload (şablon varsa) | — | — | ADR-0001 §3.6 — "Forms, modals, navigation, layout primitives" | 1 | — |
+| 14 | FEAT-010-FN-14 | frontend | `<ResolutionActionPanel />` (**v1.3: FN-17 şablon çıktısını gösterecek şekilde genişletildi; v1.4: exception_type'a göre "sıfır iş gücü" aksiyon butonları eklendi, bkz. §3.3.1**) | exceptionId, exceptionType | UI Component | enterprise.exception_events.detection_payload (şablon/konum varsa), public.drivers.phone (v1.4) | — | — | ADR-0001 §3.6 — "Forms, modals, navigation, layout primitives" | 1 | **v1.4: mevcut Live Fleet Map `focusPlate` mekanizması (Sıra 5.4, ROADMAP.md, `LiveFleetMap.tsx` `useSearchParams`)** — `driver_location_mismatch` için yeniden kullanılıyor, yeni harita bileşeni yazılmıyor |
 | 15 | FEAT-010-FN-15 | worker | `executeAutoResolution` | exceptionId | Result | enterprise.exception_events | enterprise.dispatch_tasks, enterprise.exception_events (status=auto_handled) | HERE Tour Planning | ADR-0005 §5.3 — "If rules permit, system auto-assigns and dispatches." | 2 | **FEAT-002:FN-02** POST /replan |
-| 16 | FEAT-010-FN-16 | backend + frontend (mobile) | `requestDelayReasonFromDriver` (**v1.3 EKLENDİ, 2026-07-18**) | taskId, driverId, delayMinutes | void (push gönderir) | enterprise.exception_events | enterprise.exception_events.detection_payload (driver_response) | Expo Push API (bkz. §3.4 — Faz 4 `internalBridge.js:sendPushNotification` deseniyle aynı) | Bu spec'in kendi kararı (§1.7) — dış ADR referansı yok, tulipfleet-backend'de zaten çalışan push deseni referans alınıyor | 1 | `tulipfleet-backend/routes/internalBridge.js:sendPushNotification` (Faz 4, `f4536a7`) — aynı Expo Push API çağrı deseni |
+| 16 | FEAT-010-FN-16 | backend + frontend (mobile) | `requestDelayReasonFromDriver` (**v1.3 EKLENDİ, 2026-07-18**) | taskId, driverId, delayMinutes | void (push gönderir) | enterprise.exception_events | enterprise.exception_events.detection_payload (driver_response) | Expo Push API (bkz. §3.4 — Faz 4 `internalBridge.js:sendPushNotification` deseniyle aynı) | Bu spec'in kendi kararı (§1.7) — dış ADR referansı yok, tulipfleet-backend'de zaten çalışan push deseni referans alınıyor | 1 | `tulipfleet-backend/routes/internalBridge.js:sendPushNotification` (Faz 4, `f4536a7`) — aynı Expo Push API çağrı deseni; **v1.4: `driver_offline` durumunda FN-14'ün "uyandırma bildirimi" butonu bu fonksiyonu farklı bir mesaj metniyle tekrar çağırır** |
 | 17 | FEAT-010-FN-17 | backend | `prepareDockNotificationTemplate` (**v1.3 EKLENDİ, 2026-07-18**) | exceptionId, delayMinutes, dockContactInfo | { template: string } | enterprise.dispatch_tasks, enterprise.dock_appointments | enterprise.exception_events.detection_payload (template) | — | Bu spec'in kendi kararı (§3.5) — Mode 1 Advisory ile tutarlı: sistem hazırlar, dispatcher onaylar | 1 (hazırlama) / 2 (otomatik gönderim — bkz. §1.5) | — |
 
 **Konsolidasyon notları (NotebookLM çıktısına göre düzeltmeler):**
@@ -160,13 +166,14 @@ Bu, **AI kullanmadan** "akıllı" görünen bir davranış üretir: sistem kendi
 | **5. compliance monitor** | NotebookLM 4 detection monitor önerdi (ETA/traffic/no-show/dock) | ✅ **EKLENDİ FN-05** — `monitorComplianceZones` (ADR-0012 §4 zone breach prediction). FEAT-010 5 detection monitor'a tamamlandı. |
 | **Dedup pattern** | NotebookLM dedup'tan bahsetmedi | ✅ **EKLENDİ FN-07** — `deduplicateException` (FEAT-007:FN-11 paterniyle, 10 dk cooldown window). Aynı task için tekrarlı exception engellenir. |
 | **FN-11 audit trail eksik** | NotebookLM `action, comment` parametreleri | ✅ **GENİŞLETİLDİ** — `resolved_by (JWT.user_id)` eklendi. Writes to: `enterprise.exception_events` audit fields (resolved_at, resolved_by, resolution_type, comment) belirlendi. |
-| FN numaralandırma | NotebookLM 13 fonksiyon | ✅ Konsolidasyonda 2 yeni fonksiyon eklendi (FN-05 + FN-07) → toplam 15 fonksiyon. **v1.3'te 2 yeni fonksiyon eklendi (FN-16 + FN-17) → toplam 17 fonksiyon.** |
+| FN numaralandırma | NotebookLM 13 fonksiyon | ✅ Konsolidasyonda 2 yeni fonksiyon eklendi (FN-05 + FN-07) → toplam 15 fonksiyon. **v1.3'te 2 yeni fonksiyon eklendi (FN-16 + FN-17) → toplam 17 fonksiyon. v1.4'te yeni fonksiyon eklenmedi, mevcut FN-14 ve FN-16 genişletildi.** |
 | FN-09 ADR-0009 §8 alıntı | ✅ Birebir cümle (FEAT-005/007 cross-spec sync sonrası) | — Korundu |
 | FN-08 ADR-0005 §7 | ✅ Birebir cümle | — Korundu |
 | FN-11 ADR-0005 §4.1 | ✅ Birebir cümle | — Korundu |
 | **v1.3 — FN-01 tek yönlü tespit** | Orijinal FN-01 sadece "eşik aşıldı mı" kontrolü yapıyordu, sebep ayrımı yoktu | ✅ **GENİŞLETİLDİ** — §1.7'de belgelenen iki-dallı akış (trafik var/yok) FN-01'in HERE sorgusuna eklendi, trafik yoksa FN-16 tetiklenir. |
 | **v1.3 — FN-03 tek exception tipi** | Orijinal FN-03 "driver_no_show" tek tipiyle hem "app kapalı" hem "yanlış yerde" durumlarını karıştırıyordu | ✅ **AYRIŞTIRILDI** — iki exception_type (`driver_offline`, `driver_location_mismatch`), bkz. §3.3 ve §6.1 schema. |
 | **v1.3 — FN-04 aksiyon eksikliği** | Orijinal FN-04 sadece tespit ediyordu, "ne yapılacağı" belirtilmemişti (Cem'in doğru tespiti) | ✅ **FN-17 EKLENDİ** — otomatik şablon hazırlama, dispatcher onayına sunma. Gönderim altyapısı hâlâ Phase 2 (§1.5'teki kapsam dışı kararına saygı gösterilerek). |
+| **v1.4 — FN-14 genel amaçlı, aksiyon tipi belirsiz** | v1.3'te FN-14 sadece "form modal" olarak tanımlıydı, exception_type'a göre farklı davranması gerektiği belirtilmemişti (Cem'in ikinci turdaki doğru tespiti) | ✅ **GENİŞLETİLDİ** — §3.3.1'de her exception_type için somut, "sıfır iş gücü" aksiyon tanımlandı. `driver_location_mismatch` için mevcut Focus-on-Map deseni (Sıra 5.4) yeniden kullanılıyor. |
 
 ---
 
@@ -221,10 +228,12 @@ Bu, **AI kullanmadan** "akıllı" görünen bir davranış üretir: sistem kendi
    ExceptionStatusPanel (FN-13) listede gösterir
    Dispatcher inceler → ResolutionActionPanel (FN-14)
    (v1.3: dock çakışmasıysa burada FN-17'nin hazırladığı şablon da görünür)
+   (v1.4: driver_offline/driver_location_mismatch ise §3.3.1'deki
+    "sıfır iş gücü" butonları görünür)
         │
         ▼
    POST /api/dispatcher/exceptions/:id/resolve (FN-11)
-   - Action: "acknowledge" | "manual_replan" | "manual_reassign" | "dismiss" | "send_template" (v1.3 EKLENDİ)
+   - Action: "acknowledge" | "manual_replan" | "manual_reassign" | "dismiss" | "send_template" (v1.3) | "wake_up_push" | "view_on_map" (v1.4 EKLENDİ)
    - Audit: resolved_at, resolved_by, resolution_type, comment
    - status: open → resolved
 ```
@@ -282,7 +291,20 @@ Görev başlama saati geldi (task.scheduled_start)
         her iki exception_type için de geçerli, aynı zaman eşikleri)   │
 ```
 
-**Neden bu ayrım önemli:** Dispatcher'a gelen bildirim farklı bir aksiyon gerektirir — "offline" durumunda dispatcher sürücüyü telefonla aramayı düşünebilir (uygulama açık değilse push bildirimi de ulaşmayabilir); "location_mismatch" durumunda sürücüye doğrudan bir push/mesaj göndermek (FN-16'nın kullandığı aynı Expo Push mekanizmasıyla) daha etkili olur çünkü uygulama zaten aktif.
+**Neden bu ayrım önemli:** Dispatcher'a gelen bildirim farklı bir aksiyon gerektirir. v1.3'te bu genel olarak belirtilmişti; **v1.4 bunu somut, uygulanabilir UI davranışlarına döküyor** — bkz. §3.3.1.
+
+#### 3.3.1 "Sıfır iş gücü" dispatcher aksiyonları (v1.4 EKLENDİ, 2026-07-18)
+
+Cem'in ikinci gözlemi: *"Eğer bu iki durumu tek bir `driver_no_show` başlığında toplasaydık, dispatcher her seferinde önce haritaya bakıp sürücünün nerede olduğunu kontrol edecek, ardından telefonu kaldırıp sürücüyü arayacaktı — işte asıl iş gücü israfı burası."*
+
+v1.3'ün ayrımı doğruydu ama yeterli değildi — spec'in kendisi de **her exception tipi için dispatcher'ın önüne çıkacak somut aksiyonu** tanımlamalıydı. v1.4 bunu ekliyor:
+
+| Exception Tipi | Sahadaki gerçek anlamı | ResolutionActionPanel'de (FN-14) görünen aksiyon | Uygulama maliyeti |
+|---|---|---|---|
+| `driver_offline` | Uygulama kapalı, MQTT sessiz. Sürücü muhtemelen uygulamayı açmayı unutmuş veya cihazı kapalı. | **İki buton:** (1) "Uyandırma Bildirimi Gönder" — FN-16'yı farklı bir mesaj metniyle (`"Görevin başladı, lütfen uygulamayı aç"`) tekrar çağırır. (2) Telefon ikonu — `tel:{public.drivers.phone}` linki, dispatcher'ın kendi tarayıcısı/telefonu üzerinden tek tıkla arama başlatır. | Düşük — FN-16 zaten var, sadece farklı bir mesaj parametresiyle çağrılıyor; `tel:` linki backend gerektirmeyen bir HTML davranışı, `public.drivers.phone` kolonu zaten şemada (Sıra 5.2'de kanıtlı). |
+| `driver_location_mismatch` | Uygulama açık, konum akıyor, ama sürücü beklenen yerde değil — önceki teslimatta gecikmiş veya trafikte kalmış olabilir. | **Panel içine gömülü mini harita veya "Haritada Göster" butonu** — mevcut Live Fleet Map'in `focusPlate` URL parametresi mekanizması (Sıra 5.4, `LiveFleetMap.tsx`'te `useSearchParams` ile okunan, `selectVehicle()` + `flyTo()` tetikleyen, zaten production'da kanıtlı desen) yeniden kullanılır. Dispatcher telefon etmeden, ekranda sürücünün gerçek konumunu ve göreve olan mesafesini görür. | Düşük — yeni bir harita bileşeni yazılmıyor, sadece FN-14 içinde mevcut `navigate('/dashboards/live-fleet-map?focusPlate=' + plate)` çağrısı (ya da gömülü mini-harita için aynı store'un okunması) kullanılıyor. |
+
+**Neden bu tasarım doğru:** Her iki aksiyon da **var olan altyapıyı yeniden kullanıyor** (FN-16'nın push mekanizması, Sıra 5.4'ün focus-on-map deseni) — sıfırdan yeni bir sistem inşa edilmiyor. Bu, §7'deki "orkestratör feature mevcut altyapı desenlerini yeniden kullanabilir" gözlemiyle tutarlı, ve v1.4'ü uygulamak için gereken kod miktarının küçük olmasının (Cem'in tahmini: "3-5 satır kod ve yeni bir enum değeri") teknik sebebi budur.
 
 ### 3.4 FN-16 requestDelayReasonFromDriver — akış detayı (v1.3 EKLENDİ, 2026-07-18)
 
@@ -316,6 +338,8 @@ toast/bildirim güncellenmez (spam önleme), ama panel açıldığında görün�
 ```
 
 **Not — bu bir zorunluluk değil, en-iyi-çaba (best-effort) mekanizmadır:** Sürücü cevap vermezse (örn. gerçekten arızalanmışsa telefonla ilgilenemeyebilir), `driver_response` alanı `null` kalır, dispatcher'a "sebep bilinmiyor, sürücüden yanıt alınamadı" olarak gösterilir. Bu senaryo sistemi bloke etmez.
+
+**v1.4 notu:** Aynı fonksiyon, `driver_offline` exception'ının "Uyandırma Bildirimi Gönder" butonu tarafından da çağrılır — sadece mesaj metni farklıdır (bkz. §3.3.1 tablosu). FN-16 böylece iki farklı senaryoda (ETA gecikme sebebi + sürücü uyandırma) yeniden kullanılan, tek bir push-gönderme fonksiyonu haline gelir.
 
 ### 3.5 FN-17 prepareDockNotificationTemplate — akış detayı (v1.3 EKLENDİ, 2026-07-18)
 
@@ -485,10 +509,14 @@ CREATE TABLE enterprise.exception_events (
     -- Örnek (dock_conflict, v1.3): { "eta_deviation_minutes": 40,
     --   "dock_template": "TulipFleet aracı ... 40 dk geç kalacaktır.",
     --   "dock_contact": "dock@customer.nl" }
+    -- Örnek (driver_location_mismatch, v1.4): { "distance_from_geofence_m": 850,
+    --   "vehicle_plate": "BX-TR-42", "last_known_lat": 52.37, "last_known_lng": 4.90 }
+    -- Örnek (driver_offline, v1.4): { "last_telemetry_at": "...", "silence_minutes": 22,
+    --   "wake_up_push_sent_at": "..." }
 
     -- Resolution audit (Phase 1: manuel; Phase 2: auto da eklenir)
     resolution_type     TEXT CHECK (resolution_type IN ('manual','auto')),
-    resolution_action   TEXT,  -- "acknowledge|manual_replan|manual_reassign|dismiss|send_template|auto_replan|auto_reassign|revert"
+    resolution_action   TEXT,  -- "acknowledge|manual_replan|manual_reassign|dismiss|send_template|wake_up_push|view_on_map|auto_replan|auto_reassign|revert"
     resolved_at         TIMESTAMPTZ,
     resolved_by         UUID REFERENCES public.users(id),
     resolution_comment  TEXT,
@@ -557,7 +585,8 @@ Per-company override mantığı (UNCERTAINTIES #5).
 | FN-09 notifyDispatcherException | **FEAT-005:FN-08** broadcastEtaToDriver | MQTT publish from enterprise pattern (ADR-0009 §8) |
 | FN-11 POST /resolve | **FEAT-001:FN-013** approve pattern | Approve pattern |
 | FN-15 executeAutoResolution | **FEAT-002:FN-02** POST /replan | Action target (Phase 2) |
-| **FN-16 requestDelayReasonFromDriver (v1.3)** | **`tulipfleet-backend/routes/internalBridge.js:sendPushNotification`** (Faz 4, commit `f4536a7`, `ARCHITECTURE_DECISION_task-management-api-driven.md`) | Aynı Expo Push API çağrı deseni — `users.expo_push_token` okuma, best-effort/no-throw gönderim. FEAT-010 implementasyonu bu fonksiyonu tekrar yazmak yerine paylaşılan bir helper'a çıkarmalı (implementation backlog notu, §10.2). |
+| FN-16 requestDelayReasonFromDriver (v1.3) | **`tulipfleet-backend/routes/internalBridge.js:sendPushNotification`** (Faz 4, commit `f4536a7`, `ARCHITECTURE_DECISION_task-management-api-driven.md`) | Aynı Expo Push API çağrı deseni — `users.expo_push_token` okuma, best-effort/no-throw gönderim. FEAT-010 implementasyonu bu fonksiyonu tekrar yazmak yerine paylaşılan bir helper'a çıkarmalı (implementation backlog notu, §10.2). |
+| **FN-14 ResolutionActionPanel (v1.4)** | **Live Fleet Map `focusPlate` mekanizması** (Sıra 5.4, ROADMAP.md — `vehicles/index.tsx`'te `navigate('/dashboards/live-fleet-map?focusPlate=...')`, `LiveFleetMap.tsx`'te `useSearchParams` + `selectVehicle()` + `flyTo()`, 2026-07-18'de kod-kanıtıyla doğrulanmış production deseni) | `driver_location_mismatch` exception'ında dispatcher'a sürücünün konumunu gösterme aksiyonu, sıfırdan yazılmıyor — mevcut linki/deseni tetikliyor. |
 
 **Cross-spec sync TODO (potansiyel):**
 - FEAT-002 spec'ine FN-02 "consumed by FEAT-010:FN-15" notu eklenebilir mi? Genelde caller yazılır, target reverse yazılmaz. **Karar: reverse yazma yapılmayacak** — FEAT-010 spec'i shared kolonu zaten yansıtıyor.
@@ -567,13 +596,15 @@ FEAT-010 4 farklı FEAT'ten detection consume eder ve 2 farklı FEAT'in action'�
 
 **v1.3 gözlemi:** FN-16'nın Faz 4'te zaten production'da çalışan bir push mekanizmasını referans alması, "orkestratör feature" paradigmasının sadece detection/action FEAT'lerini değil, **mevcut altyapı desenlerini de** yeniden kullanabileceğini gösteriyor — sıfırdan push altyapısı tasarlamak yerine, kanıtlanmış bir deseni tekrar kullanmak.
 
+**v1.4 gözlemi:** Bu prensip FN-14'te bir kez daha doğrulandı — Sıra 5.4'ün Focus-on-Map deseni de FEAT-010'a "ödünç alınabilecek" hazır bir altyapı olarak kullanıldı. **Orkestratör feature'ların sadece detection/action'ları değil, UI desenlerini de yeniden kullanabildiği** artık iki örnekle (FN-16 push, FN-14 harita) kanıtlanmış bir paterndir.
+
 ---
 
 ## 8. UNCERTAINTIES (Cem onayı bekleyen)
 
 ### NotebookLM'in tespit ettikleri
 
-1. **Driver no-show detection (FN-03):** ~~"Driver hareket etmezse" mantığı — kaç metre/saniye threshold?~~ **✅ v1.3'te CEVAPLANDI (2026-07-18):** Tek bir geofence kontrolü yetersizdi. Cem'in mühendislik incelemesiyle iki ayrı dal netleştirildi: (A) MQTT telemetri sessizliği 15 dk → `driver_offline`, (B) telemetri akıyor ama geofence'e uzaklık > 100m → `driver_location_mismatch`. Detay §3.3.
+1. **Driver no-show detection (FN-03):** ~~"Driver hareket etmezse" mantığı — kaç metre/saniye threshold?~~ **✅ v1.3'te CEVAPLANDI (2026-07-18):** Tek bir geofence kontrolü yetersizdi. Cem'in mühendislik incelemesiyle iki ayrı dal netleştirildi: (A) MQTT telemetri sessizliği 15 dk → `driver_offline`, (B) telemetri akıyor ama geofence'e uzaklık > 100m → `driver_location_mismatch`. Detay §3.3. **v1.4'te tamamen kapatıldı** — her iki dal için somut dispatcher aksiyonu da tanımlandı (§3.3.1).
 
 2. **Dock conflict warning lead time (FN-04):** 60 dk önceden uyar mı, daha erken/geç?
    - **Önerim:** 60 dk default (Cem onayı). Eşik karşılanırsa medium, 30 dk içinde high, dock window kaçırıldıysa critical.
@@ -612,13 +643,19 @@ FEAT-010 4 farklı FEAT'ten detection consume eder ve 2 farklı FEAT'in action'�
     - **Karar:** Phase 1 sadece MQTT + UI + (v1.3) hazır şablon gösterimi. Gerçek otomatik email/SMS gönderimi Phase 2+ FEAT-101 ile beraber gelir.
     - Mevcut backend pattern: SendGrid/Mailgun entegrasyonu yok (UNCERTAINTIES #6).
 
-### v1.3'te yeni açılan (Cem onayı bekleyen)
+### v1.3'te açılan
 
 11. **FN-16 sürücü cevap vermezse ne olur (timeout)?** Şu an spec bir timeout tanımlamıyor — `driver_response` süresiz `null` kalabilir. **Öneri:** 30 dakika içinde cevap gelmezse `detection_payload.driver_response_timeout = true` işaretlenip dispatcher'a "sürücüden yanıt alınamadı" olarak gösterilsin. Cem kararı bekliyor.
 
 12. **FN-17 şablon dili / çok-dillilik:** Dock iletişim şablonu hangi dilde üretilecek — task'ın/şirketin dili mi, yoksa her zaman İngilizce/Hollandaca mı? Mevcut i18n altyapısı (7 dil, mobil app'te kanıtlı) referans alınabilir. Cem kararı bekliyor.
 
-13. **`driver_offline` ile gerçek push bildirimi çelişkisi:** FN-03 dal A ("driver_offline") tetiklendiğinde, sürücünün uygulaması zaten kapalı/telemetri göndermiyor demektir — bu durumda FN-16 (push bildirimi) de muhtemelen ulaşmayacaktır (push token geçerli olsa bile cihaz/app offline ise teslim gecikebilir). **Öneri:** `driver_offline` exception'ında dispatcher'a "push bildirimi de ulaşmayabilir, telefonla arama düşünün" notu eklensin. Cem kararı bekliyor.
+13. **`driver_offline` ile gerçek push bildirimi çelişkisi:** ~~FN-03 dal A ("driver_offline") tetiklendiğinde, sürücünün uygulaması zaten kapalı/telemetri göndermiyor demektir — bu durumda FN-16 (push bildirimi) de muhtemelen ulaşmayacaktır.~~ **✅ v1.4'te KISMEN ÇÖZÜLDÜ:** Bu çelişki tam olarak kabul edildi ve tasarıma dahil edildi — `driver_offline` için dispatcher'a **iki** seçenek sunuluyor (push VE telefon araması), tam da push'un ulaşmayabileceği ihtimaline karşı bir yedek olarak. Kalan küçük soru: dispatcher panelinde push butonunun yanına "bu bildirim ulaşmayabilir, cihaz çevrimdışı görünüyor" gibi bir uyarı metni eklenmeli mi? Cem kararı bekliyor (kozmetik bir detay, işlevi etkilemiyor).
+
+### v1.4'te yeni açılan (Cem onayı bekleyen)
+
+14. **`public.drivers.phone` alanının doluluk oranı:** `tel:` linkinin çalışması için sürücü kayıtlarında telefon numarasının gerçekten dolu olması gerekiyor. Mevcut demo/staging verisinde (Sıra 5.2 doğrulamasından) bu alanın ne kadarının dolu olduğu bilinmiyor — production'a geçmeden önce bir veri kalitesi kontrolü (`SELECT COUNT(*) WHERE phone IS NULL`) önerilir. Cem kararı bekliyor.
+
+15. **`driver_location_mismatch` için mini-harita mı, yönlendirme linki mi:** §3.3.1'de iki seçenek belirtildi ("panel içine gömülü mini harita" veya "Haritada Göster" butonu ile ayrı sayfaya yönlendirme). Gömülü mini-harita daha iyi UX ama daha fazla kod (Leaflet'i modal içine gömmek); yönlendirme linki Cem'in "3-5 satır kod" tahminine daha yakın (sadece mevcut `navigate()` çağrısı). **Öneri:** Phase 1'de yönlendirme linki (basit), kullanıcı geri bildirimi iyiyse Phase 1.1'de gömülü mini-haritaya yükseltilir. Cem kararı bekliyor.
 
 ---
 
@@ -650,18 +687,18 @@ Tek prompt + 0 follow-up. Cem prompt'u kısalttı (token limiti) — ML disiplin
 | Boyut | F1 | F2 | F3 | F4 | F5 | F6 | F7 | F8 | F9 | **F10** |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Skor | 9 | 9.5 | 9 | 9 | 8.5 | 9 | 8.5 | 9.5 | 8.5 | **9** |
-| İterasyon | 5 | 3 | 2 | 1+1 | 1+3 | 1 | 1+1 | 1 | 1 | **1** |
-| Fonksiyon (final) | 16 | 16 | 16 | 12 | 12 | 10 | 14 | 9 | 7 | **17 (v1.3 sonrası)** |
+| İterasyon | 5 | 3 | 2 | 1+1 | 1+3 | 1 | 1+1 | 1 | 1 | **1 (+2 insan revizyonu: v1.3, v1.4)** |
+| Fonksiyon (final) | 16 | 16 | 16 | 12 | 12 | 10 | 14 | 9 | 7 | **17** |
 | Alıntı hatası | 1 | 1 | 1 | 0 | 1 | 1 | 6 | 1 | 2 | **1** |
 | §number fabrikasyon | 1 | 1 | 1 | 0 | 1 | 1 | 1 | 0 | 1 | **0** ✅ |
-| Yeni paradigma | VRP | Re-route | Dispatch | Multi-actor | HERE consume | Task duration | Coaching | Toll | Carbon | **Orchestrator** |
+| Yeni paradigma | VRP | Re-route | Dispatch | Multi-actor | HERE consume | Task duration | Coaching | Toll | Carbon | **Orchestrator + insan mühendislik incelemesi** |
 
 **F10 gözlemleri:**
 - **§number fabrikasyon stop devam** — F9'daki §188 hatası bir sapmaydı, F8 ve F10'da 0
 - Kısaltılmış prompt kaliteyi etkilemedi
 - Konsolidasyonda 2 yeni fonksiyon eklendi (FN-05 compliance monitor + FN-07 dedup) — NotebookLM'in **kaçırdığı disipline noktaları**
 - Yeni paradigma: **Orkestratör feature** — multi-source consumer + multi-target action router
-- **v1.3 (2026-07-18) — insan mühendislik incelemesi katmanı:** NotebookLM'in ilk taslağından farklı olarak, bu güncelleme bir AI pilot çıktısı değil, Cem'in fonksiyon fonksiyon okuyup 3 gerçek eksiği (sebep tespiti, no-show ayrımı, dock aksiyonu) tespit etmesiyle geldi. Bu, spec'in "AI üretti, insan onayladı" modelinden "insan AI çıktısını sorguladı, gerçek boşlukları buldu" modeline geçtiğinin kanıtı.
+- **v1.3 + v1.4 (2026-07-18) — insan mühendislik incelemesi katmanı:** NotebookLM'in ilk taslağından farklı olarak, bu iki güncelleme bir AI pilot çıktısı değil, Cem'in fonksiyon fonksiyon okuyup gerçek eksikleri (sebep tespiti, no-show ayrımı, dock aksiyonu, "sıfır iş gücü" somut UI) tespit etmesiyle geldi. v1.4 özellikle, v1.3'ün "doğru ayrım yaptık ama ne yapılacağını söylemedik" boşluğunu kapattı — bu, iteratif insan incelemesinin AI'ın ilk turda kaçırdığı ürün-seviyesi detayları (sadece teknik doğruluk değil, kullanıcı deneyimi) yakalayabildiğinin kanıtı.
 
 ### 9.4 NotebookLM trend yorumu
 
@@ -689,6 +726,8 @@ Genelde **caller spec'i** consumer'ı belgelemekle yetinir. Target spec'lerinde 
 
 **v1.3 notu:** FN-16'nın referans aldığı `internalBridge.js:sendPushNotification` `tulipfleet-backend` reposunda, `docs/functions/` altında değil — bu bir "spec-to-spec" değil "spec-to-production-code" cross-referansı, farklı bir kategori. Cross-spec sync TODO listesine eklenmiyor.
 
+**v1.4 notu:** FN-14'ün referans aldığı Focus-on-Map deseni de aynı kategoride — `tulipfleet-dispatcher` reposunda üretim kodu (`vehicles/index.tsx`, `LiveFleetMap.tsx`), spec dosyası değil.
+
 ### 10.2 Phase 1 implementation backlog
 
 ROADMAP Phase 1.1'de (FEAT-010 sıralanan ilk pilot):
@@ -701,13 +740,15 @@ ROADMAP Phase 1.1'de (FEAT-010 sıralanan ilk pilot):
 - [ ] FN-08 evaluateExceptionPolicy stub (advisory döner)
 - [ ] FN-09 notifyDispatcherException (MQTT publish)
 - [ ] FN-10 GET /api/dispatcher/exceptions
-- [ ] FN-11 POST /api/dispatcher/exceptions/:id/resolve + audit fields (v1.3: "send_template" action eklendi)
+- [ ] FN-11 POST /api/dispatcher/exceptions/:id/resolve + audit fields (v1.3: "send_template" action eklendi; v1.4: "wake_up_push", "view_on_map" eklendi)
 - [ ] FN-12 `<ExceptionToast />` (Notistack)
 - [ ] FN-13 `<ExceptionStatusPanel />` (React Table)
-- [ ] FN-14 `<ResolutionActionPanel />` (form modal, v1.3: FN-17 şablon gösterimi eklendi)
-- [ ] **FN-16 requestDelayReasonFromDriver (v1.3 YENİ)** — `internalBridge.js:sendPushNotification` deseni referans alınarak, backend'de paylaşılan bir push helper'a çıkarılması önerilir
-- [ ] **FN-16 mobil taraf (v1.3 YENİ)** — sürücü uygulamasında "Gecikme Sebebi" modal/ekranı + `PUT /api/driver/exceptions/:id/reason` endpoint'i
-- [ ] **FN-17 prepareDockNotificationTemplate (v1.3 YENİ)** — şablon metni üretimi, panoya kopyalama davranışı (gerçek gönderim Phase 2)
+- [ ] FN-14 `<ResolutionActionPanel />` (form modal, v1.3: FN-17 şablon gösterimi eklendi; **v1.4: exception_type'a göre koşullu render — driver_offline için push+tel butonları, driver_location_mismatch için focusPlate linki/mini-harita**)
+- [ ] **FN-16 requestDelayReasonFromDriver (v1.3)** — `internalBridge.js:sendPushNotification` deseni referans alınarak, backend'de paylaşılan bir push helper'a çıkarılması önerilir. **v1.4: `driver_offline` "uyandırma" mesajı için de yeniden kullanılacak, parametrik mesaj metni desteklemeli**
+- [ ] **FN-16 mobil taraf (v1.3)** — sürücü uygulamasında "Gecikme Sebebi" modal/ekranı + `PUT /api/driver/exceptions/:id/reason` endpoint'i
+- [ ] **FN-17 prepareDockNotificationTemplate (v1.3)** — şablon metni üretimi, panoya kopyalama davranışı (gerçek gönderim Phase 2)
+- [ ] **v1.4 YENİ — `tel:{phone}` linki** — `public.drivers.phone` alanını FN-14'e taşıyan basit bir SELECT, yeni backend endpoint gerektirmez
+- [ ] **v1.4 YENİ — `driver_location_mismatch` için focusPlate entegrasyonu** — FN-14'ten mevcut `/dashboards/live-fleet-map?focusPlate=...` linkine yönlendirme (Phase 1) veya gömülü mini-harita (Phase 1.1, UNCERTAINTIES #15 kararına bağlı)
 
 ### 10.3 Phase 2 implementation backlog (FEAT-101 customer trigger)
 
@@ -717,6 +758,7 @@ ROADMAP Phase 1.1'de (FEAT-010 sıralanan ilk pilot):
 - [ ] POST /api/dispatcher/exceptions/:id/resolve action="revert" desteği
 - [ ] MQTT push to driver mobile (ADR-0009 §8) critical severity için
 - [ ] Email/SMS notification entegrasyonu (SendGrid/Mailgun) — **v1.3: FN-17'nin hazırladığı şablonları otomatik gönderecek altyapı**
+- [ ] Gerçek/otomatik telefon araması (Twilio vb.) — **v1.4: şu an sadece `tel:` linki, otomatik çağrı sistemi Phase 2+**
 
 ### 10.4 Sıradaki pilot
 
@@ -748,6 +790,7 @@ Cem kararı.
 - ROADMAP Phase 1.1 + Feature Wishlist Coverage Matrix (FEAT-010 sıradaki pilot işaretlemesi)
 - NotebookLM session 2026-05-30 (1 prompt, 9/10 skor, prompt kısaltılmış)
 - **v1.3 kaynağı:** `tulipfleet-dispatcher/docs/ARCHITECTURE_DECISION_task-management-api-driven.md` (Faz 4, `internalBridge.js:sendPushNotification` deseni, commit `f4536a7`, 2026-07-18)
+- **v1.4 kaynağı:** ROADMAP.md Sıra 5.4 (Focus-on-Map deseni, `vehicles/index.tsx` + `LiveFleetMap.tsx`, 2026-07-18'de kod-kanıtıyla doğrulanmış)
 
 ---
 
@@ -758,4 +801,5 @@ Cem kararı.
 | 1 | 2026-05-30 | Cem Sahinkaya (with Claude + NotebookLM cowork) | İlk konsolide function spec. Onuncu pilot — automated exception handling, wishlist W8 (atlanmıştı, ROADMAP Coverage Matrix güncellemesi sonrası sıraya alındı). **Yeni paradigma: Orkestratör feature** — 4-5 FEAT'in detection'ını consume edip action'ına route ediyor. 15 fonksiyon (FN-01..FN-15), Phase 1: 14, Phase 2: 1 (executeAutoResolution Mode 2 trigger). ML disipline check ADR-0010 §3.3 + §3.4 + §4 birebir uyumlu — "AI agent" terminolojisi sızmadı, rule-based detection Phase 1, policy-based action Phase 2, anomaly detection Phase 3+. Konsolidasyon eklemeleri: (a) FN-05 monitorComplianceZones (ADR-0012 §4 zone breach prediction — 5. detection monitor), (b) FN-07 deduplicateException (FEAT-007:FN-11 paterni, 10 dk cooldown), (c) §4 Severity classification matrix (deterministic, threshold-based — ML değil), (d) FN-11 audit trail fields detaylandı (resolved_at, resolved_by, resolution_type, resolution_action, resolution_comment). FN-01 alıntı düzeltmesi — ADR-0005 §5.2 parafraz birleşimi → 4 tip enum (No match / Ambiguous match / Rule violation / High-impact event). Schema kararı: `enterprise.exception_events` TimescaleDB hypertable (FEAT-007:behavior_events paterniyle simetrik), 90 gün retention, dedup index. Per-company override: `public.companies.settings.exception_thresholds` JSONB. NotebookLM kalite trend: §number fabrikasyon = 0 ✅ (F9 §188 hatasından toparlandı). Kısaltılmış prompt kaliteyi etkilemedi — temel disiplinler (ML, ADR ref, Phase ayrımı) korundu. |
 | 1.1 (cross-spec sync) | 2026-05-30 | Cem Bakir + Claude | Cross-spec sync — 5 yeni exception_type enum (`locker_pickup_expired` FEAT-017:FN-12, `tender_withdrawn` FEAT-014:FN-13, `tender_no_quotes` FEAT-014:FN-04, `returns_pickup_failed` FEAT-018:FN-13, `rts_warehouse_unreachable` FEAT-018:FN-08). §4 Severity matrix 5 yeni entry. §2 FN-06 logExceptionEvent shared kolonuna FEAT-014, 017, 018 eklendi. Schema değişikliği additive (CHECK constraint ALTER) — Phase 1 production deployment için forward-compatible (eski 5 enum aynen kalır). FEAT-017 + FEAT-014 + FEAT-018 spec'lerindeki cross-spec sync TODO'lar kapatıldı. |
 | 1.2 (mega cross-spec sync) | 2026-05-30 | Cem Bakir + Claude | **Mega cross-spec sync — 6 yeni exception_type enum** (`invoice_discrepancy` FEAT-015:FN-05, `invoice_audit_deadline_expired` FEAT-015:FN-08, `rest_violation` FEAT-019:FN-07, `border_crossing_compliance_breach` FEAT-019:FN-12, `range_anxiety_breach` FEAT-103:FN-07, `csrd_data_quality_breach` FEAT-106:FN-05). §4 Severity matrix +11 yeni entry (bazı exception type'lar 2 severity seviye için). §2 FN-06 logExceptionEvent shared kolonu güncellendi (7 spec consumer: F014/015/017/018/019/103/106). Toplu commit önceki sync üstüne kümülatif — exception_type CHECK constraint mevcut 10 enum'a +6 (toplam 16). Schema değişikliği additive, forward-compatible. F015+F019+F103+F106 cross-spec TODO'lar kapatıldı. 17 pilot toplam, 11+ cross-spec sync tamamlandı. |
-| **1.3 (Cem'in mühendislik incelemesi)** | **2026-07-18** | **Cem Sahinkaya + Claude** | **Cem'in 5 gözcüyü tek tek eleştirel okuyup 3 gerçek boşluk tespit etmesi üzerine 2 yeni fonksiyon + 1 mevcut fonksiyonun ayrıştırılması.** (1) **FN-16 requestDelayReasonFromDriver (YENİ):** ETA gecikmesi tespit edilip HERE trafik verisi temizse ("önlenemez durum"), sürücüye push/modal ile sebep sorulur (Arıza/Kaza/Hava Şartları/Diğer) — `tulipfleet-backend/routes/internalBridge.js:sendPushNotification` (Faz 4, `f4536a7`) deseniyle aynı Expo Push mekanizması kullanılır. §1.7'de "AI kullanmadan akıllı davranış" prensibi belgelendi. (2) **FN-03 monitorDriverPresence iki alt-senaryoya ayrıldı:** `driver_offline` (MQTT telemetri sessizliği — uygulama hiç açılmamış) vs `driver_location_mismatch` (telemetri akıyor ama konum geofence dışı — uygulama açık, yanlış yerde). Önceki tek "driver_no_show" etiketinin bu iki farklı gerçek durumu ayırt edemediği tespit edildi (§3.3). exception_type CHECK constraint'e 2 yeni değer eklendi (schema additive, forward-compatible). (3) **FN-17 prepareDockNotificationTemplate (YENİ):** Dock çakışması tespit edilince otomatik bildirim şablonu hazırlanır, dispatcher'a "onayla ve gönder" seçeneği ResolutionActionPanel'de sunulur (Mode 1 Advisory disiplinine uygun — sistem hazırlar, insan onaylar). Gerçek otomatik gönderim altyapısı (SendGrid/Mailgun) hâlâ Phase 2'de — §1.5'teki mevcut kapsam-dışı kararına dokunulmadı, sadece şablon üretimi Phase 1'e alındı. **Yeni §1.6** planlama-vs-canlı-izleme sorumluluk ayrımını belgeliyor (Cem'in ZE-Zone tespiti: asıl önleme FEAT-001:FN-012'de planlama aşamasında, FN-05 sadece yedek katman — mimari zaten bu şekilde kuruluydu, v1.3 *neden* doğru olduğunu açıklığa kavuşturdu). UNCERTAINTIES #1 kapatıldı, #2 kısmen genişletildi (aksiyon tanımlandı), #3 kısmen çözüldü (insan-girdili fallback). 3 yeni UNCERTAINTIES açıldı (#11 FN-16 timeout, #12 FN-17 çok-dillilik, #13 driver_offline+push çelişkisi). Toplam fonksiyon: 15 → **17**. Bu revizyon bir NotebookLM pilotu değil — Cem'in fonksiyon fonksiyon eleştirel okumasıyla üretildi, §9.3'e bu model farkı not düşüldü. |
+| 1.3 (Cem'in mühendislik incelemesi) | 2026-07-18 | Cem Sahinkaya + Claude | Cem'in 5 gözcüyü tek tek eleştirel okuyup 3 gerçek boşluk tespit etmesi üzerine 2 yeni fonksiyon + 1 mevcut fonksiyonun ayrıştırılması. (1) FN-16 requestDelayReasonFromDriver (YENİ): ETA gecikmesi tespit edilip HERE trafik verisi temizse ("önlenemez durum"), sürücüye push/modal ile sebep sorulur (Arıza/Kaza/Hava Şartları/Diğer) — `internalBridge.js:sendPushNotification` (Faz 4, `f4536a7`) deseniyle aynı Expo Push mekanizması kullanılır. (2) FN-03 monitorDriverPresence iki alt-senaryoya ayrıldı: `driver_offline` vs `driver_location_mismatch`. (3) FN-17 prepareDockNotificationTemplate (YENİ): Dock çakışması için otomatik bildirim şablonu hazırlanır, dispatcher onayına sunulur. Yeni §1.6 (planlama vs canlı izleme sorumluluk ayrımı) ve §1.7 (ETA gecikme sebebi ayrımı) eklendi. Toplam fonksiyon: 15 → 17. |
+| **1.4 ("sıfır iş gücü" UI netleştirmesi)** | **2026-07-18** | **Cem Sahinkaya + Claude** | **Cem'in ikinci turdaki gözlemi üzerine FN-14'ün (ResolutionActionPanel) exception_type'a göre somut, "sıfır iş gücü" aksiyonlar sunması netleştirildi — yeni fonksiyon eklenmedi, mevcut FN-14 ve FN-16 genişletildi, iki mevcut production deseninin (FN-16 push mekanizması + Sıra 5.4 Focus-on-Map) yeniden kullanılacağı belgelendi.** Yeni **§3.3.1** "Sıfır iş gücü dispatcher aksiyonları" tablosu eklendi: `driver_offline` için iki buton (Uyandırma Bildirimi — FN-16'nın farklı mesajla tekrar çağrılması; Telefon ikonu — `tel:{public.drivers.phone}` linki, backend gerektirmeyen basit bir HTML davranışı); `driver_location_mismatch` için Focus-on-Map entegrasyonu (Sıra 5.4'ün zaten production'da kanıtlı `focusPlate` URL parametresi mekanizmasının yeniden kullanımı, yeni harita bileşeni yazılmadan). §6.1 schema'ya iki yeni `resolution_action` değeri eklendi (`wake_up_push`, `view_on_map`) ve `detection_payload` örnekleri genişletildi (`driver_location_mismatch` için konum/mesafe, `driver_offline` için sessizlik süresi). §7'ye FN-14'ün Sıra 5.4 deseniyle paylaşımı eklendi — "orkestratör feature'ların UI desenlerini de yeniden kullanabildiği" ikinci örnek olarak not düşüldü (ilki FN-16/push). UNCERTAINTIES #1 tamamen kapatıldı, #13 kısmen çözüldü (çelişki kabul edilip tasarıma dahil edildi — iki seçenek sunularak). 2 yeni UNCERTAINTIES açıldı (#14 telefon verisi doluluk oranı, #15 mini-harita vs yönlendirme linki kararı). Bu revizyon de v1.3 gibi bir NotebookLM pilotu değil, Cem'in ürün-seviyesi ("iş gücü israfı") gözlemiyle üretildi — §9.3'e bu iki-turlu insan inceleme sürecinin AI'ın ilk taslakta kaçırdığı UX detaylarını yakaladığı not düşüldü. |

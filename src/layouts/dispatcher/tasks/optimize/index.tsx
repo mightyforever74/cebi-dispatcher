@@ -11,13 +11,25 @@
 *
 * ONEMLI: ROUTING_PROVIDER=mock (lib/routing/factory.js'te HERE entegrasyonu
 * henuz yazilmadi, Temmuz 2026 icin planli). Mock, secilen araclari fiilen
-* KULLANMAZ - approve asamasinda her zaman sabit 4 test araci (Dobbe filosu)
-* arasinda round-robin dagitim yapar. Bu asagida acikca kullaniciya gosterilir.
+* KULLANMAZ - available_vehicles her zaman sabit 4 test araci (Dobbe filosu).
+*
+* FIX (2026-07-18) - Plan Review Kanban (ADR-0005 §4.1/§7 "Kanban view" +
+* ADR-0001 §3.6 "React Kanban - drag-and-drop task assignment"):
+* "completed" adiminda artik sade metin yerine gercek bir Kanban board
+* gosteriliyor. Backend'in round-robin atamasi (routes/tasks.js approve
+* endpoint'i) frontend'de AYNEN simule edilip ilk yerlesim cizilir (Secenek B,
+* bkz. ARCHITECTURE_DECISION_task-management-api-driven.md). Dispatcher
+* karti surukleyip baska bir araca tasiyabilir; "Approve Plan" tiklaninca
+* son yerlesim vehicle_assignments olarak backend'e gonderilir - backend bu
+* listeyi VARSA kullanir, YOKSA (eski davranis) kendi round-robin'ine duser.
 =========================================================
 */
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+
+// @asseinfo/react-kanban (ADR-0001 §3.6'da karar verilmis, sablonla birlikte gelen kutuphane)
+import Board from "@asseinfo/react-kanban";
 
 // @mui material components
 import Card from "@mui/material/Card";
@@ -27,12 +39,16 @@ import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
+import { Theme } from "@mui/material/styles";
 
 // Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
+
+// Material Dashboard 2 PRO React context (dark mode - Kanban kolon rengi icin)
+import { useMaterialUIController } from "context";
 
 // Layout
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -44,6 +60,8 @@ import {
   useSubmitOptimization,
   usePollOptimization,
   useApproveOptimization,
+  OptimizeResultTask,
+  VehicleAssignment,
 } from "hooks/useTaskOptimization";
 
 interface PointInput {
@@ -54,9 +72,58 @@ interface PointInput {
 
 const emptyPoint: PointInput = { address: "", lat: "", lng: "" };
 
+// Kanban kart/kolon tipleri (@asseinfo/react-kanban kendi TS tipi vermiyor,
+// sablonun kendi ornek kodu da "any" kullaniyor - ayni desen izleniyor).
+interface KanbanCard {
+  id: string;
+  template: string;
+}
+interface KanbanColumn {
+  id: string;
+  title: string;
+  cards: KanbanCard[];
+}
+interface KanbanBoardData {
+  columns: KanbanColumn[];
+}
+
+// Optimize sonucundan (task'lar + musait araclar) ilk Kanban yerlesimini
+// olusturur - backend'in round-robin mantigini (routes/tasks.js approve
+// endpoint'i, "vehicleId = availableVehicles[i % availableVehicles.length]")
+// frontend'de birebir simule eder.
+function buildInitialBoard(
+  tasks: OptimizeResultTask[],
+  availableVehicles: string[],
+  vehicleLabels: Record<string, string>
+): KanbanBoardData {
+  const columns: KanbanColumn[] = availableVehicles.map((vehicleId) => ({
+    id: vehicleId,
+    title: vehicleLabels[vehicleId] || vehicleId.slice(0, 8),
+    cards: [],
+  }));
+
+  tasks.forEach((task, i) => {
+    const col = columns[i % columns.length];
+    const pickupAddr =
+      task.pickup_location.address ||
+      `${task.pickup_location.lat},${task.pickup_location.lng}`;
+    const dropoffAddr =
+      task.dropoff_location.address ||
+      `${task.dropoff_location.lat},${task.dropoff_location.lng}`;
+    col.cards.push({
+      id: task.id,
+      template: `${pickupAddr} → ${dropoffAddr}`,
+    });
+  });
+
+  return { columns };
+}
+
 function OptimizeTask(): JSX.Element {
   const navigate = useNavigate();
   const { data: vehicles = [], isLoading: loadingVehicles } = useVehicles();
+  const [controller] = useMaterialUIController();
+  const { darkMode } = controller;
 
   const [pickup, setPickup] = useState<PointInput>(emptyPoint);
   const [dropoff, setDropoff] = useState<PointInput>(emptyPoint);
@@ -64,6 +131,11 @@ function OptimizeTask(): JSX.Element {
   const [formError, setFormError] = useState("");
   const [jobId, setJobId] = useState<string | null>(null);
   const [approveSuccess, setApproveSuccess] = useState<{ pushed: number } | null>(null);
+
+  // Kanban state: gorsel board (uncontrolled Board'a initialBoard olarak verilir)
+  // + assignments (taskId -> vehicleId), approve isteginde asil gonderilen veri.
+  const [initialBoard, setInitialBoard] = useState<KanbanBoardData | null>(null);
+  const [assignments, setAssignments] = useState<Map<string, string>>(new Map());
 
   const submitMutation = useSubmitOptimization();
   const pollQuery = usePollOptimization(jobId);
@@ -117,10 +189,55 @@ function OptimizeTask(): JSX.Element {
     );
   };
 
+  const status = pollQuery.data?.status;
+  const isPolling = !!jobId && status !== "completed" && status !== "failed";
+  const result = pollQuery.data?.result;
+
+  // vehicleId -> plaka etiketi lookup (useVehicles'tan)
+  const vehicleLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    vehicles.forEach((v: Vehicle) => {
+      map[v.id] = v.plate_no || v.id.slice(0, 8);
+    });
+    return map;
+  }, [vehicles]);
+
+  // result geldiginde Kanban board'unu BIR KEZ olustur (round-robin simulasyonu)
+  useEffect(() => {
+    if (status === "completed" && result?.tasks && result.tasks.length > 0 && !initialBoard) {
+      const board = buildInitialBoard(result.tasks, result.available_vehicles, vehicleLabels);
+      setInitialBoard(board);
+
+      const initialAssignments = new Map<string, string>();
+      board.columns.forEach((col) => {
+        col.cards.forEach((card) => {
+          initialAssignments.set(card.id, col.id);
+        });
+      });
+      setAssignments(initialAssignments);
+    }
+  }, [status, result, initialBoard, vehicleLabels]);
+
+  // Dispatcher bir karti baska bir araca (kolona) surukleyince assignments guncellenir.
+  // @asseinfo/react-kanban onCardDragEnd(card, source, destination) imzasi -
+  // npm README + GitHub kaynagindan kanitli, destination undefined olabilir
+  // (kart ayni yere birakilirsa).
+  const handleCardDragEnd = (card: KanbanCard, _source: any, destination: any) => {
+    if (!destination || !destination.toColumnId) return;
+    setAssignments((prev) => {
+      const next = new Map(prev);
+      next.set(card.id, destination.toColumnId);
+      return next;
+    });
+  };
+
   const handleApprove = () => {
     if (!jobId) return;
+    const vehicle_assignments: VehicleAssignment[] = Array.from(assignments.entries()).map(
+      ([taskId, vehicleId]) => ({ taskId, vehicleId })
+    );
     approveMutation.mutate(
-      { routing_job_id: jobId },
+      { routing_job_id: jobId, vehicle_assignments },
       {
         onSuccess: (data) => {
           setApproveSuccess({ pushed: data.pushed });
@@ -136,11 +253,9 @@ function OptimizeTask(): JSX.Element {
     setJobId(null);
     setApproveSuccess(null);
     setFormError("");
+    setInitialBoard(null);
+    setAssignments(new Map());
   };
-
-  const status = pollQuery.data?.status;
-  const isPolling = !!jobId && status !== "completed" && status !== "failed";
-  const result = pollQuery.data?.result;
 
   return (
     <DashboardLayout>
@@ -155,9 +270,9 @@ function OptimizeTask(): JSX.Element {
 
         <Alert severity="info" sx={{ mb: 3 }}>
           Test mode active: the optimization engine is currently a mock (HERE Tour Planning
-          integration is planned but not yet built). The final vehicle assignment always
-          round-robins across 4 fixed test vehicles regardless of which vehicles you select
-          below.
+          integration is planned but not yet built). The initial vehicle layout below is
+          simulated to match the backend, but you can drag any task to a different vehicle
+          before approving.
         </Alert>
 
         {!jobId && (
@@ -302,9 +417,64 @@ function OptimizeTask(): JSX.Element {
                   Total duration: {Math.round(result.summary.total_duration_seconds / 60)} min
                 </MDTypography>
                 <Divider sx={{ my: 2 }} />
-                <MDTypography variant="button" fontWeight="bold" display="block" mb={1}>
-                  Vehicles available for assignment ({result.available_vehicles.length})
-                </MDTypography>
+
+                {initialBoard ? (
+                  <>
+                    <MDTypography variant="button" fontWeight="bold" display="block" mb={2}>
+                      Drag tasks between vehicles to adjust the plan
+                    </MDTypography>
+                    <MDBox
+                      position="relative"
+                      mb={3}
+                      sx={({
+                        palette: { light, background },
+                        functions: { pxToRem },
+                        borders: { borderRadius },
+                      }: Theme | any) => ({
+                        "& .react-kanban-column": {
+                          backgroundColor: darkMode ? background.card : light.main,
+                          minWidth: pxToRem(280),
+                          margin: `0 ${pxToRem(10)}`,
+                          padding: pxToRem(16),
+                          borderRadius: borderRadius.lg,
+                        },
+                      })}
+                    >
+                      <Board
+                        initialBoard={initialBoard}
+                        onCardDragEnd={handleCardDragEnd}
+                        disableColumnDrag
+                        renderCard={({ id, template }: KanbanCard) => (
+                          <MDBox
+                            key={id}
+                            display="block"
+                            bgColor={darkMode ? "transparent" : "white"}
+                            color="text"
+                            borderRadius="lg"
+                            mt={1.5}
+                            py={1.25}
+                            px={1.25}
+                            sx={{
+                              border: ({ borders: { borderWidth }, palette: { white } }: any) =>
+                                darkMode ? `${borderWidth[1]} solid ${white.main}` : 0,
+                              fontSize: ({ typography: { size } }: any) => size.sm,
+                              cursor: "grab",
+                            }}
+                          >
+                            <MDTypography variant="caption" color="text">
+                              {template}
+                            </MDTypography>
+                          </MDBox>
+                        )}
+                      />
+                    </MDBox>
+                  </>
+                ) : (
+                  <MDTypography variant="button" fontWeight="bold" display="block" mb={1}>
+                    Vehicles available for assignment ({result.available_vehicles.length})
+                  </MDTypography>
+                )}
+
                 {approveMutation.isError && (
                   <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
                     Could not approve plan — try again

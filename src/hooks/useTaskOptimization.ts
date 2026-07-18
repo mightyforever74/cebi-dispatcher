@@ -11,14 +11,20 @@ import { useAuthStore } from "store/useAuthStore";
 // Response sekilleri (routes/tasks.js + lib/routing/MockRoutingProvider.js'ten kanitli):
 //   POST optimize        -> {message, jobId, status} (202) veya {message, jobId, status:"completed"} (200, dedup)
 //   GET  poll/:id         -> {jobId, status, result?} veya {jobId, status, error?}
-//     result (completed): {solver, summary:{total_distance_meters, total_duration_seconds}, available_vehicles:[...]}
+//     result (completed): {solver, summary:{total_distance_meters, total_duration_seconds},
+//                           available_vehicles:[...], tasks:[{id, pickup_location, dropoff_location}]}
+//     FIX (2026-07-18): "tasks" alani eklendi - Kanban UI (Plan Review, Secenek B)
+//     kartlari icin gercek dispatch_tasks.id lazimdi, oncesinde poll bunu hic dondurmuyordu.
 //   POST approve          -> {success, message, pushed, tasks:[...]}
+//     FIX (2026-07-18): body'ye opsiyonel "vehicle_assignments" eklendi -
+//     dispatcher'in Kanban UI'da surukle-birak ile yaptigi manuel atamalar.
+//     Yoksa (undefined), backend eski round-robin davranisina duser (geriye donuk uyumlu).
 //
 // ONEMLI: Su an ROUTING_PROVIDER=mock (lib/routing/factory.js'te HERE entegrasyonu
 // yorum satirinda, Temmuz 2026 icin planli ama henuz yazilmadi). Mock, "vehicles"
-// body alanini fiilen KULLANMAZ - approve asamasinda her zaman sabit 4 test araci
-// (Dobbe Transport filosu) arasinda round-robin dagitim yapar. Bu davranis
-// kullaniciya UI'da acikca gosterilmeli (bkz. ilgili form bileseni).
+// body alanini fiilen KULLANMAZ - approve asamasinda round-robin (ya da Kanban'dan
+// gelen manuel atama varsa onu) sabit 4 test araci (Dobbe Transport filosu)
+// arasinda uygular. Bu davranis kullaniciya UI'da acikca gosterilmeli.
 
 const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 
@@ -43,10 +49,18 @@ export interface OptimizeSubmitResponse {
   status: string;
 }
 
+// FIX (2026-07-18): draft task'in Kanban karti icin gereken minimum sekli.
+export interface OptimizeResultTask {
+  id: string;
+  pickup_location: { lat: number; lng: number; address?: string };
+  dropoff_location: { lat: number; lng: number; address?: string };
+}
+
 export interface OptimizePollResult {
   solver: string;
   summary: { total_distance_meters: number; total_duration_seconds: number };
   available_vehicles: string[];
+  tasks?: OptimizeResultTask[]; // FIX (2026-07-18): opsiyonel - eski job'larda (bu koddan once tamamlanmis) olmayabilir
 }
 
 export interface OptimizePollResponse {
@@ -61,6 +75,17 @@ export interface ApproveResponse {
   message: string;
   pushed: number;
   tasks?: string[];
+}
+
+// FIX (2026-07-18): dispatcher'in Kanban UI'da yaptigi manuel atama.
+export interface VehicleAssignment {
+  taskId: string;
+  vehicleId: string;
+}
+
+export interface ApprovePayload {
+  routing_job_id: string;
+  vehicle_assignments?: VehicleAssignment[]; // FIX (2026-07-18): opsiyonel, verilmezse backend round-robin'e duser
 }
 
 function authHeaders(token: string | null) {
@@ -120,7 +145,7 @@ export function usePollOptimization(jobId: string | null) {
 export function useApproveOptimization() {
   const token = useAuthStore((s) => s.token);
   const queryClient = useQueryClient();
-  return useMutation<ApproveResponse, Error, { routing_job_id: string }>({
+  return useMutation<ApproveResponse, Error, ApprovePayload>({
     mutationFn: async (payload) => {
       const res = await fetch(`${ENTERPRISE_API_URL}/dispatcher/tasks/optimize/approve`, {
         method: "POST",

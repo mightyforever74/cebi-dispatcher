@@ -60,7 +60,7 @@ Bu çelişkiler **kod referans alınarak** çözülmüştür; dokümanlar zamanl
 
 ---
 
-## 4. İş 3 — Task Management Temeli — UÇTAN UCA TAMAMLANDI, SÜRÜCÜ GÖRÜNÜRLÜĞÜ DE DÜZELTİLDİ (2026-07-04/15)
+## 4. İş 3 — Task Management Temeli — UÇTAN UCA TAMAMLANDI, SÜRÜCÜ GÖRÜNÜRLÜĞÜ VE BİLDİRİMİ DE TAMAMLANDI (2026-07-04→18)
 ### GERÇEK, ÇALIŞAN Kod — "Proposed" Değil
 
 > **Durum notu:** Bu mimari **zaten inşa edilmiş ve çalışıyor** — `tulipfleet-enterprise-backend/routes/tasks.js` ve `tulipfleet-backend/routes/internalBridge.js`'ten birebir okundu, sonra frontend'e bağlanıp canlı olarak test edildi.
@@ -81,10 +81,12 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
                 → ana backend (staging): POST /api/internal/bridge/tasks
                      ├─ users.id → drivers.id çevirisi (SELECT)
                      ├─ atomik task_no üretimi (company_task_counters, ON CONFLICT DO UPDATE)
-                     └─ public.tasks INSERT (status='assigned'; enterprise_dispatch_task_id FK dolu)
-                            → GET /api/driver/tasks artık 'assigned'ı da gösteriyor (2026-07-15 fix)
-                            ✅ Sürücü artık görevi görebiliyor, canlı doğrulandı
-                            ⚠ Push bildirimi hâlâ yok — BUG #2, bkz. §4.1
+                     ├─ public.tasks INSERT (status='assigned'; enterprise_dispatch_task_id FK dolu)
+                     │      → GET /api/driver/tasks artık 'assigned'ı da gösteriyor (2026-07-15 fix)
+                     │      ✅ Sürücü artık görevi görebiliyor, canlı doğrulandı
+                     └─ COMMIT sonrası: sendPushNotification() — best-effort, no-throw
+                            → Expo Push API'sine istek, users.expo_push_token üzerinden
+                            ✅ Push tetikleme çalışıyor, canlı doğrulandı (2026-07-18)
 ```
 
 **Kanıt (2026-07-04, ilk canlı test):** Amsterdam Centraal → Rotterdam Centraal task'ı optimize edildi, onaylandı. `fleet_tracking_staging.public.tasks`: `task_no=TLP-26-00003`, `status=assigned`, `enterprise_dispatch_task_id` dolu, `vehicle_id` mock filosundan biri.
@@ -96,26 +98,33 @@ Dispatcher Web UI (kullanıcı JWT'si, fastify.authenticate)
 4. **`public.tasks.enterprise_dispatch_task_id`** FK kolonu iki sistemi eşleştiren köprü, canlı testte doldu.
 5. **Internal Bridge, production (3000) değil STAGING (3001) portuna gider** — veri tutarlılığı gereği (bkz. §6.8).
 
-### 4.1 Sürücü Görünürlüğü ve Bildirimi — İKİ BUG, BİRİ ÇÖZÜLDÜ (2026-07-04→15)
+### 4.1 Sürücü Görünürlüğü ve Bildirimi — İKİ BUG, İKİSİ DE ÇÖZÜLDÜ (2026-07-04→18)
 
 **Kullanıcının orijinal sorusu (2026-07-04):** "Task oluşturduk, şoför/araçla ilişkilendirdik ama görevi şoföre GÖNDERMEYİ dispatcher'dan tasarlamadık — bu mobil app'te de test edilmeli."
+
+**Terminoloji netleştirmesi (2026-07-18, kullanıcıyla mutabakat):** "Eksik" ifadesi yanlış anlaşılmaya açıktı. Netleştirme: eski (tek-sunuculu, SuperAdmin/Admin/Driver) klasik akışta da hiçbir zaman push bildirimi **yoktu** — sürücü dashboard'unda "gelen görev" kutusu vardı, bu pasif modelde push'a ihtiyaç yoktu. Bu, dispatcher'ı eklerken bozduğumuz bir şey değil, sistemin hiç sahip olmadığı bir yetenek. Ama **dispatcher'ın** canlı VRP akışında (araç yoldayken yeni görev bacağı eklenebilir senaryosu) sürücünün proaktif haberdar olması gerekiyor — bu, dispatcher'ın kendi kapsamına giren yeni bir gereksinim, `internalBridge.js`'e (dispatcher'ın tek kullandığı yol) eklenmesi doğru kararı.
 
 **BUG #1 — `assigned` statüsü sürücü endpoint'inin filtresinde yoktu — ✅ ÇÖZÜLDÜ (2026-07-15)**
 
 Kök sebep: `GET /api/driver/tasks`'ın status filtresi `pending, pending_review, accepted, in_progress` idi, `assigned` yoktu — halbuki `assigned`, aynı server.js içinde üç ayrı yerde (`fleet-stats`, vehicle-silme, driver-silme kontrolleri) zaten "aktif görev" sayılıyordu. Mühendislik kararı: task'ın statüsünü değiştirmek yerine (sürücünün vermediği bir onayı simüle eder) **endpoint filtresine `assigned` eklendi** — en dar kapsamlı, projenin kendi tutarlılığıyla uyumlu yama.
 
-**Uygulama (2026-07-15):**
-- `tulipfleet-backend` production: commit `20d9ad0`, `git push` ile GitHub'a yazıldı, `docker restart fleet-backend` ile deploy edildi.
-- `tulipfleet-backend` staging (`/opt/fleet/backend-staging`, ayrı bir checkout, aynı repo): `git stash` → `git pull` (7 commit geride olduğu ortaya çıktı, `20d9ad0` de içindeydi) → stash zaten gereksizdi, `git stash drop` ile temizlendi → `pm2 restart fleet-staging --update-env`.
-- **Canlı doğrulama (Pieter'in gerçek kimliğiyle üretilen JWT):** `GET /api/driver/tasks` artık **3 görev** döndürüyor — `TLP-26-00003` (bizim test görevimiz) **ve** daha önce hiç görünmeyen iki eski görev (`TLP-26-00002`, `TLP-26-00001`, 20 Haziran'dan kalma). Bug'ın etkisi sanılandan genişti — sadece yeni testimizi değil, geçmişte sessizce kaybolmuş görevleri de gizliyordu.
-- **Not (255KB dosya sınırı):** `server.js` çok büyük olduğu için GitHub'a doğrudan `create_or_update_file` ile yazılamadı (context/view sınırı) — yama sunucuda `sed` ile uygulandı, sonra normal `git add/commit/push` ile GitHub'a yansıtıldı. Bkz. §6.12.
+**Uygulama:**
+- `tulipfleet-backend` production: commit `20d9ad0`, `docker restart fleet-backend` ile deploy edildi.
+- `tulipfleet-backend` staging: `git pull` ile senkronize edildi, `pm2 restart fleet-staging --update-env` ile deploy edildi.
+- **Canlı doğrulama (Pieter'in gerçek kimliğiyle üretilen JWT):** `GET /api/driver/tasks` artık **3 görev** döndürüyor — `TLP-26-00003` (bizim test görevimiz) **ve** daha önce hiç görünmeyen iki eski görev (`TLP-26-00002`, `TLP-26-00001`, 20 Haziran'dan kalma). Bug'ın etkisi sanılandan genişti.
+- **Not (255KB dosya sınırı):** `server.js` çok büyük olduğu için GitHub'a doğrudan `create_or_update_file` ile yazılamadı — yama sunucuda `sed` ile uygulandı, sonra normal `git add/commit/push` ile GitHub'a yansıtıldı. Bkz. §6.12.
 
-**BUG #2 — Push notification altyapısı var ama hiç tetiklenmiyor — ❌ HENÜZ ÇÖZÜLMEDİ**
-- `internalBridge.js`'in `POST /api/internal/bridge/tasks` handler'ı **sadece** `public.tasks` INSERT yapıyor — hiçbir push tetikleme kodu içermiyor. GitHub code search: `sendPushNotification` ana backend'de **0 sonuç.**
-- Mobil push kayıt altyapısı **çalışıyor**: `POST /api/push/register` var, Expo token `users.expo_push_token` sütununa yazılıyor.
-- `expo_push_token` alanı server.js'in **hiçbir başka yerinde okunmuyor/kullanılmıyor** — token kaydediliyor, hiç gönderim için kullanılmıyor.
+**BUG #2 — Push notification altyapısı vardı ama hiç tetiklenmiyordu — ✅ ÇÖZÜLDÜ (2026-07-18)**
 
-**Sonraki adım (ADIM 3, henüz başlanmadı):** Push tetikleme — `internalBridge.js`'e mi, ayrı bir servise mi eklenecek kararı, önce `CreateTaskScreen.js`'in kullandığı mevcut atama akışının push gönderip göndermediği incelendikten sonra verilecek.
+Kök sebep: `internalBridge.js`'in `POST /api/internal/bridge/tasks` handler'ı sadece `public.tasks` INSERT yapıyordu. `POST /api/tasks/:id/offer` (mevcut, eski admin→driver akışının parçası) bile push atmıyordu — sadece `alerts` tablosuna (admin dashboard'unda görünen) bir kayıt düşüyordu. `expo_push_token` server.js'in hiçbir yerinde okunmuyordu.
+
+**Uygulama:**
+- `sendPushNotification(fastify, {userId, title, body, data})` helper'ı `internalBridge.js`'e eklendi — `users.expo_push_token`'ı okuyup Expo Push API'sine (`https://exp.host/--/api/v2/push/send`) istek atıyor. **Best-effort, no-throw:** COMMIT'ten sonra çağrılıyor, transaction'ın parçası değil — push başarısız olsa bile task oluşturma etkilenmiyor.
+- Commit: `f4536a7`, hem production hem staging'e `git pull` + restart ile deploy edildi.
+- **Canlı doğrulama (2026-07-18):** Gerçek bir `POST /api/internal/bridge/tasks` isteği (Pieter'e, `expo_push_token` uzunluğu DB'de 41 karakter olarak önceden kanıtlandı) → `201 Created`, `taskNo: TLP-26-00004`. Hemen ardından `pm2` log: `"[Push] Notification sent"` — Expo API isteği başarıyla kabul edildi.
+- **Dürüst sınır:** "Notification sent" Expo'nun isteği kabul ettiğini kanıtlıyor, cihaza fiilen ulaştığını (Expo'nun ayrı "receipt" sistemiyle doğrulanan bir şey) değil. Backend'in sorumluluğundaki kısım (doğru token, doğru format, doğru istek) kesin kanıtlı; cihaz tarafı doğrulaması kullanıcı tarafında.
+
+**Kapsam dışı bırakılan (bilinçli karar):** Sürücünün kendi aksiyonlarının (accept/reject/start/complete/withdraw) admin'e bildirilmesi zaten `alerts` tablosu üzerinden çalışıyor (Faz 2'de bağladığımız `/api/alerts` sayesinde admin dashboard'unda görünüyor) — bu yöne dokunulmadı, sadece admin→sürücü yönü (dispatcher'ın yeni ihtiyacı) ele alındı.
 
 **Açık noktalar (varsaymıyorum, doğrulanmadı):**
 - `getRoutingProvider()`'ın gerçek sağlayıcısı **doğrulandı: mock.** `lib/routing/factory.js`'de HERE Tour Planning entegrasyonu yorum satırında ("Future expansion gate, July 2026 sprint") — kod her zaman `MockRoutingProvider` döndürüyor. Mock, seçilen `vehicles[]`'i fiilen kullanmıyor; her zaman sabit 4 test aracı arasında round-robin dağıtım yapıyor — dispatcher UI'ında açık bir uyarı olarak gösteriliyor.
@@ -147,13 +156,11 @@ Kök sebep: `GET /api/driver/tasks`'ın status filtresi `pending, pending_review
 - [x] Canlı test: Amsterdam→Rotterdam task'ı onaylandı, `public.tasks`'ta gerçek satır doğrulandı.
 - **Bilinen sınır #1:** Routing motoru mock, HERE entegrasyonu henüz yazılmadı — UI'da açıkça belirtiliyor.
 
-**Faz 4 — Sürücü Görünürlüğü ve Bildirimi — KISMEN TAMAMLANDI (2026-07-04→15)**
+**Faz 4 — Sürücü Görünürlüğü ve Bildirimi — TAMAMEN BİTTİ (2026-07-04→18)**
 - [x] Kök sebep analizi: iki ayrı bug kesin kod kanıtıyla tespit edildi (§4.1)
-- [x] **BUG #1 çözüldü:** `GET /api/driver/tasks` filtresine `assigned` eklendi
-  - Production: commit `20d9ad0`, `docker restart fleet-backend` ile deploy edildi
-  - Staging: `git pull` ile senkronize edildi (aynı commit'i getirdi), `pm2 restart fleet-staging --update-env` ile deploy edildi
-  - Canlı doğrulama: Pieter'in JWT'siyle `GET /api/driver/tasks` → 3 görev dönüyor (`TLP-26-00001/2/3`), hepsi daha önce gizliydi
-- [ ] **ADIM 3 (sıradaki):** BUG #2 — push notification tetikleme. Önce `CreateTaskScreen.js`'in mevcut atama akışının push gönderip göndermediği incelenecek, sonra `internalBridge.js`'e mi ayrı bir servise mi ekleneceğine karar verilecek.
+- [x] **BUG #1 çözüldü:** `GET /api/driver/tasks` filtresine `assigned` eklendi (`20d9ad0`), hem production hem staging'de deploy edildi, canlı doğrulandı.
+- [x] **BUG #2 çözüldü:** `sendPushNotification` helper `internalBridge.js`'e eklendi (`f4536a7`), COMMIT-sonrası best-effort çağrılıyor, hem production hem staging'de deploy edildi, canlı doğrulandı (`"[Push] Notification sent"` log kanıtı).
+- **Sonuç: Dispatcher'ın onayladığı bir görev artık (a) sürücünün görev listesinde görünüyor VE (b) sürücüye proaktif push bildirimi gidiyor — ikisi de canlı, gerçek verilerle kanıtlı.**
 
 **Genel proje kuralı (her faza uygulanır):**
 - [ ] Her yeni entegrasyonda alan-adı uyumluluk kontrolü
@@ -161,7 +168,7 @@ Kök sebep: `GET /api/driver/tasks`'ın status filtresi `pending, pending_review
 
 ---
 
-## 6. Deploy Süreçlerinden Öğrenilen Dersler (2026-07-03→15)
+## 6. Deploy Süreçlerinden Öğrenilen Dersler (2026-07-03→18)
 
 ### 6.1 Migration dosyalarında "Down Migration" bloğu mutlaka `/* */` içinde olmalı
 `psql < dosya.sql` dosyayı baştan sona çalıştırır — satır yorumuyla (`--`) açılan bir "Down Migration" başlığının altındaki gerçek SQL komutları (`DROP TABLE` vb.) **çalışır**, migration kendi kendini siler. Düzeltme: Down bloğu `/* ... */` içine alındı. **Kural:** Her migration'da Down bloğu blok yorumla test edilmeden commit edilmez.
@@ -196,11 +203,17 @@ Bir API zincirinin veritabanına ulaşması ile bir insan kullanıcının o bilg
 ### 6.11 Büyük bir dosyada tekrar tekrar SSH ile arama yapmak yerine bir kez çekip yerelde/GitHub'da ara
 253KB'lik `server.js`'i sunucuda defalarca `grep`/`cat` ile aratmak yerine, GitHub'dan bir kez çekip yerel bir dosyada arandı — hem hızlı hem SSH oturum karışıklığı riski yok.
 
-### 6.12 ÇOK BÜYÜK dosyalar (200KB+) GitHub'a doğrudan `create_or_update_file` ile yazılamaz — sunucuda yamalayıp normal git akışıyla push et (YENİ, 2026-07-15)
+### 6.12 ÇOK BÜYÜK dosyalar (200KB+) GitHub'a doğrudan `create_or_update_file` ile yazılamaz — sunucuda yamalayıp normal git akışıyla push et
 `server.js` (253KB) için `view` aracı bile dosyanın **ortasını kesti** (7576 satırdan sadece baş/son görünür oldu) — bu, dosyanın tamamını tek bir `create_or_update_file` çağrısında güvenle taşıyamayacağımı gösterdi. Küçük/orta dosyalarda (Faz 1-3 boyunca hep bu şekilde çalıştı) "GitHub'a doğrudan commit ediyorum" yaklaşımı doğruydu, ama bu boyutta **teknik bir sınır** var. Çözüm: yamayı (küçük, birkaç satırlık bir değişiklik) sunucuda `sed`/manuel düzenlemeyle uygula, `grep` ile doğrula, sonra **kullanıcının kendi `git add/commit/push`'uyla** GitHub'a yansıt — ayrıca iki ayrı checkout'un (production `/opt/fleet/backend`, staging `/opt/fleet/backend-staging`, aynı repo) **ikisinde de** aynı yamanın uygulanması ve **ikisinin de** ayrı ayrı restart edilmesi gerektiği unutulmamalı. **Kural:** Bir dosyanın boyutunu (`wc -c` ya da GitHub'ın "large file" uyarısı) commit'ten önce kontrol et; büyükse doğrudan yazmayı deneme, sunucu-taraflı yama + normal git akışına geç.
 
 ### 6.13 Bir repo'nun birden fazla checkout'u (production + staging) varsa, biri diğerinin önüne geçebilir
 Staging 7 commit geride ve kendi uncommitted değişikliğine (bizim manuel yamamız) sahipti. `git pull` öncesi `git stash` ile değişiklik saklandı; pull'un getirdiği commit'ler zaten aynı düzeltmeyi içeriyordu (production'a daha önce push edilmişti), bu yüzden `git stash pop` yerine `git stash drop` ile çakışma riski hiç alınmadan temizlendi. **Kural:** Stash açmadan önce pull sonucunun stash'lenen değişikliği zaten içerip içermediğini kontrol et (`grep` ile) — gereksiz bir `pop` denemesi, aslında hiç gerekmeyen bir merge çakışması yaratabilir.
+
+### 6.14 Küçük dosyalarda bile GitHub API'si geçici ağ hatası (TLS timeout) verebilir — SHA değişmediyse güvenle tekrar dene
+`internalBridge.js`'e (8KB, küçük bir dosya) push kodu eklerken `create_or_update_file` "TLS handshake timeout" hatası verdi. Bunu "başarısız oldu" diye varsaymak yerine dosya tekrar okunup SHA'nın hiç değişmediği doğrulandı (istek gerçekten GitHub'a ulaşmamış), sonra aynı SHA ile güvenle tekrar denendi — ikinci denemede başarılı oldu. **Kural:** Herhangi bir GitHub yazma işlemi ağ hatası verirse, "başarılı mı başarısız mı" diye tahmin etme; dosyayı tekrar oku, SHA değişmediyse güvenle tekrar dene.
+
+### 6.15 "Eksik" ile "hiç var olmamış" arasındaki fark, kullanıcıyla mutabakat gerektirir
+Bir özelliğin olmadığını tespit etmek ("push notification tetiklenmiyor") ile bunu "eksiklik" olarak çerçevelemek farklı iddialardır — ikincisi bir beklenti/gereksinim standardı ima eder. Eski (tek-sunuculu) sistemde push hiç yoktu ve hiç gerekmemişti (pasif "gelen görev" kutusu modeli yeterliydi); "eksik" olan şey, **dispatcher'ın yeni, proaktif senaryosunun** (canlı optimize akışında araca görev eklenmesi) gerektirdiği bir yetenekti. **Kural:** Bir şeyin "eksik" olduğunu iddia ederken, hangi gereksinime/senaryoya göre eksik olduğunu netleştir — kullanıcı bunu sorguladığında "zaten hiç yoktu" ile "olması gerekirdi ama yok" arasındaki farkı ayırt edip dürüstçe düzelt.
 
 ---
 
@@ -216,4 +229,5 @@ Staging 7 commit geride ve kendi uncommitted değişikliğine (bizim manuel yama
 | 2026-07-04 (5. tur) | Canlı kullanıcı testi tamamlandı (Faz 1) — "Save" gerçekten çalışıyor, staging'e yazdığı doğrulandı. |
 | 2026-07-04 (6. tur) | Faz 3 tamamen bitti, uçtan uca canlı testle doğrulandı. Internal Bridge yapılandırıldı, bir production kesintisi yaşanıp hemen düzeltildi, port/UFW dersleri çıkarıldı. |
 | 2026-07-04 (7. tur) | Kullanıcı kritik açık nokta buldu: sürücüye görev bildirimi yok. İki ayrı bug (assigned filtre eksikliği + atıl push altyapısı) kesin kod kanıtıyla tespit edildi. §4.1 ve Faz 4 eklendi. |
-| 2026-07-15 (8. tur) | **BUG #1 tamamen çözüldü ve uçtan uca doğrulandı.** `GET /api/driver/tasks` filtresine `assigned` eklendi. 253KB'lik `server.js`'in GitHub'a doğrudan yazılamayacağı keşfedildi (view aracı bile dosyayı kesti) — yama sunucuda uygulanıp normal git akışıyla push edildi (`20d9ad0`). Hem production hem staging (ayrı checkout, ayrı process) senkronize edilip restart edildi. Canlı testte beklenenden fazla kanıt çıktı: sadece test görevimiz değil, daha önce sessizce gizlenmiş iki eski görev de (`TLP-26-00001/2`) ortaya çıktı — bug'ın etkisi sanılandan genişti. §6.12 ve §6.13 yeni dersler olarak eklendi. **BUG #2 (push notification) hâlâ açık, ADIM 3 bekliyor.** |
+| 2026-07-15 (8. tur) | **BUG #1 tamamen çözüldü ve uçtan uca doğrulandı.** `GET /api/driver/tasks` filtresine `assigned` eklendi. 253KB'lik `server.js`'in GitHub'a doğrudan yazılamayacağı keşfedildi — yama sunucuda uygulanıp normal git akışıyla push edildi (`20d9ad0`). Hem production hem staging senkronize edilip restart edildi. Canlı testte beklenenden fazla kanıt çıktı: iki eski görev de (`TLP-26-00001/2`) ortaya çıktı. §6.12 ve §6.13 yeni dersler olarak eklendi. |
+| 2026-07-18 (9. tur) | **BUG #2 tamamen çözüldü ve uçtan uca doğrulandı — Faz 4 tamamen bitti.** Kullanıcıyla "eksik" teriminin ne anlama geldiği netleştirildi (§4.1, §6.15) — eski sistemde push hiç yoktu, bu dispatcher'ın yeni bir gereksinimi. `sendPushNotification` helper `internalBridge.js`'e eklendi (`f4536a7`, COMMIT-sonrası best-effort), hem production hem staging'e deploy edildi. Gerçek bir test isteğiyle (`TLP-26-00004`) canlı doğrulandı: `pm2` log'unda `"[Push] Notification sent"`. Küçük bir GitHub yazma denemesinde geçici TLS timeout yaşandı, SHA kontrolüyle güvenle tekrar denendi (§6.14). **Faz 1, 2, 3, 4 — dördü de tam anlamıyla production'da çalışıyor, canlı kanıtlı.** |

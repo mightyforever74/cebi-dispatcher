@@ -22,6 +22,13 @@
 * karti surukleyip baska bir araca tasiyabilir; "Approve Plan" tiklaninca
 * son yerlesim vehicle_assignments olarak backend'e gonderilir - backend bu
 * listeyi VARSA kullanir, YOKSA (eski davranis) kendi round-robin'ine duser.
+*
+* FIX (2026-07-18, 2. tur) - Kolon basliklari GORUNMUYORDU: renderColumnHeader
+* prop'u hic verilmemisti, kutuphane kendi cIplak/stilsiz varsayilan basligini
+* render ediyordu (koyu temada okunmuyordu). Simdi MDTypography ile acikca
+* render ediliyor + kolon arka plani daha kontrastli sabit bir renge (grey-900/
+* grey-100) cekildi - theme'in "background.card"i bu ekranda yeterince
+* kontrast olusturmuyordu (ekran goruntusunde kanitlandi).
 =========================================================
 */
 
@@ -426,42 +433,64 @@ function OptimizeTask(): JSX.Element {
                     <MDBox
                       position="relative"
                       mb={3}
-                      sx={({
-                        palette: { light, background },
-                        functions: { pxToRem },
-                        borders: { borderRadius },
-                      }: Theme | any) => ({
+                      sx={{
                         "& .react-kanban-column": {
-                          backgroundColor: darkMode ? background.card : light.main,
-                          minWidth: pxToRem(280),
-                          margin: `0 ${pxToRem(10)}`,
-                          padding: pxToRem(16),
-                          borderRadius: borderRadius.lg,
+                          backgroundColor: darkMode ? "rgba(255, 255, 255, 0.08)" : "#f0f2f5",
+                          border: darkMode ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid #d2d6da",
+                          minWidth: "260px",
+                          margin: "0 8px",
+                          padding: "16px",
+                          borderRadius: "12px",
                         },
-                      })}
+                        "& .react-kanban-board": {
+                          overflowX: "auto",
+                        },
+                      }}
                     >
                       <Board
                         initialBoard={initialBoard}
                         onCardDragEnd={handleCardDragEnd}
                         disableColumnDrag
+                        renderColumnHeader={({ title }: { title: string }) => (
+                          <MDBox
+                            mb={1.5}
+                            pb={1}
+                            sx={{
+                              borderBottom: darkMode
+                                ? "1px solid rgba(255, 255, 255, 0.3)"
+                                : "1px solid #d2d6da",
+                            }}
+                          >
+                            <MDTypography
+                              variant="h6"
+                              fontWeight="bold"
+                              color={darkMode ? "white" : "dark"}
+                            >
+                              {title}
+                            </MDTypography>
+                          </MDBox>
+                        )}
                         renderCard={({ id, template }: KanbanCard) => (
                           <MDBox
                             key={id}
                             display="block"
-                            bgColor={darkMode ? "transparent" : "white"}
+                            bgColor={darkMode ? "#2c3c58" : "white"}
                             color="text"
                             borderRadius="lg"
                             mt={1.5}
                             py={1.25}
                             px={1.25}
                             sx={{
-                              border: ({ borders: { borderWidth }, palette: { white } }: any) =>
-                                darkMode ? `${borderWidth[1]} solid ${white.main}` : 0,
+                              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
                               fontSize: ({ typography: { size } }: any) => size.sm,
                               cursor: "grab",
                             }}
                           >
-                            <MDTypography variant="caption" color="text">
+                            <MDTypography
+                              variant="caption"
+                              color={darkMode ? "white" : "text"}
+                              fontWeight="regular"
+                            >
                               {template}
                             </MDTypography>
                           </MDBox>

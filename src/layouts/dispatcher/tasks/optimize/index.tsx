@@ -24,24 +24,27 @@
 * UPGRADE (2026-07-20) - Decision Support Engine Phase 1 (onayli plan):
 * Kanban, scorer plugin chain (services/dispatch/scoring) uzerine oturan
 * bir Karar Destek Asistanina yukseltildi (Graceful Degradation):
-*   - MEKAN + ZAMAN filtreleri AKTIF: canli telemetri (useVehicleStore,
-*     plaka eslemesi) + haversine ile kolonlar skora gore dizilir.
-*   - REGULASYON + KARGO filtreleri KILITLI (available:false + reason):
-*     ZE-zone frontend endpoint'i ve kargo gereksinim alanlari (Phase 1.1 /
-*     backlog) gelmeden sahte skor URETILMEZ.
-*   - Kolon basliginda skor chip'i + Tooltip'te Akilli Karar Notu (memo).
-*   - Round-robin ILK ATAMA paritesi korunur: atamalar orijinal
-*     available_vehicles sirasiyla kurulur; skor SIRALAMASI yalnizca kolon
-*     dizilimini degistirir, atamayi DEGISTIRMEZ.
-*   - Drag stabilitesi: skor snapshot'i board kurulum aninda alinir; canli
-*     her telemetri frame'inde remount YAPILMAZ. "Siralamayi Guncelle"
-*     butonu, atamalari koruyarak boardu guncel telemetriyle yeniden dizer.
-*   - Pre-drag kolon pasiflestirme (uygunsuz araci soluklastirma) BILEREK
-*     Phase 1.1'e birakildi: eligibility verisi (kargo/uyum) olmadan bu
-*     gorsellestirme uydurma olurdu. Altyapi hazir (ScoreDetail.eligible).
+*   - MEKAN + ZAMAN filtreleri AKTIF; REGULASYON + KARGO kilitli (Phase 1.1).
+*   - Round-robin ILK ATAMA paritesi korunur; siralama yalnizca dizilimi
+*     degistirir, atamayi DEGISTIRMEZ.
+*   - Skor snapshot'i board kurulum aninda; "Siralamayi Guncelle" ile manuel
+*     yenileme (canli frame'ler remount tetiklemez - drag stabilitesi).
 *
-* FIX (2026-07-20, 2. tur) - TS7006: scoringTasks map'inde "t" parametresine
-* acik OptimizeResultTask tipi verildi (noImplicitAny, tsc --noEmit kanitli).
+* REDESIGN (2026-07-20, UX standartlari) - Dikey Sirali Liste:
+* Yatay Kanban kolonlari, 24-32" dispatcher is istasyonu icin bilgi
+* yogunlugu standardina aykiriydi. Araclar artik YUKARIDAN ASAGIYA tam
+* genislik satirlar halinde, secili kriterin skoruna gore sirali dizilir
+* (en uygun en uste). Karar Notu, satirdaki info butonuyla acilan kalici
+* POPOVER'a tasindi (hover tooltip degil - fare odakli masaustu kullanim).
+* "Soft shadow" yasagi geregi kart golgeleri kaldirildi, flat 1px border.
+* TEKNIK KANIT (asseinfo/react-kanban src/components/Board/index.js'ten
+* dogrudan okundu, varsayilmadi): .react-kanban-board inline style
+* {display:flex, overflowY:hidden}; icindeki sarmalayici div inline
+* {whiteSpace:nowrap}; kolon dizilimi direction='horizontal' Droppable
+* SADECE kolon surukleme (type='BOARD') icindir - disableColumnDrag ile
+* kapali oldugundan dikey CSS dizilim kart tasimayi ETKILEMEZ (kart
+* drop'lari her kolonun kendi dikey droppable'inda). Inline style'lar
+* ancak !important ile ezilebildigi icin asagidaki sx'te !important var.
 =========================================================
 */
 
@@ -59,8 +62,10 @@ import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
-import Tooltip from "@mui/material/Tooltip";
 import Chip from "@mui/material/Chip";
+import Popover from "@mui/material/Popover";
+import IconButton from "@mui/material/IconButton";
+import Icon from "@mui/material/Icon";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 
@@ -72,7 +77,7 @@ import MDButton from "components/MDButton";
 // Konum arama (HERE Discover proxy)
 import LocationSearchInput, { LocationValue } from "components/LocationSearchInput";
 
-// Material Dashboard 2 PRO React context (dark mode - Kanban kolon rengi icin)
+// Material Dashboard 2 PRO React context (dark mode - satir rengi icin)
 import { useMaterialUIController } from "context";
 
 // Layout
@@ -113,9 +118,10 @@ interface KanbanColumn {
   id: string;
   title: string;
   cards: KanbanCard[];
-  // Decision Support: kolon basligindaki skor chip'i + Karar Notu.
+  // Decision Support: satir basligindaki skor chip'i + Karar Notu + sira no.
   scoreChip?: string;
   scoreMemo?: string;
+  rank?: number;
 }
 interface KanbanBoardData {
   columns: KanbanColumn[];
@@ -124,7 +130,7 @@ interface KanbanBoardData {
 // Backend round-robin paritesi (routes/tasks.js approve endpoint'i,
 // "vehicleId = availableVehicles[i % availableVehicles.length]").
 // DIKKAT: her zaman ORIJINAL available_vehicles sirasiyla cagrilir -
-// skor siralamasi atamayi etkilemez, yalnizca kolon dizilimini etkiler.
+// skor siralamasi atamayi etkilemez, yalnizca satir dizilimini etkiler.
 function buildRoundRobinAssignments(
   tasks: OptimizeResultTask[],
   availableVehicles: string[]
@@ -136,8 +142,8 @@ function buildRoundRobinAssignments(
   return assignments;
 }
 
-// Verili kolon dizilimi + mevcut atamalarla boardu kurar. Skor bilgisi
-// (chip/memo) varsa kolon basliklarina islenir.
+// Verili satir dizilimi + mevcut atamalarla boardu kurar. Skor bilgisi
+// (chip/memo/rank) varsa satir basliklarina islenir.
 function buildBoard(
   tasks: OptimizeResultTask[],
   orderedVehicleIds: string[],
@@ -145,7 +151,7 @@ function buildBoard(
   assignments: Map<string, string>,
   scoreById: Map<string, { chip: string; memo: string }> | null
 ): KanbanBoardData {
-  const columns: KanbanColumn[] = orderedVehicleIds.map((vehicleId) => {
+  const columns: KanbanColumn[] = orderedVehicleIds.map((vehicleId, index) => {
     const score = scoreById?.get(vehicleId);
     return {
       id: vehicleId,
@@ -153,6 +159,7 @@ function buildBoard(
       cards: [],
       scoreChip: score?.chip,
       scoreMemo: score?.memo,
+      rank: score ? index + 1 : undefined,
     };
   });
   const columnById = new Map(columns.map((c) => [c.id, c]));
@@ -169,6 +176,83 @@ function buildBoard(
   });
 
   return { columns };
+}
+
+// Arac satiri basligi: sira no + plaka + skor chip + Karar Notu POPOVER'i.
+// Popover state'i satir bazinda lokal tutulur (renderColumnHeader render
+// prop'u icinde hook kullanilamayacagi icin ayri bilesen olarak tanimli).
+function VehicleRowHeader({
+  column,
+  darkMode,
+}: {
+  column: KanbanColumn;
+  darkMode: boolean;
+}): JSX.Element {
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const { title, scoreChip, scoreMemo, rank, cards } = column;
+
+  return (
+    <MDBox
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      pb={1}
+      sx={{
+        borderBottom: darkMode ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid #d2d6da",
+      }}
+    >
+      <MDBox display="flex" alignItems="center" gap={1.5}>
+        {rank !== undefined && (
+          <MDTypography variant="button" fontWeight="bold" color="info">
+            #{rank}
+          </MDTypography>
+        )}
+        <MDTypography variant="h6" fontWeight="bold" color={darkMode ? "white" : "dark"}>
+          {title}
+        </MDTypography>
+        <MDTypography variant="caption" color="text">
+          {cards.length} gorev
+        </MDTypography>
+      </MDBox>
+      <MDBox display="flex" alignItems="center" gap={1}>
+        {scoreChip && (
+          <Chip
+            label={scoreChip}
+            size="small"
+            color={Number(scoreChip) >= 50 ? "success" : "default"}
+            sx={{ fontWeight: "bold" }}
+          />
+        )}
+        {scoreMemo && (
+          <>
+            <IconButton
+              size="small"
+              onClick={(e) => setAnchorEl(e.currentTarget)}
+              sx={{ color: darkMode ? "rgba(255,255,255,0.7)" : "inherit" }}
+            >
+              <Icon fontSize="small">info_outlined</Icon>
+            </IconButton>
+            <Popover
+              open={Boolean(anchorEl)}
+              anchorEl={anchorEl}
+              onClose={() => setAnchorEl(null)}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              <MDBox p={2} maxWidth={380}>
+                <MDTypography variant="button" fontWeight="bold" display="block" mb={1}>
+                  Akilli Karar Notu — {title}
+                </MDTypography>
+                <MDTypography variant="caption" color="text">
+                  {scoreMemo}
+                </MDTypography>
+              </MDBox>
+            </Popover>
+          </>
+        )}
+      </MDBox>
+    </MDBox>
+  );
 }
 
 function OptimizeTask(): JSX.Element {
@@ -327,7 +411,7 @@ function OptimizeTask(): JSX.Element {
 
   // result geldiginde board BIR KEZ kurulur:
   // 1) atamalar round-robin (backend paritesi, ORIJINAL available_vehicles sirasi)
-  // 2) kolonlar varsayilan modun (Mekan) skoruna gore dizilir.
+  // 2) satirlar varsayilan modun (Mekan) skoruna gore dizilir.
   useEffect(() => {
     if (status === "completed" && result?.tasks && result.tasks.length > 0 && !initialBoard) {
       const initialAssignments = buildRoundRobinAssignments(
@@ -339,7 +423,7 @@ function OptimizeTask(): JSX.Element {
     }
   }, [status, result, initialBoard, rankingMode, rebuildBoard]);
 
-  // Filtre modu degisince kolonlar yeni skorla yeniden dizilir (atamalar korunur).
+  // Filtre modu degisince satirlar yeni skorla yeniden dizilir (atamalar korunur).
   const handleModeChange = (_e: unknown, newMode: RankingMode | null) => {
     if (!newMode) return;
     const scorer = getScorer(newMode);
@@ -348,7 +432,7 @@ function OptimizeTask(): JSX.Element {
     rebuildBoard(newMode, assignments);
   };
 
-  // Dispatcher bir karti baska bir araca (kolona) surukleyince assignments guncellenir.
+  // Dispatcher bir karti baska bir araca (satira) surukleyince assignments guncellenir.
   // @asseinfo/react-kanban onCardDragEnd(card, source, destination) imzasi -
   // npm README + GitHub kaynagindan kanitli, destination undefined olabilir.
   const handleCardDragEnd = (card: KanbanCard, _source: any, destination: any) => {
@@ -537,24 +621,39 @@ function OptimizeTask(): JSX.Element {
                     ))}
 
                     <MDTypography variant="button" fontWeight="bold" display="block" mt={1.5} mb={2}>
-                      Drag tasks between vehicles to adjust the plan — columns are ranked left to
-                      right by the selected criterion (best match first). Ranking never changes
-                      assignments; only you do, by dragging.
+                      Vehicles are listed top to bottom, best match first for the selected
+                      criterion. Drag a task onto another vehicle row to reassign it — ranking
+                      never changes assignments; only you do.
                     </MDTypography>
                     <MDBox
                       position="relative"
                       mb={3}
                       sx={{
-                        "& .react-kanban-column": {
-                          backgroundColor: darkMode ? "rgba(255, 255, 255, 0.08)" : "#f0f2f5",
-                          border: darkMode ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid #d2d6da",
-                          minWidth: "260px",
-                          margin: "0 8px",
-                          padding: "16px",
-                          borderRadius: "12px",
-                        },
+                        // DIKEY SATIR DUZENI - kutuphanenin inline style'lari
+                        // (Board/index.js'ten kanitli) !important ile ezilir:
+                        // .react-kanban-board inline {display:flex, overflowY:hidden},
+                        // icindeki sarmalayici div inline {whiteSpace:nowrap}.
                         "& .react-kanban-board": {
-                          overflowX: "auto",
+                          display: "block !important",
+                          overflowY: "visible !important",
+                        },
+                        "& .react-kanban-board > div": {
+                          whiteSpace: "normal !important",
+                          display: "flex",
+                          flexDirection: "column",
+                          width: "100%",
+                        },
+                        "& .react-kanban-column": {
+                          width: "100% !important",
+                          minWidth: "100% !important",
+                          maxWidth: "100% !important",
+                          margin: "0 0 12px 0 !important",
+                          padding: "12px 16px",
+                          borderRadius: "8px",
+                          // Flat B2B: soft shadow YASAK - duz zemin + 1px border.
+                          backgroundColor: darkMode ? "rgba(255, 255, 255, 0.06)" : "#f8f9fa",
+                          border: darkMode ? "1px solid rgba(255, 255, 255, 0.15)" : "1px solid #d2d6da",
+                          boxShadow: "none",
                         },
                       }}
                     >
@@ -565,37 +664,8 @@ function OptimizeTask(): JSX.Element {
                         initialBoard={initialBoard}
                         onCardDragEnd={handleCardDragEnd}
                         disableColumnDrag
-                        renderColumnHeader={({ title, scoreChip, scoreMemo }: KanbanColumn) => (
-                          <MDBox
-                            mb={1.5}
-                            pb={1}
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="space-between"
-                            sx={{
-                              borderBottom: darkMode
-                                ? "1px solid rgba(255, 255, 255, 0.3)"
-                                : "1px solid #d2d6da",
-                            }}
-                          >
-                            <MDTypography
-                              variant="h6"
-                              fontWeight="bold"
-                              color={darkMode ? "white" : "dark"}
-                            >
-                              {title}
-                            </MDTypography>
-                            {scoreChip && (
-                              <Tooltip title={scoreMemo || ""} arrow placement="top">
-                                <Chip
-                                  label={scoreChip}
-                                  size="small"
-                                  color={Number(scoreChip) >= 50 ? "success" : "default"}
-                                  sx={{ fontWeight: "bold", cursor: "help" }}
-                                />
-                              </Tooltip>
-                            )}
-                          </MDBox>
+                        renderColumnHeader={(column: KanbanColumn) => (
+                          <VehicleRowHeader column={column} darkMode={darkMode} />
                         )}
                         renderCard={({ id, template }: KanbanCard) => (
                           <MDBox
@@ -603,12 +673,16 @@ function OptimizeTask(): JSX.Element {
                             display="block"
                             bgColor={darkMode ? "#2c3c58" : "white"}
                             color="text"
-                            borderRadius="lg"
-                            mt={1.5}
-                            py={1.25}
+                            borderRadius="md"
+                            mt={1}
+                            py={1}
                             px={1.25}
                             sx={{
-                              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                              // Flat B2B: golge yok, 1px border.
+                              border: darkMode
+                                ? "1px solid rgba(255, 255, 255, 0.2)"
+                                : "1px solid #d2d6da",
+                              boxShadow: "none",
                               fontSize: ({ typography: { size } }: any) => size.sm,
                               cursor: "grab",
                             }}

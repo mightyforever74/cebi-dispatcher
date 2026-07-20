@@ -13,38 +13,36 @@
 * henuz yazilmadi, Temmuz 2026 icin planli). Mock, secilen araclari fiilen
 * KULLANMAZ - available_vehicles her zaman sabit 4 test araci (Dobbe filosu).
 *
-* FIX (2026-07-18) - Plan Review Kanban (ADR-0005 §4.1/§7 "Kanban view" +
-* ADR-0001 §3.6 "React Kanban - drag-and-drop task assignment"):
-* "completed" adiminda gercek bir Kanban board gosteriliyor. Backend'in
-* round-robin atamasi frontend'de AYNEN simule edilip ilk yerlesim cizilir
-* (Secenek B, bkz. ARCHITECTURE_DECISION_task-management-api-driven.md).
-* Dispatcher karti surukleyip baska araca tasiyabilir; "Approve Plan" ile
-* son yerlesim vehicle_assignments olarak gonderilir.
+* FIX (2026-07-18) - Plan Review Kanban (ADR-0005 §4.1/§7 + ADR-0001 §3.6):
+* Backend round-robin atamasi frontend'de AYNEN simule edilip ilk yerlesim
+* cizilir (Secenek B). Dispatcher karti surukleyip baska araca tasiyabilir;
+* "Approve Plan" ile son yerlesim vehicle_assignments olarak gonderilir.
 *
 * UPGRADE (2026-07-20) - Decision Support Engine Phase 1 (onayli plan):
-* Kanban, scorer plugin chain (services/dispatch/scoring) uzerine oturan
-* bir Karar Destek Asistanina yukseltildi (Graceful Degradation):
-*   - MEKAN + ZAMAN filtreleri AKTIF; REGULASYON + KARGO kilitli (Phase 1.1).
-*   - Round-robin ILK ATAMA paritesi korunur; siralama yalnizca dizilimi
-*     degistirir, atamayi DEGISTIRMEZ.
-*   - Skor snapshot'i board kurulum aninda; "Siralamayi Guncelle" ile manuel
-*     yenileme (canli frame'ler remount tetiklemez - drag stabilitesi).
+* Scorer plugin chain (services/dispatch/scoring), Graceful Degradation:
+* MEKAN + ZAMAN aktif; REGULASYON + KARGO kilitli (Phase 1.1). Round-robin
+* ILK ATAMA paritesi korunur; siralama atamayi DEGISTIRMEZ.
 *
 * REDESIGN (2026-07-20, UX standartlari) - Dikey Sirali Liste:
-* Yatay Kanban kolonlari, 24-32" dispatcher is istasyonu icin bilgi
-* yogunlugu standardina aykiriydi. Araclar artik YUKARIDAN ASAGIYA tam
-* genislik satirlar halinde, secili kriterin skoruna gore sirali dizilir
-* (en uygun en uste). Karar Notu, satirdaki info butonuyla acilan kalici
-* POPOVER'a tasindi (hover tooltip degil - fare odakli masaustu kullanim).
-* "Soft shadow" yasagi geregi kart golgeleri kaldirildi, flat 1px border.
-* TEKNIK KANIT (asseinfo/react-kanban src/components/Board/index.js'ten
-* dogrudan okundu, varsayilmadi): .react-kanban-board inline style
-* {display:flex, overflowY:hidden}; icindeki sarmalayici div inline
-* {whiteSpace:nowrap}; kolon dizilimi direction='horizontal' Droppable
-* SADECE kolon surukleme (type='BOARD') icindir - disableColumnDrag ile
-* kapali oldugundan dikey CSS dizilim kart tasimayi ETKILEMEZ (kart
-* drop'lari her kolonun kendi dikey droppable'inda). Inline style'lar
-* ancak !important ile ezilebildigi icin asagidaki sx'te !important var.
+* Araclar yukaridan asagiya tam genislik satirlar (en uygun en uste).
+* Karar Notu satirdaki info butonuyla acilan POPOVER'da. Soft shadow yasak,
+* flat 1px border. Kutuphane inline style'lari (asseinfo/react-kanban
+* Board/index.js kaynak kodundan kanitli) !important ile ezildi;
+* direction='horizontal' Droppable yalnizca kolon surukleme icin oldugundan
+* (disableColumnDrag kapali) kart tasima etkilenmez.
+*
+* FIX (2026-07-20, 3. tur) - "Mekan/Zaman degisince liste degismiyor":
+* KOK NEDEN (koddan kanitli): skorlama, useVehicleStore uzerinden plaka
+* eslemesiyle yapiliyordu; store'un applyLocationFrame -> resolveKey mantigi
+* yalnizca MOCK SEED kayitlarini gunceller, eslesmeyen gercek filo
+* frame'lerini sessizce atar ("if (!key) return state;"). Gercek plakalar
+* (BX-TR-42 vb.) store'a hic giremeyince tum skorlar 0 kaliyor, esit
+* skorlarla siralama da degismiyordu. COZUM: store bypass edildi -
+* useDispatchLocationSnapshot, /api/dispatcher/locations/latest cevabini
+* dogrudan okur; endpoint (routes/locations.js'ten kanitli) her satirda
+* vehicle_id (public.vehicles.id UUID) dondurdugu icin eslesme artik
+* available_vehicles UUID'leriyle BIREBIRDIR - plaka eslemesi kalkti.
+* Ilk board kurulumu, snapshot fetch'i tamamlanmadan (isFetched) yapilmaz.
 =========================================================
 */
 
@@ -94,9 +92,12 @@ import {
   VehicleAssignment,
 } from "hooks/useTaskOptimization";
 
-// Canli telemetri (Sira 4.2/4.3 deseni yeniden kullanildi)
-import { useLatestLocations } from "hooks/useLatestLocations";
-import { useVehicleStore } from "store/useVehicleStore";
+// Canli telemetri snapshot'i (store bypass - FIX 3. tur, dosya basi aciklamasi)
+import useDispatchLocationSnapshot, {
+  DispatchLocationFrame,
+} from "hooks/useDispatchLocationSnapshot";
+// deriveStatus: store'un PURE yardimci fonksiyonu (store state'i KULLANILMIYOR)
+import { deriveStatus } from "store/useVehicleStore";
 
 // Decision Support Engine (Phase 1)
 import { SCORERS, getScorer, rankVehicles } from "services/dispatch/scoring/registry";
@@ -261,9 +262,9 @@ function OptimizeTask(): JSX.Element {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
 
-  // Sira 4.3 deseni: sayfa acilinca telemetri REST snapshot'i store'a yazilir
-  // (MQTT akisi varsa applyLocationFrame stale-guard ile zaten birlesir).
-  useLatestLocations();
+  // FIX (3. tur): telemetri store yerine dogrudan REST snapshot'tan okunur -
+  // vehicle_id (UUID) ile birebir eslesme (dosya basi aciklamasina bak).
+  const locationsQuery = useDispatchLocationSnapshot();
 
   const [pickup, setPickup] = useState<LocationValue>(emptyLocation);
   const [dropoff, setDropoff] = useState<LocationValue>(emptyLocation);
@@ -360,26 +361,25 @@ function OptimizeTask(): JSX.Element {
     }));
   }, [result]);
 
-  // Skorlama aninda (kurulum / manuel yenileme) telemetri store'undan
-  // arac snapshot'lari cikarilir. IMPERATIVE getState: hook subscribe'i
-  // her MQTT/REST frame'inde re-render + reorder tetiklerdi (drag'i bozar).
-  // Store key'leri arac UUID'si DEGIL - eslesme PLAKA uzerinden yapilir
-  // (useVehicleStore.resolveKey ile ayni mantik).
+  // REST snapshot frame'lerinden arac skorlama goruntusu. Eslesme,
+  // routes/locations.js'in dondurdugu vehicle_id (UUID) ile BIREBIRDIR.
   const buildSnapshots = useCallback(
-    (availableVehicles: string[]): ScoringVehicleSnapshot[] => {
-      const telemetry = useVehicleStore.getState().vehicles;
-      const telemetryList = Object.values(telemetry);
+    (
+      availableVehicles: string[],
+      frames: DispatchLocationFrame[] | undefined
+    ): ScoringVehicleSnapshot[] => {
+      const frameByVehicleId = new Map((frames ?? []).map((f) => [f.vehicle_id, f]));
       return availableVehicles.map((vehicleId) => {
         const plate = vehicleLabels[vehicleId] || vehicleId.slice(0, 8);
-        const frame = telemetryList.find((t) => t.plate === plate);
+        const frame = frameByVehicleId.get(vehicleId);
         return {
           id: vehicleId,
           plate,
           latitude: frame ? frame.latitude : null,
           longitude: frame ? frame.longitude : null,
-          speedKmh: frame ? frame.speed_kmh : null,
-          movementStatus: frame ? frame.status : null,
-          lastUpdate: frame ? frame.last_update : null,
+          speedKmh: frame ? frame.speed : null,
+          movementStatus: frame ? deriveStatus(frame.speed) : null,
+          lastUpdate: frame ? frame.timestamp : null,
         };
       });
     },
@@ -387,10 +387,17 @@ function OptimizeTask(): JSX.Element {
   );
 
   // Boardu verilen modda, MEVCUT atamalari koruyarak yeniden kurar.
+  // framesOverride: "Siralamayi Guncelle" refetch sonucunu, state guncellenmesini
+  // beklemeden dogrudan kullanmak icin (react-query refetch() {data} dondurur).
   const rebuildBoard = useCallback(
-    (mode: RankingMode, currentAssignments: Map<string, string>) => {
+    (
+      mode: RankingMode,
+      currentAssignments: Map<string, string>,
+      framesOverride?: DispatchLocationFrame[]
+    ) => {
       if (!result?.tasks || result.tasks.length === 0) return;
-      const snapshots = buildSnapshots(result.available_vehicles);
+      const frames = framesOverride ?? locationsQuery.data;
+      const snapshots = buildSnapshots(result.available_vehicles, frames);
       const ranked = rankVehicles(mode, snapshots, scoringTasks);
       const orderedIds =
         ranked.length > 0 ? ranked.map((r) => r.vehicleId) : result.available_vehicles;
@@ -406,14 +413,23 @@ function OptimizeTask(): JSX.Element {
       setInitialBoard(buildBoard(result.tasks, orderedIds, vehicleLabels, currentAssignments, scoreById));
       setBoardEpoch((e) => e + 1);
     },
-    [result, scoringTasks, vehicleLabels, buildSnapshots]
+    [result, scoringTasks, vehicleLabels, buildSnapshots, locationsQuery.data]
   );
 
   // result geldiginde board BIR KEZ kurulur:
   // 1) atamalar round-robin (backend paritesi, ORIJINAL available_vehicles sirasi)
   // 2) satirlar varsayilan modun (Mekan) skoruna gore dizilir.
+  // locationsQuery.isFetched: snapshot fetch'i bitmeden kurulursa tum skorlar
+  // 0 olurdu; basari/hata farketmeksizin ilk fetch tamamlaninca kurulur
+  // (hata durumunda 0 skorla kurulur, sonsuz bekleme olmaz).
   useEffect(() => {
-    if (status === "completed" && result?.tasks && result.tasks.length > 0 && !initialBoard) {
+    if (
+      status === "completed" &&
+      result?.tasks &&
+      result.tasks.length > 0 &&
+      !initialBoard &&
+      locationsQuery.isFetched
+    ) {
       const initialAssignments = buildRoundRobinAssignments(
         result.tasks,
         result.available_vehicles
@@ -421,7 +437,7 @@ function OptimizeTask(): JSX.Element {
       setAssignments(initialAssignments);
       rebuildBoard(rankingMode, initialAssignments);
     }
-  }, [status, result, initialBoard, rankingMode, rebuildBoard]);
+  }, [status, result, initialBoard, rankingMode, rebuildBoard, locationsQuery.isFetched]);
 
   // Filtre modu degisince satirlar yeni skorla yeniden dizilir (atamalar korunur).
   const handleModeChange = (_e: unknown, newMode: RankingMode | null) => {
@@ -430,6 +446,13 @@ function OptimizeTask(): JSX.Element {
     if (!scorer || !scorer.available) return; // kilitli filtre - secilemez
     setRankingMode(newMode);
     rebuildBoard(newMode, assignments);
+  };
+
+  // "Siralamayi Guncelle": snapshot yeniden cekilir, taze frame'lerle
+  // (state guncellemesi beklenmeden, refetch sonucu dogrudan) yeniden dizilir.
+  const handleRefreshRanking = async () => {
+    const res = await locationsQuery.refetch();
+    rebuildBoard(rankingMode, assignments, res.data);
   };
 
   // Dispatcher bir karti baska bir araca (satira) surukleyince assignments guncellenir.
@@ -603,7 +626,7 @@ function OptimizeTask(): JSX.Element {
                         variant="outlined"
                         color="info"
                         size="small"
-                        onClick={() => rebuildBoard(rankingMode, assignments)}
+                        onClick={handleRefreshRanking}
                       >
                         Siralamayi Guncelle
                       </MDButton>

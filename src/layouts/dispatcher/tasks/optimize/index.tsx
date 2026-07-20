@@ -39,6 +39,9 @@
 *   - Pre-drag kolon pasiflestirme (uygunsuz araci soluklastirma) BILEREK
 *     Phase 1.1'e birakildi: eligibility verisi (kargo/uyum) olmadan bu
 *     gorsellestirme uydurma olurdu. Altyapi hazir (ScoreDetail.eligible).
+*
+* FIX (2026-07-20, 2. tur) - TS7006: scoringTasks map'inde "t" parametresine
+* acik OptimizeResultTask tipi verildi (noImplicitAny, tsc --noEmit kanitli).
 =========================================================
 */
 
@@ -266,7 +269,7 @@ function OptimizeTask(): JSX.Element {
   // Optimize sonucundaki draft task'lar -> scorer girdisi.
   const scoringTasks: ScoringTask[] = useMemo(() => {
     if (!result?.tasks) return [];
-    return result.tasks.map((t) => ({
+    return result.tasks.map((t: OptimizeResultTask) => ({
       id: t.id,
       pickup: t.pickup_location,
       dropoff: t.dropoff_location,

@@ -6,50 +6,43 @@
 *   POST /dispatcher/tasks/optimize
 *   GET  /dispatcher/tasks/optimize/poll/:id (2sn'de bir otomatik polling)
 *   POST /dispatcher/tasks/optimize/approve
-* Sidenav'da GORUNMEZ (routes.tsx'te type/name/icon yok, sadece route+component) -
-* /dispatcher/tasks sayfasindaki "Yeni Gorev Olustur" butonundan erisilir.
+* Sidenav'da GORUNMEZ; /dispatcher/tasks'taki "+ Nieuwe Taak" ile erisilir.
 *
-* ONEMLI: ROUTING_PROVIDER=mock (lib/routing/factory.js'te HERE entegrasyonu
-* henuz yazilmadi, Temmuz 2026 icin planli). Mock, secilen araclari fiilen
-* KULLANMAZ - available_vehicles her zaman sabit 4 test araci (Dobbe filosu).
+* ONEMLI: ROUTING_PROVIDER=mock. Mock, secilen araclari fiilen KULLANMAZ -
+* available_vehicles her zaman sabit 4 test araci (Dobbe filosu). Mock poll
+* sonucu task basina yalnizca {id, pickup_location, dropoff_location} doner
+* (MockRoutingProvider.js kanitli) - kargo/skill/zaman verisi DONMEZ.
 *
-* FIX (2026-07-18) - Plan Review Kanban (ADR-0005 §4.1/§7 + ADR-0001 §3.6):
-* Backend round-robin atamasi frontend'de AYNEN simule edilip ilk yerlesim
-* cizilir (Secenek B). Dispatcher karti surukleyip baska araca tasiyabilir;
-* "Approve Plan" ile son yerlesim vehicle_assignments olarak gonderilir.
-*
-* UPGRADE (2026-07-20) - Decision Support Engine Phase 1 (onayli plan):
+* UPGRADE (2026-07-20) - Decision Support Engine Phase 1:
 * Scorer plugin chain (services/dispatch/scoring), Graceful Degradation:
-* MEKAN + ZAMAN aktif; REGULASYON + KARGO kilitli (Phase 1.1). Round-robin
-* ILK ATAMA paritesi korunur; siralama atamayi DEGISTIRMEZ.
+* MEKAN + ZAMAN aktif; REGULASYON + KARGO kilitli. Round-robin ILK ATAMA
+* paritesi korunur; siralama atamayi DEGISTIRMEZ. Dikey sirali arac listesi,
+* Karar Notu Popover, flat B2B (soft shadow yasak). Telemetri REST snapshot'tan
+* (useDispatchLocationSnapshot) vehicle_id ile BIREBIR eslesir.
 *
-* REDESIGN (2026-07-20, UX standartlari) - Dikey Sirali Liste:
-* Araclar yukaridan asagiya tam genislik satirlar (en uygun en uste).
-* Karar Notu satirdaki info butonuyla acilan POPOVER'da. Soft shadow yasak,
-* flat 1px border. Kutuphane inline style'lari (asseinfo/react-kanban
-* Board/index.js kaynak kodundan kanitli) !important ile ezildi;
-* direction='horizontal' Droppable yalnizca kolon surukleme icin oldugundan
-* (disableColumnDrag kapali) kart tasima etkilenmez.
-*
-* FIX (2026-07-20, 3. tur) - "Mekan/Zaman degisince liste degismiyor":
-* KOK NEDEN (koddan kanitli): skorlama, useVehicleStore uzerinden plaka
-* eslemesiyle yapiliyordu; store'un applyLocationFrame -> resolveKey mantigi
-* yalnizca MOCK SEED kayitlarini gunceller, eslesmeyen gercek filo
-* frame'lerini sessizce atar ("if (!key) return state;"). Gercek plakalar
-* (BX-TR-42 vb.) store'a hic giremeyince tum skorlar 0 kaliyor, esit
-* skorlarla siralama da degismiyordu. COZUM: store bypass edildi -
-* useDispatchLocationSnapshot, /api/dispatcher/locations/latest cevabini
-* dogrudan okur; endpoint (routes/locations.js'ten kanitli) her satirda
-* vehicle_id (public.vehicles.id UUID) dondurdugu icin eslesme artik
-* available_vehicles UUID'leriyle BIREBIRDIR - plaka eslemesi kalkti.
-* Ilk board kurulumu, snapshot fetch'i tamamlanmadan (isFetched) yapilmaz.
+* UPGRADE (2026-07-20, Strateji 3) - Logistics & Constraints + Frontend-State:
+* "+ Nieuwe Taak" formu, VRP/Karar Destek kisitlariyla genisletildi. Onayli
+* mimari hukum (sifir backend degisikligi):
+*   - GRUP A (bugun DB'ye muhurlenir): capacity_required jsonb'sine volume_m3
+*     + weight_kg + hazmat_classes paketlenip gonderilir; skill_required ham
+*     array olarak gonderilir. Backend routes/tasks.js bunlari GERCEK kolonlara
+*     yazar (kanitli).
+*   - GRUP B (kolon YOK - backend'e GONDERILMEZ): direction, location_type,
+*     time_window_start/end. Bunlar submit aninda submittedConstraints +
+*     taskConstraintsMap<taskId, StrictTaskConstraints> icinde FRONTEND-STATE
+*     olarak tutulur ve Scorer'a dogrudan beslenir.
+*   - Scorer, kisitlari POLL SONUCUNDAN DEGIL bu frontend-state'ten okur
+*     (mock zaten donmuyor). Zaman scorer'i time_window_end ile canli
+*     feasibility siralar. Sayfa yenilenene kadar karar destek tam kapasite.
+*   - Tum kisit verisi tek TypeScript kontratindan (types/metadata) akar -
+*     form yazar, scorer okur, typo derlemede yakalanir.
 =========================================================
 */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
-// @asseinfo/react-kanban (ADR-0001 §3.6'da karar verilmis, sablonla birlikte gelen kutuphane)
+// @asseinfo/react-kanban (ADR-0001 §3.6)
 import Board from "@asseinfo/react-kanban";
 
 // @mui material components
@@ -58,6 +51,12 @@ import Grid from "@mui/material/Grid";
 import Alert from "@mui/material/Alert";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import Chip from "@mui/material/Chip";
@@ -75,7 +74,7 @@ import MDButton from "components/MDButton";
 // Konum arama (HERE Discover proxy)
 import LocationSearchInput, { LocationValue } from "components/LocationSearchInput";
 
-// Material Dashboard 2 PRO React context (dark mode - satir rengi icin)
+// Material Dashboard 2 PRO React context (dark mode)
 import { useMaterialUIController } from "context";
 
 // Layout
@@ -92,11 +91,10 @@ import {
   VehicleAssignment,
 } from "hooks/useTaskOptimization";
 
-// Canli telemetri snapshot'i (store bypass - FIX 3. tur, dosya basi aciklamasi)
+// Canli telemetri snapshot'i (store bypass)
 import useDispatchLocationSnapshot, {
   DispatchLocationFrame,
 } from "hooks/useDispatchLocationSnapshot";
-// deriveStatus: store'un PURE yardimci fonksiyonu (store state'i KULLANILMIYOR)
 import { deriveStatus } from "store/useVehicleStore";
 
 // Decision Support Engine (Phase 1)
@@ -107,10 +105,20 @@ import {
   ScoringVehicleSnapshot,
 } from "services/dispatch/scoring/types";
 
+// Kisit sozlesmesi (form <-> scorer TEK gercek)
+import {
+  StrictTaskConstraints,
+  TaskDirection,
+  TaskLocationType,
+  DIRECTION_OPTIONS,
+  LOCATION_TYPE_OPTIONS,
+  HAZMAT_CLASS_OPTIONS,
+  SKILL_OPTIONS,
+  EMPTY_CONSTRAINTS,
+} from "types/metadata";
+
 const emptyLocation: LocationValue = { address: "", latitude: null, longitude: null };
 
-// Kanban kart/kolon tipleri (@asseinfo/react-kanban kendi TS tipi vermiyor,
-// sablonun kendi ornek kodu da "any" kullaniyor - ayni desen izleniyor).
 interface KanbanCard {
   id: string;
   template: string;
@@ -119,7 +127,6 @@ interface KanbanColumn {
   id: string;
   title: string;
   cards: KanbanCard[];
-  // Decision Support: satir basligindaki skor chip'i + Karar Notu + sira no.
   scoreChip?: string;
   scoreMemo?: string;
   rank?: number;
@@ -128,10 +135,15 @@ interface KanbanBoardData {
   columns: KanbanColumn[];
 }
 
-// Backend round-robin paritesi (routes/tasks.js approve endpoint'i,
-// "vehicleId = availableVehicles[i % availableVehicles.length]").
-// DIKKAT: her zaman ORIJINAL available_vehicles sirasiyla cagrilir -
-// skor siralamasi atamayi etkilemez, yalnizca satir dizilimini etkiler.
+// datetime-local input degeri ("2026-07-20T14:30") -> ISO 8601 (UTC), bos ise null.
+function localToIso(local: string): string | null {
+  if (!local) return null;
+  const d = new Date(local);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+// Backend round-robin paritesi. Her zaman ORIJINAL available_vehicles
+// sirasiyla cagrilir - skor siralamasi atamayi DEGISTIRMEZ.
 function buildRoundRobinAssignments(
   tasks: OptimizeResultTask[],
   availableVehicles: string[]
@@ -143,8 +155,6 @@ function buildRoundRobinAssignments(
   return assignments;
 }
 
-// Verili satir dizilimi + mevcut atamalarla boardu kurar. Skor bilgisi
-// (chip/memo/rank) varsa satir basliklarina islenir.
 function buildBoard(
   tasks: OptimizeResultTask[],
   orderedVehicleIds: string[],
@@ -179,9 +189,55 @@ function buildBoard(
   return { columns };
 }
 
-// Arac satiri basligi: sira no + plaka + skor chip + Karar Notu POPOVER'i.
-// Popover state'i satir bazinda lokal tutulur (renderColumnHeader render
-// prop'u icinde hook kullanilamayacagi icin ayri bilesen olarak tanimli).
+// Gorev kisitlarinin kompakt ozeti (board ustunde, bilgi-yogun B2B satiri).
+function ConstraintsSummary({
+  c,
+  darkMode,
+}: {
+  c: StrictTaskConstraints;
+  darkMode: boolean;
+}): JSX.Element {
+  const cap = c.capacity_required;
+  const ext = c.extended;
+  const dirLabel =
+    DIRECTION_OPTIONS.find((o) => o.value === ext.direction)?.label ?? ext.direction;
+  const locLabel =
+    LOCATION_TYPE_OPTIONS.find((o) => o.value === ext.location_type)?.label ?? ext.location_type;
+  const fmt = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
+
+  const chips: string[] = [
+    dirLabel,
+    locLabel,
+    cap.volume_m3 != null ? `${cap.volume_m3} m³` : "hacim —",
+    cap.weight_kg != null ? `${cap.weight_kg} kg` : "agirlik —",
+    cap.hazmat_classes.length ? `Hazmat: ${cap.hazmat_classes.join(", ")}` : "Hazmat yok",
+    c.skill_required.length ? `Yetkinlik: ${c.skill_required.join(", ")}` : "Yetkinlik —",
+    `Pencere: ${fmt(ext.time_window_start)} → ${fmt(ext.time_window_end)}`,
+  ];
+
+  return (
+    <MDBox
+      mb={2}
+      p={1.5}
+      sx={{
+        borderRadius: "8px",
+        border: darkMode ? "1px solid rgba(255,255,255,0.15)" : "1px solid #d2d6da",
+        boxShadow: "none",
+      }}
+    >
+      <MDTypography variant="caption" fontWeight="bold" display="block" mb={1}>
+        Gorev kisitlari (Karar Destek Asistanina beslenen)
+      </MDTypography>
+      <MDBox display="flex" flexWrap="wrap" gap={0.75}>
+        {chips.map((label) => (
+          <Chip key={label} label={label} size="small" variant="outlined" />
+        ))}
+      </MDBox>
+    </MDBox>
+  );
+}
+
 function VehicleRowHeader({
   column,
   darkMode,
@@ -262,8 +318,6 @@ function OptimizeTask(): JSX.Element {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
 
-  // FIX (3. tur): telemetri store yerine dogrudan REST snapshot'tan okunur -
-  // vehicle_id (UUID) ile birebir eslesme (dosya basi aciklamasina bak).
   const locationsQuery = useDispatchLocationSnapshot();
 
   const [pickup, setPickup] = useState<LocationValue>(emptyLocation);
@@ -273,14 +327,31 @@ function OptimizeTask(): JSX.Element {
   const [jobId, setJobId] = useState<string | null>(null);
   const [approveSuccess, setApproveSuccess] = useState<{ pushed: number } | null>(null);
 
-  // Kanban state: gorsel board (uncontrolled Board'a initialBoard olarak verilir)
-  // + assignments (taskId -> vehicleId), approve isteginde asil gonderilen veri.
+  // --- Logistics & Constraints form state (Strateji 3) ---
+  const [direction, setDirection] = useState<TaskDirection>("outbound");
+  const [locationType, setLocationType] = useState<TaskLocationType>("customer");
+  const [volumeM3, setVolumeM3] = useState<string>(""); // input string; submit'te Number/null
+  const [weightKg, setWeightKg] = useState<string>("");
+  const [hazmatNone, setHazmatNone] = useState<boolean>(true);
+  const [hazmatClasses, setHazmatClasses] = useState<string[]>([]);
+  const [noSkill, setNoSkill] = useState<boolean>(true);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [timeWindowStart, setTimeWindowStart] = useState<string>(""); // datetime-local
+  const [timeWindowEnd, setTimeWindowEnd] = useState<string>("");
+
+  // Submit edilen kisitlar (Grup A + Grup B). Scorer bunu poll sonucu yerine
+  // buradan okur (mock kisit donmuyor). Grup B yalnizca burada yasar.
+  const [submittedConstraints, setSubmittedConstraints] =
+    useState<StrictTaskConstraints | null>(null);
+  // taskId -> kisit haritasi (onayli plan veri yapisi). result geldiginde
+  // submittedConstraints ile doldurulur (form tek-task oldugu icin 1:1).
+  const [taskConstraintsMap, setTaskConstraintsMap] = useState<
+    Map<string, StrictTaskConstraints>
+  >(new Map());
+
+  // Kanban state
   const [initialBoard, setInitialBoard] = useState<KanbanBoardData | null>(null);
   const [assignments, setAssignments] = useState<Map<string, string>>(new Map());
-
-  // Decision Support: secili siralama modu + board remount sayaci.
-  // boardEpoch yalnizca bilinçli yeniden dizmede artar (mode degisimi /
-  // "Siralamayi Guncelle") - canli telemetri frame'leri remount TETIKLEMEZ.
   const [rankingMode, setRankingMode] = useState<RankingMode>("spatial");
   const [boardEpoch, setBoardEpoch] = useState(0);
 
@@ -294,10 +365,24 @@ function OptimizeTask(): JSX.Element {
     );
   };
 
-  // FIX (2026-07-18, 3. tur): koordinatlar HERE'den (LocationSearchInput
-  // secimi sonrasi) geliyor - manuel koordinat girisi/tahmini yok.
   const validLocation = (p: LocationValue) =>
     p.address.trim() !== "" && p.latitude !== null && p.longitude !== null;
+
+  // Form state'inden StrictTaskConstraints uretir (tek kontrat).
+  const collectConstraints = (): StrictTaskConstraints => ({
+    capacity_required: {
+      volume_m3: volumeM3.trim() === "" ? null : Number(volumeM3),
+      weight_kg: weightKg.trim() === "" ? null : Number(weightKg),
+      hazmat_classes: hazmatNone ? [] : hazmatClasses,
+    },
+    skill_required: noSkill ? [] : skills,
+    extended: {
+      direction,
+      location_type: locationType,
+      time_window_start: localToIso(timeWindowStart),
+      time_window_end: localToIso(timeWindowEnd),
+    },
+  });
 
   const handleSubmit = () => {
     setFormError("");
@@ -311,6 +396,10 @@ function OptimizeTask(): JSX.Element {
       setFormError("Select at least one vehicle.");
       return;
     }
+
+    const constraints = collectConstraints();
+    // Scorer bunu okur (Grup A + Grup B). Grup B backend'e GITMEZ.
+    setSubmittedConstraints(constraints);
 
     submitMutation.mutate(
       {
@@ -326,6 +415,10 @@ function OptimizeTask(): JSX.Element {
               lng: dropoff.longitude as number,
               address: dropoff.address,
             },
+            // GRUP A - backend GERCEK kolonlara yazar (routes/tasks.js kanitli):
+            // capacity_required jsonb'ye stringify, skill_required text[]'e array.
+            capacity_required: constraints.capacity_required,
+            skill_required: constraints.skill_required,
           },
         ],
         vehicles: selectedVehicleIds,
@@ -342,7 +435,6 @@ function OptimizeTask(): JSX.Element {
   const isPolling = !!jobId && status !== "completed" && status !== "failed";
   const result = pollQuery.data?.result;
 
-  // vehicleId -> plaka etiketi lookup (useVehicles'tan)
   const vehicleLabels = useMemo(() => {
     const map: Record<string, string> = {};
     vehicles.forEach((v: Vehicle) => {
@@ -351,18 +443,19 @@ function OptimizeTask(): JSX.Element {
     return map;
   }, [vehicles]);
 
-  // Optimize sonucundaki draft task'lar -> scorer girdisi.
+  // Draft task'lar -> scorer girdisi. constraints frontend-state'ten baglanir
+  // (mock poll kisit donmuyor). Form tek-task oldugu icin submittedConstraints
+  // tum donen task'lara atanir.
   const scoringTasks: ScoringTask[] = useMemo(() => {
     if (!result?.tasks) return [];
     return result.tasks.map((t: OptimizeResultTask) => ({
       id: t.id,
       pickup: t.pickup_location,
       dropoff: t.dropoff_location,
+      constraints: submittedConstraints ?? undefined,
     }));
-  }, [result]);
+  }, [result, submittedConstraints]);
 
-  // REST snapshot frame'lerinden arac skorlama goruntusu. Eslesme,
-  // routes/locations.js'in dondurdugu vehicle_id (UUID) ile BIREBIRDIR.
   const buildSnapshots = useCallback(
     (
       availableVehicles: string[],
@@ -386,9 +479,6 @@ function OptimizeTask(): JSX.Element {
     [vehicleLabels]
   );
 
-  // Boardu verilen modda, MEVCUT atamalari koruyarak yeniden kurar.
-  // framesOverride: "Siralamayi Guncelle" refetch sonucunu, state guncellenmesini
-  // beklemeden dogrudan kullanmak icin (react-query refetch() {data} dondurur).
   const rebuildBoard = useCallback(
     (
       mode: RankingMode,
@@ -416,12 +506,6 @@ function OptimizeTask(): JSX.Element {
     [result, scoringTasks, vehicleLabels, buildSnapshots, locationsQuery.data]
   );
 
-  // result geldiginde board BIR KEZ kurulur:
-  // 1) atamalar round-robin (backend paritesi, ORIJINAL available_vehicles sirasi)
-  // 2) satirlar varsayilan modun (Mekan) skoruna gore dizilir.
-  // locationsQuery.isFetched: snapshot fetch'i bitmeden kurulursa tum skorlar
-  // 0 olurdu; basari/hata farketmeksizin ilk fetch tamamlaninca kurulur
-  // (hata durumunda 0 skorla kurulur, sonsuz bekleme olmaz).
   useEffect(() => {
     if (
       status === "completed" &&
@@ -435,29 +519,29 @@ function OptimizeTask(): JSX.Element {
         result.available_vehicles
       );
       setAssignments(initialAssignments);
+      // taskId -> kisit haritasi (onayli plan veri yapisi). Tek-task => 1:1.
+      if (submittedConstraints) {
+        const cmap = new Map<string, StrictTaskConstraints>();
+        result.tasks.forEach((t) => cmap.set(t.id, submittedConstraints));
+        setTaskConstraintsMap(cmap);
+      }
       rebuildBoard(rankingMode, initialAssignments);
     }
-  }, [status, result, initialBoard, rankingMode, rebuildBoard, locationsQuery.isFetched]);
+  }, [status, result, initialBoard, rankingMode, rebuildBoard, locationsQuery.isFetched, submittedConstraints]);
 
-  // Filtre modu degisince satirlar yeni skorla yeniden dizilir (atamalar korunur).
   const handleModeChange = (_e: unknown, newMode: RankingMode | null) => {
     if (!newMode) return;
     const scorer = getScorer(newMode);
-    if (!scorer || !scorer.available) return; // kilitli filtre - secilemez
+    if (!scorer || !scorer.available) return;
     setRankingMode(newMode);
     rebuildBoard(newMode, assignments);
   };
 
-  // "Siralamayi Guncelle": snapshot yeniden cekilir, taze frame'lerle
-  // (state guncellemesi beklenmeden, refetch sonucu dogrudan) yeniden dizilir.
   const handleRefreshRanking = async () => {
     const res = await locationsQuery.refetch();
     rebuildBoard(rankingMode, assignments, res.data);
   };
 
-  // Dispatcher bir karti baska bir araca (satira) surukleyince assignments guncellenir.
-  // @asseinfo/react-kanban onCardDragEnd(card, source, destination) imzasi -
-  // npm README + GitHub kaynagindan kanitli, destination undefined olabilir.
   const handleCardDragEnd = (card: KanbanCard, _source: any, destination: any) => {
     if (!destination || !destination.toColumnId) return;
     setAssignments((prev) => {
@@ -492,9 +576,25 @@ function OptimizeTask(): JSX.Element {
     setInitialBoard(null);
     setAssignments(new Map());
     setRankingMode("spatial");
+    // Logistics & Constraints reset
+    setDirection(EMPTY_CONSTRAINTS.extended.direction);
+    setLocationType(EMPTY_CONSTRAINTS.extended.location_type);
+    setVolumeM3("");
+    setWeightKg("");
+    setHazmatNone(true);
+    setHazmatClasses([]);
+    setNoSkill(true);
+    setSkills([]);
+    setTimeWindowStart("");
+    setTimeWindowEnd("");
+    setSubmittedConstraints(null);
+    setTaskConstraintsMap(new Map());
   };
 
   const inactiveScorers = SCORERS.filter((s) => !s.available);
+  const summaryConstraints =
+    submittedConstraints ??
+    (taskConstraintsMap.size > 0 ? Array.from(taskConstraintsMap.values())[0] : null);
 
   return (
     <DashboardLayout>
@@ -553,25 +653,174 @@ function OptimizeTask(): JSX.Element {
               ))}
             </MDBox>
 
-            {formError && (
-              <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
-                {formError}
-              </MDTypography>
-            )}
-            {submitMutation.isError && (
-              <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
-                Could not submit optimization — try again
-              </MDTypography>
-            )}
+            <Divider sx={{ my: 2 }} />
 
-            <MDButton
-              variant="gradient"
-              color="info"
-              onClick={handleSubmit}
-              disabled={submitMutation.isPending}
-            >
-              {submitMutation.isPending ? "Submitting..." : "Optimize Route"}
-            </MDButton>
+            {/* ===== Logistics & Constraints (Strateji 3) ===== */}
+            <MDTypography variant="h6" mb={0.5}>
+              Logistics &amp; Constraints
+            </MDTypography>
+            <MDTypography variant="caption" color="text" display="block" mb={2}>
+              Kapasite ve yetkinlik goreve muhurlenir (capacity_required jsonb + skill_required).
+              Yon, konum tipi ve teslim penceresi bu oturumda Karar Destek Asistanina beslenir
+              (frontend-state) — DB semasi degismez.
+            </MDTypography>
+
+            <Grid container spacing={2} mb={1}>
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel id="direction-label">Yon</InputLabel>
+                  <Select
+                    labelId="direction-label"
+                    label="Yon"
+                    value={direction}
+                    onChange={(e) => setDirection(e.target.value as TaskDirection)}
+                    sx={{ minHeight: 44 }}
+                  >
+                    {DIRECTION_OPTIONS.map((o) => (
+                      <MenuItem key={o.value} value={o.value}>
+                        {o.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel id="loctype-label">Konum Tipi</InputLabel>
+                  <Select
+                    labelId="loctype-label"
+                    label="Konum Tipi"
+                    value={locationType}
+                    onChange={(e) => setLocationType(e.target.value as TaskLocationType)}
+                    sx={{ minHeight: 44 }}
+                  >
+                    {LOCATION_TYPE_OPTIONS.map((o) => (
+                      <MenuItem key={o.value} value={o.value}>
+                        {o.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Hacim (m³)"
+                  value={volumeM3}
+                  onChange={(e) => setVolumeM3(e.target.value)}
+                  inputProps={{ min: 0, step: "0.1" }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Agirlik (kg)"
+                  value={weightKg}
+                  onChange={(e) => setWeightKg(e.target.value)}
+                  inputProps={{ min: 0, step: "1" }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hazmatNone}
+                      onChange={(e) => {
+                        setHazmatNone(e.target.checked);
+                        if (e.target.checked) setHazmatClasses([]);
+                      }}
+                    />
+                  }
+                  label="Tehlikeli madde yok"
+                />
+                <Autocomplete
+                  multiple
+                  options={HAZMAT_CLASS_OPTIONS}
+                  value={hazmatClasses}
+                  onChange={(_e, v) => setHazmatClasses(v as string[])}
+                  disabled={hazmatNone}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Hazmat siniflari (ADR)" placeholder="Sinif sec" />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={noSkill}
+                      onChange={(e) => {
+                        setNoSkill(e.target.checked);
+                        if (e.target.checked) setSkills([]);
+                      }}
+                    />
+                  }
+                  label="Yetkinlik aranmiyor"
+                />
+                <Autocomplete
+                  multiple
+                  freeSolo
+                  options={SKILL_OPTIONS}
+                  value={skills}
+                  onChange={(_e, v) => setSkills(v as string[])}
+                  disabled={noSkill}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Surucu yetkinlikleri" placeholder="Yetkinlik ekle" />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="datetime-local"
+                  label="Teslim penceresi baslangic (VRPTW)"
+                  value={timeWindowStart}
+                  onChange={(e) => setTimeWindowStart(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="datetime-local"
+                  label="Teslim penceresi bitis (VRPTW)"
+                  value={timeWindowEnd}
+                  onChange={(e) => setTimeWindowEnd(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+
+            <MDBox mt={2}>
+              {formError && (
+                <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
+                  {formError}
+                </MDTypography>
+              )}
+              {submitMutation.isError && (
+                <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
+                  Could not submit optimization — try again
+                </MDTypography>
+              )}
+
+              <MDButton
+                variant="gradient"
+                color="info"
+                onClick={handleSubmit}
+                disabled={submitMutation.isPending}
+              >
+                {submitMutation.isPending ? "Submitting..." : "Optimize Route"}
+              </MDButton>
+            </MDBox>
           </Card>
         )}
 
@@ -603,9 +852,12 @@ function OptimizeTask(): JSX.Element {
                 </MDTypography>
                 <Divider sx={{ my: 2 }} />
 
+                {summaryConstraints && (
+                  <ConstraintsSummary c={summaryConstraints} darkMode={darkMode} />
+                )}
+
                 {initialBoard ? (
                   <>
-                    {/* Decision Support: siralama modu filtreleri */}
                     <MDBox display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={1}>
                       <MDTypography variant="button" fontWeight="bold">
                         Rank vehicles by
@@ -652,10 +904,6 @@ function OptimizeTask(): JSX.Element {
                       position="relative"
                       mb={3}
                       sx={{
-                        // DIKEY SATIR DUZENI - kutuphanenin inline style'lari
-                        // (Board/index.js'ten kanitli) !important ile ezilir:
-                        // .react-kanban-board inline {display:flex, overflowY:hidden},
-                        // icindeki sarmalayici div inline {whiteSpace:nowrap}.
                         "& .react-kanban-board": {
                           display: "block !important",
                           overflowY: "visible !important",
@@ -673,15 +921,12 @@ function OptimizeTask(): JSX.Element {
                           margin: "0 0 12px 0 !important",
                           padding: "12px 16px",
                           borderRadius: "8px",
-                          // Flat B2B: soft shadow YASAK - duz zemin + 1px border.
                           backgroundColor: darkMode ? "rgba(255, 255, 255, 0.06)" : "#f8f9fa",
                           border: darkMode ? "1px solid rgba(255, 255, 255, 0.15)" : "1px solid #d2d6da",
                           boxShadow: "none",
                         },
                       }}
                     >
-                      {/* key=boardEpoch: Board uncontrolled (initialBoard) - mode degisimi /
-                          manuel yenilemede bilinçli remount ile yeni dizilim uygulanir. */}
                       <Board
                         key={`kanban-${boardEpoch}`}
                         initialBoard={initialBoard}
@@ -701,7 +946,6 @@ function OptimizeTask(): JSX.Element {
                             py={1}
                             px={1.25}
                             sx={{
-                              // Flat B2B: golge yok, 1px border.
                               border: darkMode
                                 ? "1px solid rgba(255, 255, 255, 0.2)"
                                 : "1px solid #d2d6da",

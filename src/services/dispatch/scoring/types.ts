@@ -10,6 +10,8 @@
  * implemente eden yeni bir dosya + registry'ye tek satir ekleme ile girer.
  */
 
+import { StrictTaskConstraints } from "types/metadata";
+
 export type RankingMode = "spatial" | "temporal" | "compliance" | "cargo";
 
 export interface TaskPoint {
@@ -18,19 +20,28 @@ export interface TaskPoint {
   address?: string;
 }
 
-/** Optimize poll sonucundaki draft task'in skorlama icin gereken kesiti. */
+/**
+ * Optimize poll sonucundaki draft task'in skorlama icin gereken kesiti.
+ *
+ * constraints (2026-07-20, Strateji 3): formun urettigi birlesik kisit
+ * kontrati. Grup A (kapasite/skills) + Grup B (yon/tip/zaman penceresi) tek
+ * yerden gelir. Mock solver bu veriyi poll sonucunda DONMEDIGI icin
+ * (id + konum ceker, kanitli), deger FRONTEND-STATE'ten baglanir; scorer
+ * bunu poll sonucundan degil buradan okur. undefined ise kisit bilgisi yok
+ * demektir — scorer o durumda kisitsiz (eski) davranisina duser.
+ */
 export interface ScoringTask {
   id: string;
   pickup: TaskPoint;
   dropoff: TaskPoint;
+  constraints?: StrictTaskConstraints;
 }
 
 /**
  * Skorlanan aracin anlik goruntusu.
  * id = public.vehicles UUID (Kanban kolon id'si, useVehicles'tan).
- * Telemetri alanlari useVehicleStore'dan PLAKA eslemesiyle gelir
- * (store key'leri farkli oldugu icin id ile DEGIL plate ile eslesir —
- * useVehicleStore.resolveKey ile ayni mantik). Telemetri yoksa null kalir.
+ * Telemetri alanlari REST snapshot'tan (useDispatchLocationSnapshot)
+ * vehicle_id (UUID) ile BIREBIR eslesir. Telemetri yoksa null kalir.
  */
 export interface ScoringVehicleSnapshot {
   id: string;
@@ -45,7 +56,7 @@ export interface ScoringVehicleSnapshot {
 export interface ScoreDetail {
   /** 0..1 normalize skor — yuksek = daha uygun, kolon siralamasi buna gore. */
   value: number;
-  /** Akilli Karar Notu — kolon basligindaki Tooltip'te aynen gosterilir. */
+  /** Akilli Karar Notu — kolon basligindaki Popover'da aynen gosterilir. */
   memo: string;
   /**
    * Phase 1.1 hazirligi: kargo/uyum verisi geldiginde "bu arac bu task'i

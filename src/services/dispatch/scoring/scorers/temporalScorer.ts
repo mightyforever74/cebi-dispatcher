@@ -1,24 +1,40 @@
 /**
- * ZAMAN (Temporal Window) scorer — AKTIF (tahmini ETA seviyesinde).
+ * ZAMAN (Temporal Window) scorer — AKTIF.
  *
- * Phase 1 gercegi (durustluk): optimize draft task'inda scheduled_start/end
- * alani YOK (form toplamiyor, poll sonucu icermiyor — useTaskOptimization.ts
- * OptimizeResultTask'tan kanitli). Bu yuzden "yasal suruc/mola penceresine
- * yetisme" analizi HENUZ yapilamaz. Bugun yapilabilen en durust siralama:
- * "pickup'a en erken varmasi beklenen arac en uste" — sabit 60 km/h ortalama
- * hiz varsayimiyla kus ucusu ETA. Varsayim memo'da kullaniciya ACIKCA yazilir.
+ * Iki katmanli davranis (Strateji 3, 2026-07-20):
  *
- * scheduled_start draft'a girdiginde ve HERE Matrix (ADR-0014) baglandiginda
- * bu scorer gercek surus suresi + yasal pencere kontrolune yukseltilecek —
- * arayuz sozlesmesi (ScoreDetail) degismeden.
+ * 1) TEMEL (kisit yoksa): "pickup'a en erken varmasi beklenen arac en uste".
+ *    Sabit 60 km/h ortalama + kus ucusu mesafe ile tahmini ETA. Varsayim
+ *    memo'da ACIKCA yazilir.
+ *
+ * 2) VRPTW PENCERESI (task.constraints.extended.time_window_end varsa):
+ *    Bu veri artik formdan geliyor (frontend-state; mock solver poll'da
+ *    DONMUYOR). Tahmini varis, teslim penceresi bitisine gore degerlendirilir:
+ *      - Pencereye yetisiyorsa: skor korunur, memo pay (slack) suresini yazar.
+ *      - Pencereyi kaciriyorsa: skor 0.2 ile carpilir (feasibility cezasi) ve
+ *        memo UYARI olarak ne kadar geciktigini yazar.
+ *    Boylece Zaman filtresi, gercek teslim penceresine gore CANLI siralar.
+ *
+ * HERE Matrix (ADR-0014) baglandiginda kus ucusu ETA gercek surus suresine
+ * yukseltilecek — arayuz sozlesmesi (ScoreDetail) degismeden.
  */
 
 import { ActiveScorer, ScoreDetail, ScoringTask, ScoringVehicleSnapshot } from "../types";
 import { frameAgeLabel, haversineKm } from "../geo";
 
 const ASSUMED_AVG_SPEED_KMH = 60;
-// 30 dk ETA'da skor ~0.5.
+// 30 dk ETA'da temel skor ~0.5.
 const HALF_SCORE_ETA_MIN = 30;
+// Pencereyi kacirmanin feasibility cezasi (skor carpani).
+const WINDOW_MISS_PENALTY = 0.2;
+
+/** ISO zamana kadar kalan dakika; gecersiz/bos ise null. */
+function minutesUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime();
+  if (Number.isNaN(ms)) return null;
+  return (ms - Date.now()) / 60000;
+}
 
 function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail {
   if (vehicle.latitude === null || vehicle.longitude === null) {
@@ -28,26 +44,45 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
     };
   }
 
-  const km = haversineKm(
-    vehicle.latitude,
-    vehicle.longitude,
-    task.pickup.lat,
-    task.pickup.lng
-  );
+  const km = haversineKm(vehicle.latitude, vehicle.longitude, task.pickup.lat, task.pickup.lng);
   const etaMin = (km / ASSUMED_AVG_SPEED_KMH) * 60;
+  const baseValue = 1 / (1 + etaMin / HALF_SCORE_ETA_MIN);
   const statusNote =
     vehicle.movementStatus === "moving"
       ? `su an hareket halinde (${Math.round(vehicle.speedKmh ?? 0)} km/h)`
       : `su an ${vehicle.movementStatus ?? "durum bilinmiyor"}`;
 
+  const baseMemo =
+    `${vehicle.plate}: pickup'a tahmini ${Math.round(etaMin)} dk ` +
+    `(${ASSUMED_AVG_SPEED_KMH} km/h ortalama varsayimi, kus ucusu ${km.toFixed(1)} km; ` +
+    `${statusNote}, son sinyal ${frameAgeLabel(vehicle.lastUpdate)})`;
+
+  const windowEnd = task.constraints?.extended.time_window_end ?? null;
+  const minsToEnd = minutesUntil(windowEnd);
+
+  // Pencere yoksa (ya da gecersizse): temel ETA siralamasi.
+  if (minsToEnd === null) {
+    return {
+      value: baseValue,
+      memo:
+        `${baseMemo}. Teslim penceresi belirtilmemis — salt ETA'ya gore siralandi. ` +
+        `Gercek surus suresi HERE Matrix (ADR-0014) ile gelecek.`,
+    };
+  }
+
+  // Pencere var: yetisme feasibility'sine gore degerlendir.
+  if (etaMin <= minsToEnd) {
+    const slack = Math.round(minsToEnd - etaMin);
+    return {
+      value: baseValue,
+      memo: `${baseMemo}. Teslim penceresine YETISIR (~${slack} dk pay).`,
+    };
+  }
+
+  const late = Math.round(etaMin - minsToEnd);
   return {
-    value: 1 / (1 + etaMin / HALF_SCORE_ETA_MIN),
-    memo:
-      `${vehicle.plate}: pickup'a tahmini ${Math.round(etaMin)} dk ` +
-      `(${ASSUMED_AVG_SPEED_KMH} km/h ortalama varsayimi, kus ucusu ${km.toFixed(1)} km; ` +
-      `${statusNote}, son sinyal ${frameAgeLabel(vehicle.lastUpdate)}). ` +
-      `Gercek surus suresi + yasal suruc/mola penceresi analizi, HERE Matrix (ADR-0014) ` +
-      `ve task zamanlama alanlari draft akisina eklendiginde devreye girecek.`,
+    value: baseValue * WINDOW_MISS_PENALTY,
+    memo: `${baseMemo}. UYARI: teslim penceresini ~${late} dk KACIRIR — feasibility cezasi uygulandi.`,
   };
 }
 

@@ -1,6 +1,6 @@
 /**
 =========================================================
-* TulipFleet Dispatcher — Task Optimization (VRP optimize/approve akışı)
+* TulipFleet Dispatcher — Task Optimization (VRP optimize/approve akisi)
 =========================================================
 * Faz 3, Part B. Gercek enterprise-api endpoint'lerine bagli:
 *   POST /dispatcher/tasks/optimize
@@ -15,29 +15,34 @@
 *
 * FIX (2026-07-18) - Plan Review Kanban (ADR-0005 §4.1/§7 "Kanban view" +
 * ADR-0001 §3.6 "React Kanban - drag-and-drop task assignment"):
-* "completed" adiminda artik sade metin yerine gercek bir Kanban board
-* gosteriliyor. Backend'in round-robin atamasi (routes/tasks.js approve
-* endpoint'i) frontend'de AYNEN simule edilip ilk yerlesim cizilir (Secenek B,
-* bkz. ARCHITECTURE_DECISION_task-management-api-driven.md). Dispatcher
-* karti surukleyip baska bir araca tasiyabilir; "Approve Plan" tiklaninca
-* son yerlesim vehicle_assignments olarak backend'e gonderilir - backend bu
-* listeyi VARSA kullanir, YOKSA (eski davranis) kendi round-robin'ine duser.
+* "completed" adiminda gercek bir Kanban board gosteriliyor. Backend'in
+* round-robin atamasi frontend'de AYNEN simule edilip ilk yerlesim cizilir
+* (Secenek B, bkz. ARCHITECTURE_DECISION_task-management-api-driven.md).
+* Dispatcher karti surukleyip baska araca tasiyabilir; "Approve Plan" ile
+* son yerlesim vehicle_assignments olarak gonderilir.
 *
-* FIX (2026-07-18, 2. tur) - Kolon basliklari GORUNMUYORDU: renderColumnHeader
-* prop'u hic verilmemisti, kutuphane kendi cIplak/stilsiz varsayilan basligini
-* render ediyordu (koyu temada okunmuyordu). Simdi MDTypography ile acikca
-* render ediliyor + kolon arka plani daha kontrastli sabit bir renge cekildi.
-*
-* FIX (2026-07-18, 3. tur) - HERE Discover ile canli konum arama: manuel
-* Address/Latitude/Longitude 3-ayri-input yerine, tek bir LocationSearchInput
-* (routes/geocode.js proxy'sini kullanan) kullaniliyor. Kullanici adres yazip
-* HERE'in onerdigi bir sonuca tiklayinca, gercek koordinatlar (latitude/
-* longitude) otomatik state'e yaziliyor - manuel koordinat girisi/tahmini
-* bitiyor, backend'e her zaman HERE'den gelen temiz koordinat gonderiliyor.
+* UPGRADE (2026-07-20) - Decision Support Engine Phase 1 (onayli plan):
+* Kanban, scorer plugin chain (services/dispatch/scoring) uzerine oturan
+* bir Karar Destek Asistanina yukseltildi (Graceful Degradation):
+*   - MEKAN + ZAMAN filtreleri AKTIF: canli telemetri (useVehicleStore,
+*     plaka eslemesi) + haversine ile kolonlar skora gore dizilir.
+*   - REGULASYON + KARGO filtreleri KILITLI (available:false + reason):
+*     ZE-zone frontend endpoint'i ve kargo gereksinim alanlari (Phase 1.1 /
+*     backlog) gelmeden sahte skor URETILMEZ.
+*   - Kolon basliginda skor chip'i + Tooltip'te Akilli Karar Notu (memo).
+*   - Round-robin ILK ATAMA paritesi korunur: atamalar orijinal
+*     available_vehicles sirasiyla kurulur; skor SIRALAMASI yalnizca kolon
+*     dizilimini degistirir, atamayi DEGISTIRMEZ.
+*   - Drag stabilitesi: skor snapshot'i board kurulum aninda alinir; canli
+*     her telemetri frame'inde remount YAPILMAZ. "Siralamayi Guncelle"
+*     butonu, atamalari koruyarak boardu guncel telemetriyle yeniden dizer.
+*   - Pre-drag kolon pasiflestirme (uygunsuz araci soluklastirma) BILEREK
+*     Phase 1.1'e birakildi: eligibility verisi (kargo/uyum) olmadan bu
+*     gorsellestirme uydurma olurdu. Altyapi hazir (ScoreDetail.eligible).
 =========================================================
 */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 // @asseinfo/react-kanban (ADR-0001 §3.6'da karar verilmis, sablonla birlikte gelen kutuphane)
@@ -51,6 +56,10 @@ import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
+import Tooltip from "@mui/material/Tooltip";
+import Chip from "@mui/material/Chip";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 
 // Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
@@ -77,6 +86,18 @@ import {
   VehicleAssignment,
 } from "hooks/useTaskOptimization";
 
+// Canli telemetri (Sira 4.2/4.3 deseni yeniden kullanildi)
+import { useLatestLocations } from "hooks/useLatestLocations";
+import { useVehicleStore } from "store/useVehicleStore";
+
+// Decision Support Engine (Phase 1)
+import { SCORERS, getScorer, rankVehicles } from "services/dispatch/scoring/registry";
+import {
+  RankingMode,
+  ScoringTask,
+  ScoringVehicleSnapshot,
+} from "services/dispatch/scoring/types";
+
 const emptyLocation: LocationValue = { address: "", latitude: null, longitude: null };
 
 // Kanban kart/kolon tipleri (@asseinfo/react-kanban kendi TS tipi vermiyor,
@@ -89,38 +110,59 @@ interface KanbanColumn {
   id: string;
   title: string;
   cards: KanbanCard[];
+  // Decision Support: kolon basligindaki skor chip'i + Karar Notu.
+  scoreChip?: string;
+  scoreMemo?: string;
 }
 interface KanbanBoardData {
   columns: KanbanColumn[];
 }
 
-// Optimize sonucundan (task'lar + musait araclar) ilk Kanban yerlesimini
-// olusturur - backend'in round-robin mantigini (routes/tasks.js approve
-// endpoint'i, "vehicleId = availableVehicles[i % availableVehicles.length]")
-// frontend'de birebir simule eder.
-function buildInitialBoard(
+// Backend round-robin paritesi (routes/tasks.js approve endpoint'i,
+// "vehicleId = availableVehicles[i % availableVehicles.length]").
+// DIKKAT: her zaman ORIJINAL available_vehicles sirasiyla cagrilir -
+// skor siralamasi atamayi etkilemez, yalnizca kolon dizilimini etkiler.
+function buildRoundRobinAssignments(
   tasks: OptimizeResultTask[],
-  availableVehicles: string[],
-  vehicleLabels: Record<string, string>
-): KanbanBoardData {
-  const columns: KanbanColumn[] = availableVehicles.map((vehicleId) => ({
-    id: vehicleId,
-    title: vehicleLabels[vehicleId] || vehicleId.slice(0, 8),
-    cards: [],
-  }));
-
+  availableVehicles: string[]
+): Map<string, string> {
+  const assignments = new Map<string, string>();
   tasks.forEach((task, i) => {
-    const col = columns[i % columns.length];
+    assignments.set(task.id, availableVehicles[i % availableVehicles.length]);
+  });
+  return assignments;
+}
+
+// Verili kolon dizilimi + mevcut atamalarla boardu kurar. Skor bilgisi
+// (chip/memo) varsa kolon basliklarina islenir.
+function buildBoard(
+  tasks: OptimizeResultTask[],
+  orderedVehicleIds: string[],
+  vehicleLabels: Record<string, string>,
+  assignments: Map<string, string>,
+  scoreById: Map<string, { chip: string; memo: string }> | null
+): KanbanBoardData {
+  const columns: KanbanColumn[] = orderedVehicleIds.map((vehicleId) => {
+    const score = scoreById?.get(vehicleId);
+    return {
+      id: vehicleId,
+      title: vehicleLabels[vehicleId] || vehicleId.slice(0, 8),
+      cards: [],
+      scoreChip: score?.chip,
+      scoreMemo: score?.memo,
+    };
+  });
+  const columnById = new Map(columns.map((c) => [c.id, c]));
+
+  tasks.forEach((task) => {
+    const vehicleId = assignments.get(task.id);
+    const col = (vehicleId && columnById.get(vehicleId)) || columns[0];
+    if (!col) return;
     const pickupAddr =
-      task.pickup_location.address ||
-      `${task.pickup_location.lat},${task.pickup_location.lng}`;
+      task.pickup_location.address || `${task.pickup_location.lat},${task.pickup_location.lng}`;
     const dropoffAddr =
-      task.dropoff_location.address ||
-      `${task.dropoff_location.lat},${task.dropoff_location.lng}`;
-    col.cards.push({
-      id: task.id,
-      template: `${pickupAddr} → ${dropoffAddr}`,
-    });
+      task.dropoff_location.address || `${task.dropoff_location.lat},${task.dropoff_location.lng}`;
+    col.cards.push({ id: task.id, template: `${pickupAddr} → ${dropoffAddr}` });
   });
 
   return { columns };
@@ -131,6 +173,10 @@ function OptimizeTask(): JSX.Element {
   const { data: vehicles = [], isLoading: loadingVehicles } = useVehicles();
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
+
+  // Sira 4.3 deseni: sayfa acilinca telemetri REST snapshot'i store'a yazilir
+  // (MQTT akisi varsa applyLocationFrame stale-guard ile zaten birlesir).
+  useLatestLocations();
 
   const [pickup, setPickup] = useState<LocationValue>(emptyLocation);
   const [dropoff, setDropoff] = useState<LocationValue>(emptyLocation);
@@ -144,6 +190,12 @@ function OptimizeTask(): JSX.Element {
   const [initialBoard, setInitialBoard] = useState<KanbanBoardData | null>(null);
   const [assignments, setAssignments] = useState<Map<string, string>>(new Map());
 
+  // Decision Support: secili siralama modu + board remount sayaci.
+  // boardEpoch yalnizca bilinçli yeniden dizmede artar (mode degisimi /
+  // "Siralamayi Guncelle") - canli telemetri frame'leri remount TETIKLEMEZ.
+  const [rankingMode, setRankingMode] = useState<RankingMode>("spatial");
+  const [boardEpoch, setBoardEpoch] = useState(0);
+
   const submitMutation = useSubmitOptimization();
   const pollQuery = usePollOptimization(jobId);
   const approveMutation = useApproveOptimization();
@@ -154,9 +206,8 @@ function OptimizeTask(): JSX.Element {
     );
   };
 
-  // FIX (2026-07-18, 3. tur): koordinatlar artik HERE'den (LocationSearchInput
-  // secimi sonrasi) geliyor - manuel string->number donusumu/tahmini yok.
-  // Gecerli sayilmasi icin latitude/longitude'un dolu (secilmis) olmasi sart.
+  // FIX (2026-07-18, 3. tur): koordinatlar HERE'den (LocationSearchInput
+  // secimi sonrasi) geliyor - manuel koordinat girisi/tahmini yok.
   const validLocation = (p: LocationValue) =>
     p.address.trim() !== "" && p.latitude !== null && p.longitude !== null;
 
@@ -212,26 +263,91 @@ function OptimizeTask(): JSX.Element {
     return map;
   }, [vehicles]);
 
-  // result geldiginde Kanban board'unu BIR KEZ olustur (round-robin simulasyonu)
+  // Optimize sonucundaki draft task'lar -> scorer girdisi.
+  const scoringTasks: ScoringTask[] = useMemo(() => {
+    if (!result?.tasks) return [];
+    return result.tasks.map((t) => ({
+      id: t.id,
+      pickup: t.pickup_location,
+      dropoff: t.dropoff_location,
+    }));
+  }, [result]);
+
+  // Skorlama aninda (kurulum / manuel yenileme) telemetri store'undan
+  // arac snapshot'lari cikarilir. IMPERATIVE getState: hook subscribe'i
+  // her MQTT/REST frame'inde re-render + reorder tetiklerdi (drag'i bozar).
+  // Store key'leri arac UUID'si DEGIL - eslesme PLAKA uzerinden yapilir
+  // (useVehicleStore.resolveKey ile ayni mantik).
+  const buildSnapshots = useCallback(
+    (availableVehicles: string[]): ScoringVehicleSnapshot[] => {
+      const telemetry = useVehicleStore.getState().vehicles;
+      const telemetryList = Object.values(telemetry);
+      return availableVehicles.map((vehicleId) => {
+        const plate = vehicleLabels[vehicleId] || vehicleId.slice(0, 8);
+        const frame = telemetryList.find((t) => t.plate === plate);
+        return {
+          id: vehicleId,
+          plate,
+          latitude: frame ? frame.latitude : null,
+          longitude: frame ? frame.longitude : null,
+          speedKmh: frame ? frame.speed_kmh : null,
+          movementStatus: frame ? frame.status : null,
+          lastUpdate: frame ? frame.last_update : null,
+        };
+      });
+    },
+    [vehicleLabels]
+  );
+
+  // Boardu verilen modda, MEVCUT atamalari koruyarak yeniden kurar.
+  const rebuildBoard = useCallback(
+    (mode: RankingMode, currentAssignments: Map<string, string>) => {
+      if (!result?.tasks || result.tasks.length === 0) return;
+      const snapshots = buildSnapshots(result.available_vehicles);
+      const ranked = rankVehicles(mode, snapshots, scoringTasks);
+      const orderedIds =
+        ranked.length > 0 ? ranked.map((r) => r.vehicleId) : result.available_vehicles;
+      const scoreById =
+        ranked.length > 0
+          ? new Map(
+              ranked.map((r) => [
+                r.vehicleId,
+                { chip: `${Math.round(r.detail.value * 100)}`, memo: r.detail.memo },
+              ])
+            )
+          : null;
+      setInitialBoard(buildBoard(result.tasks, orderedIds, vehicleLabels, currentAssignments, scoreById));
+      setBoardEpoch((e) => e + 1);
+    },
+    [result, scoringTasks, vehicleLabels, buildSnapshots]
+  );
+
+  // result geldiginde board BIR KEZ kurulur:
+  // 1) atamalar round-robin (backend paritesi, ORIJINAL available_vehicles sirasi)
+  // 2) kolonlar varsayilan modun (Mekan) skoruna gore dizilir.
   useEffect(() => {
     if (status === "completed" && result?.tasks && result.tasks.length > 0 && !initialBoard) {
-      const board = buildInitialBoard(result.tasks, result.available_vehicles, vehicleLabels);
-      setInitialBoard(board);
-
-      const initialAssignments = new Map<string, string>();
-      board.columns.forEach((col) => {
-        col.cards.forEach((card) => {
-          initialAssignments.set(card.id, col.id);
-        });
-      });
+      const initialAssignments = buildRoundRobinAssignments(
+        result.tasks,
+        result.available_vehicles
+      );
       setAssignments(initialAssignments);
+      rebuildBoard(rankingMode, initialAssignments);
     }
-  }, [status, result, initialBoard, vehicleLabels]);
+  }, [status, result, initialBoard, rankingMode, rebuildBoard]);
+
+  // Filtre modu degisince kolonlar yeni skorla yeniden dizilir (atamalar korunur).
+  const handleModeChange = (_e: unknown, newMode: RankingMode | null) => {
+    if (!newMode) return;
+    const scorer = getScorer(newMode);
+    if (!scorer || !scorer.available) return; // kilitli filtre - secilemez
+    setRankingMode(newMode);
+    rebuildBoard(newMode, assignments);
+  };
 
   // Dispatcher bir karti baska bir araca (kolona) surukleyince assignments guncellenir.
   // @asseinfo/react-kanban onCardDragEnd(card, source, destination) imzasi -
-  // npm README + GitHub kaynagindan kanitli, destination undefined olabilir
-  // (kart ayni yere birakilirsa).
+  // npm README + GitHub kaynagindan kanitli, destination undefined olabilir.
   const handleCardDragEnd = (card: KanbanCard, _source: any, destination: any) => {
     if (!destination || !destination.toColumnId) return;
     setAssignments((prev) => {
@@ -265,7 +381,10 @@ function OptimizeTask(): JSX.Element {
     setFormError("");
     setInitialBoard(null);
     setAssignments(new Map());
+    setRankingMode("spatial");
   };
+
+  const inactiveScorers = SCORERS.filter((s) => !s.available);
 
   return (
     <DashboardLayout>
@@ -376,8 +495,48 @@ function OptimizeTask(): JSX.Element {
 
                 {initialBoard ? (
                   <>
-                    <MDTypography variant="button" fontWeight="bold" display="block" mb={2}>
-                      Drag tasks between vehicles to adjust the plan
+                    {/* Decision Support: siralama modu filtreleri */}
+                    <MDBox display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={1}>
+                      <MDTypography variant="button" fontWeight="bold">
+                        Rank vehicles by
+                      </MDTypography>
+                      <ToggleButtonGroup
+                        value={rankingMode}
+                        exclusive
+                        size="small"
+                        onChange={handleModeChange}
+                      >
+                        {SCORERS.map((s) => (
+                          <ToggleButton key={s.id} value={s.id} disabled={!s.available}>
+                            {s.available ? s.label : `${s.label} (Phase 1.1 — Inactive)`}
+                          </ToggleButton>
+                        ))}
+                      </ToggleButtonGroup>
+                      <MDButton
+                        variant="outlined"
+                        color="info"
+                        size="small"
+                        onClick={() => rebuildBoard(rankingMode, assignments)}
+                      >
+                        Siralamayi Guncelle
+                      </MDButton>
+                    </MDBox>
+                    {inactiveScorers.map((s) => (
+                      <MDTypography
+                        key={s.id}
+                        variant="caption"
+                        color="text"
+                        display="block"
+                        mb={0.5}
+                      >
+                        {s.label}: {s.available === false ? s.reason : ""}
+                      </MDTypography>
+                    ))}
+
+                    <MDTypography variant="button" fontWeight="bold" display="block" mt={1.5} mb={2}>
+                      Drag tasks between vehicles to adjust the plan — columns are ranked left to
+                      right by the selected criterion (best match first). Ranking never changes
+                      assignments; only you do, by dragging.
                     </MDTypography>
                     <MDBox
                       position="relative"
@@ -396,14 +555,20 @@ function OptimizeTask(): JSX.Element {
                         },
                       }}
                     >
+                      {/* key=boardEpoch: Board uncontrolled (initialBoard) - mode degisimi /
+                          manuel yenilemede bilinçli remount ile yeni dizilim uygulanir. */}
                       <Board
+                        key={`kanban-${boardEpoch}`}
                         initialBoard={initialBoard}
                         onCardDragEnd={handleCardDragEnd}
                         disableColumnDrag
-                        renderColumnHeader={({ title }: { title: string }) => (
+                        renderColumnHeader={({ title, scoreChip, scoreMemo }: KanbanColumn) => (
                           <MDBox
                             mb={1.5}
                             pb={1}
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="space-between"
                             sx={{
                               borderBottom: darkMode
                                 ? "1px solid rgba(255, 255, 255, 0.3)"
@@ -417,6 +582,16 @@ function OptimizeTask(): JSX.Element {
                             >
                               {title}
                             </MDTypography>
+                            {scoreChip && (
+                              <Tooltip title={scoreMemo || ""} arrow placement="top">
+                                <Chip
+                                  label={scoreChip}
+                                  size="small"
+                                  color={Number(scoreChip) >= 50 ? "success" : "default"}
+                                  sx={{ fontWeight: "bold", cursor: "help" }}
+                                />
+                              </Tooltip>
+                            )}
                           </MDBox>
                         )}
                         renderCard={({ id, template }: KanbanCard) => (

@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "store/useAuthStore";
+// Kisit sozlesmesi (types/metadata): capacity_required/skill_required'in GERCEK
+// sekli. Onceden Record<string, unknown> (gevsek jsonb passthrough) idi; strict
+// CapacityRequired ona atanamiyordu (TS2322, index signature yok). Tip buraya
+// sikilastirilinca form -> hook -> backend zinciri bastan sona typo-korumali olur.
+import { CapacityRequired, SkillRequired } from "types/metadata";
 
 // Desen: src/hooks/useTasks.ts / useVehicles.ts'ten kanitli (fetch + Authorization,
 // enterprise-api.tulipfleet.com base URL). DIKKAT: routes/tasks.js'te path'ler
@@ -31,8 +36,11 @@ const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 export interface OptimizeTaskInput {
   pickup_location: { lat: number; lng: number; address?: string };
   dropoff_location: { lat: number; lng: number; address?: string };
-  capacity_required?: Record<string, unknown>;
-  skill_required?: string[];
+  // GRUP A (Strateji 3): backend routes/tasks.js bunlari GERCEK kolonlara yazar.
+  // capacity_required -> dispatch_tasks.capacity_required (jsonb, backend stringify eder).
+  // skill_required    -> dispatch_tasks.skill_required (text[], ham array).
+  capacity_required?: CapacityRequired;
+  skill_required?: SkillRequired;
 }
 
 export interface OptimizeSubmitPayload {

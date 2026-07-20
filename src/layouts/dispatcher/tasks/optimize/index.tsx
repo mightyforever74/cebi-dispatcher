@@ -36,6 +36,14 @@
 *     feasibility siralar. Sayfa yenilenene kadar karar destek tam kapasite.
 *   - Tum kisit verisi tek TypeScript kontratindan (types/metadata) akar -
 *     form yazar, scorer okur, typo derlemede yakalanir.
+*
+* FIX (2026-07-20, 2. tur) - TS2322 + TS7006:
+*   - TS2322 (capacity_required): kok neden hook'ta - OptimizeTaskInput
+*     capacity_required'i Record<string,unknown> idi, strict CapacityRequired
+*     atanamiyordu. Hook tipi CapacityRequired/SkillRequired'a sikilastirildi
+*     (useTaskOptimization.ts); bu satir artik degismeden gecer.
+*   - TS7006: taskConstraintsMap doldururken result.tasks.forEach((t)) param
+*     tipi eklendi (OptimizeResultTask).
 =========================================================
 */
 
@@ -522,7 +530,7 @@ function OptimizeTask(): JSX.Element {
       // taskId -> kisit haritasi (onayli plan veri yapisi). Tek-task => 1:1.
       if (submittedConstraints) {
         const cmap = new Map<string, StrictTaskConstraints>();
-        result.tasks.forEach((t) => cmap.set(t.id, submittedConstraints));
+        result.tasks.forEach((t: OptimizeResultTask) => cmap.set(t.id, submittedConstraints));
         setTaskConstraintsMap(cmap);
       }
       rebuildBoard(rankingMode, initialAssignments);

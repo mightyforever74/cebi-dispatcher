@@ -26,9 +26,14 @@
 * FIX (2026-07-18, 2. tur) - Kolon basliklari GORUNMUYORDU: renderColumnHeader
 * prop'u hic verilmemisti, kutuphane kendi cIplak/stilsiz varsayilan basligini
 * render ediyordu (koyu temada okunmuyordu). Simdi MDTypography ile acikca
-* render ediliyor + kolon arka plani daha kontrastli sabit bir renge (grey-900/
-* grey-100) cekildi - theme'in "background.card"i bu ekranda yeterince
-* kontrast olusturmuyordu (ekran goruntusunde kanitlandi).
+* render ediliyor + kolon arka plani daha kontrastli sabit bir renge cekildi.
+*
+* FIX (2026-07-18, 3. tur) - HERE Discover ile canli konum arama: manuel
+* Address/Latitude/Longitude 3-ayri-input yerine, tek bir LocationSearchInput
+* (routes/geocode.js proxy'sini kullanan) kullaniliyor. Kullanici adres yazip
+* HERE'in onerdigi bir sonuca tiklayinca, gercek koordinatlar (latitude/
+* longitude) otomatik state'e yaziliyor - manuel koordinat girisi/tahmini
+* bitiyor, backend'e her zaman HERE'den gelen temiz koordinat gonderiliyor.
 =========================================================
 */
 
@@ -46,13 +51,14 @@ import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
-import { Theme } from "@mui/material/styles";
 
 // Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
-import MDInput from "components/MDInput";
+
+// Konum arama (HERE Discover proxy)
+import LocationSearchInput, { LocationValue } from "components/LocationSearchInput";
 
 // Material Dashboard 2 PRO React context (dark mode - Kanban kolon rengi icin)
 import { useMaterialUIController } from "context";
@@ -71,13 +77,7 @@ import {
   VehicleAssignment,
 } from "hooks/useTaskOptimization";
 
-interface PointInput {
-  address: string;
-  lat: string;
-  lng: string;
-}
-
-const emptyPoint: PointInput = { address: "", lat: "", lng: "" };
+const emptyLocation: LocationValue = { address: "", latitude: null, longitude: null };
 
 // Kanban kart/kolon tipleri (@asseinfo/react-kanban kendi TS tipi vermiyor,
 // sablonun kendi ornek kodu da "any" kullaniyor - ayni desen izleniyor).
@@ -132,8 +132,8 @@ function OptimizeTask(): JSX.Element {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
 
-  const [pickup, setPickup] = useState<PointInput>(emptyPoint);
-  const [dropoff, setDropoff] = useState<PointInput>(emptyPoint);
+  const [pickup, setPickup] = useState<LocationValue>(emptyLocation);
+  const [dropoff, setDropoff] = useState<LocationValue>(emptyLocation);
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
   const [jobId, setJobId] = useState<string | null>(null);
@@ -154,15 +154,18 @@ function OptimizeTask(): JSX.Element {
     );
   };
 
-  const validPoint = (p: PointInput) =>
-    p.address.trim() !== "" && p.lat.trim() !== "" && p.lng.trim() !== "" && !isNaN(Number(p.lat)) && !isNaN(Number(p.lng));
+  // FIX (2026-07-18, 3. tur): koordinatlar artik HERE'den (LocationSearchInput
+  // secimi sonrasi) geliyor - manuel string->number donusumu/tahmini yok.
+  // Gecerli sayilmasi icin latitude/longitude'un dolu (secilmis) olmasi sart.
+  const validLocation = (p: LocationValue) =>
+    p.address.trim() !== "" && p.latitude !== null && p.longitude !== null;
 
   const handleSubmit = () => {
     setFormError("");
     setApproveSuccess(null);
 
-    if (!validPoint(pickup) || !validPoint(dropoff)) {
-      setFormError("Pickup and dropoff need an address, latitude and longitude.");
+    if (!validLocation(pickup) || !validLocation(dropoff)) {
+      setFormError("Pickup and dropoff must be selected from the search suggestions.");
       return;
     }
     if (selectedVehicleIds.length === 0) {
@@ -175,13 +178,13 @@ function OptimizeTask(): JSX.Element {
         tasks: [
           {
             pickup_location: {
-              lat: Number(pickup.lat),
-              lng: Number(pickup.lng),
+              lat: pickup.latitude as number,
+              lng: pickup.longitude as number,
               address: pickup.address,
             },
             dropoff_location: {
-              lat: Number(dropoff.lat),
-              lng: Number(dropoff.lng),
+              lat: dropoff.latitude as number,
+              lng: dropoff.longitude as number,
               address: dropoff.address,
             },
           },
@@ -254,8 +257,8 @@ function OptimizeTask(): JSX.Element {
   };
 
   const handleReset = () => {
-    setPickup(emptyPoint);
-    setDropoff(emptyPoint);
+    setPickup(emptyLocation);
+    setDropoff(emptyLocation);
     setSelectedVehicleIds([]);
     setJobId(null);
     setApproveSuccess(null);
@@ -288,35 +291,8 @@ function OptimizeTask(): JSX.Element {
               Pickup
             </MDTypography>
             <Grid container spacing={2} mb={3}>
-              <Grid item xs={12} sm={6}>
-                <MDInput
-                  fullWidth
-                  label="Address"
-                  value={pickup.address}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setPickup({ ...pickup, address: e.target.value })
-                  }
-                />
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <MDInput
-                  fullWidth
-                  label="Latitude"
-                  value={pickup.lat}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setPickup({ ...pickup, lat: e.target.value })
-                  }
-                />
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <MDInput
-                  fullWidth
-                  label="Longitude"
-                  value={pickup.lng}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setPickup({ ...pickup, lng: e.target.value })
-                  }
-                />
+              <Grid item xs={12}>
+                <LocationSearchInput label="Search pickup address" value={pickup} onValueChange={setPickup} />
               </Grid>
             </Grid>
 
@@ -324,35 +300,8 @@ function OptimizeTask(): JSX.Element {
               Dropoff
             </MDTypography>
             <Grid container spacing={2} mb={3}>
-              <Grid item xs={12} sm={6}>
-                <MDInput
-                  fullWidth
-                  label="Address"
-                  value={dropoff.address}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setDropoff({ ...dropoff, address: e.target.value })
-                  }
-                />
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <MDInput
-                  fullWidth
-                  label="Latitude"
-                  value={dropoff.lat}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setDropoff({ ...dropoff, lat: e.target.value })
-                  }
-                />
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <MDInput
-                  fullWidth
-                  label="Longitude"
-                  value={dropoff.lng}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setDropoff({ ...dropoff, lng: e.target.value })
-                  }
-                />
+              <Grid item xs={12}>
+                <LocationSearchInput label="Search dropoff address" value={dropoff} onValueChange={setDropoff} />
               </Grid>
             </Grid>
 

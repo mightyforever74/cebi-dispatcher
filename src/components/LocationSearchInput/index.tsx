@@ -11,6 +11,13 @@
  * dropdown'da en yakin 5 sonuc "baslik / tam adres" seklinde gorunur.
  * Bir sonuca tiklaninca input, temiz adresle dolar ve onValueChange ile
  * {address, latitude, longitude} disariya iletilir.
+ *
+ * FIX (2026-07-20): renderOption'da MDBox component="li" TypeScript hatasi
+ * verdi (TS2322) - MDBox'un generic "component" destegi tam polymorphic
+ * degil, MUI'nin verdigi LiHTMLAttributes props'uyla (onChange:
+ * FormEventHandler<HTMLLIElement>) uyusmuyordu (MDBox varsayilan olarak
+ * HTMLDivElement bekliyor). Duz native <li> kullanarak tip uyusmazligi
+ * tamamen ortadan kaldirildi - <li> zaten LiHTMLAttributes bekliyor.
  */
 import { useState } from "react";
 import Autocomplete from "@mui/material/Autocomplete";
@@ -66,7 +73,10 @@ function LocationSearchInput({ label, value, onValueChange }: LocationSearchInpu
         }
       }}
       renderOption={(props, option: GeocodeResult) => (
-        <MDBox component="li" {...props} key={`${option.latitude}-${option.longitude}`}>
+        // FIX (2026-07-20): duz native <li> - MDBox'un component="li" tip
+        // uyusmazligini onlemek icin. Icerik hala MDBox/MDTypography kullaniyor
+        // (bunlarin varsayilan div/span tipi sorunsuz calisiyor).
+        <li {...props} key={`${option.latitude}-${option.longitude}`}>
           <MDBox display="flex" flexDirection="column">
             <MDTypography variant="button" fontWeight="bold">
               {option.title}
@@ -75,7 +85,7 @@ function LocationSearchInput({ label, value, onValueChange }: LocationSearchInpu
               {option.addressLabel}
             </MDTypography>
           </MDBox>
-        </MDBox>
+        </li>
       )}
       renderInput={(params) => (
         <MDInput

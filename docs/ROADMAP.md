@@ -67,36 +67,68 @@ The dispatcher wishlist (`Ben_bir_advisor_um-1.docx`) catalogs **31 industry use
 
 **Legend:**
 Güncellenmiş Wishlist coverage table
+
 W#	Wishlist feature	Frequency	Cem note	FEAT ID	Phase	Status
+
 W1	AI-Powered Route Optimization	Very common	—	FEAT-001	1	✅ Spec v3 (FN-016 cross-spec sync hub) · [DSE-P1] Dispatcher Kanban Karar Destek UI shipped (optimize akışı üstüne)
+
 W2	Dynamic In-Day Re-routing	Common	—	FEAT-002	1	✅ Spec v1
+
 W3	Smart Auto-Dispatch	Common	—	FEAT-003	1	✅ Spec v1
+
 W4	Hybrid Fleet Assignment	Common	—	FEAT-004	1	✅ Spec v1 (3PL/gig out-of-scope per ADR-0011 §7 OUT-002)
+
 W5	Predictive ETA Estimation	Very common	—	FEAT-005	1	✅ Spec v2 (FEAT-006 cross-spec sync) · [DSE-P1] temporalScorer proto (ETA + VRPTW feasibility); gerçek sürüş süresi ADR-0014 ile
+
 W6	Automated Appointment Scheduling	Common	drive + dock + rest + buffer	FEAT-006	1	✅ Spec v1 (FEAT-006⊂FEAT-108 scope) · [DSE-P1] time_window (VRPTW) form capture
+
 W7	Driver Performance Coaching	Common	we do this via adxl345	FEAT-007	1	✅ Spec v3 (4 UNCERTAINTIES kapatıldı)
+
 W8	Automated Exception Handling	Common	—	FEAT-010	1.1	📋 Spec pending (atlanmış — sıra geldi) · [DSE-P1] temporal "KAÇIRIR" feasibility uyarısı proto-exception feed'i olabilir
+
 W9	Proof of Delivery (PoD) Capture	Very common	last priority	FEAT-011	1	📋 Spec pending
+
 W10	Multimodal Orchestration	Very common	—	—	—	🚫 OUT-001 (Phase 3 ADR pending)
+
 W11	Refrigerated Container Monitoring	Common	menu created, customer activates	FEAT-012	1 (skeleton) + 2 (activate)	📋 Spec pending (schema forward-compat, kod path kapalı)
+
 W12	Hazmat & Compliance Routing	Niche	expertise feature	FEAT-013	1.1	📋 Spec pending (ADR-0012 ile uyumlu) · [DSE-P1] hazmat_classes form capture + capacity_required jsonb persist; matching Phase 1.1 (araç ADR yeteneği gerekli)
+
 W13	Multi-carrier Tender Management	Common	—	FEAT-014	2	🔵 Customer-funded trigger
+
 W14	Automated Freight Audit and Payment	Very common	—	FEAT-015	2	🔵 Customer-funded trigger
+
 W15	Cost-to-Serve Modeling	Common	—	FEAT-016	1.1	📋 Spec pending
+
 W16	Electric Vehicle (EV) Range Planning	Common	—	FEAT-103	2	🔵 EV customer trigger (ADR-0011 §6) · [DSE-P1] scorer registry injection point hazır ("bataryası dolu olanı yukarı taşı" = yeni scorer)
+
 W17	Locker and PUDO Management	Common	we do with geofence	FEAT-017	1.1	📋 Spec pending (mevcut geofence üzerine) · [DSE-P1] location_type='locker' form capture
+
 W18	Reverse Logistics Handling	Common	—	FEAT-109	2	🔵 Retail customer trigger (ADR-0011 §6) · [DSE-P1] direction='inbound' (İade/Toplama) form capture
+
 W19	Multi-Day Long-Haul Planning	Niche	—	FEAT-019	2	✅ Spec v1 (Phase 2 customer-funded trigger)
+
 W20	Autonomous Vehicle Integration	Niche	future, must include	—	3	🚫 OUT-004 (Phase 3 ADR pending)
+
 W21	Carbon Footprint Tracking	Common	we have already done but must learn subtleties	FEAT-009	1.1	✅ Spec v1 (CSRD-aware, distinct from FEAT-106)
+
 W22	Driver Electronic Logging (ELD/IFTA)	Very common	decide whether increase db work	FEAT-018	1.1 or 2	📋 Karar bekliyor (NL geçerli mi? Tahograf var) · [DSE-P1] temporal scorer sürücü mola/süre verisine ihtiyaç duyuyor — ELD bağımlılığı ortaya çıktı
-W24	Capacity-Aware Delivery Promising	Common	base feature of cargo mgmt (kanban approach)	FEAT-020	1.1	📋 Spec pending [DSE-P1] Phase 1 skeleton shipped (Kanban capacity formu + StrictTaskConstraints kontratı + cargoScorer sözleşmesi); matching logic Phase 1.1 (spec bekliyor)
+
+W24	Capacity-Aware Delivery Promising	Common	base feature of cargo mgmt (kanban approach)	FEAT-020	1.1	📋 Spec pending [DSE-P1] Phase 1 skeleton shipped (Kanban capacity formu + StrictTaskConstraints kontratı + cargoScorer sözleşmesi); matching logic 
+Phase 1.1 (spec bekliyor)
+
 W25	Breadcrumbs Trail Analysis	Common	—	FEAT-021	1.1	📋 Spec pending (planned vs actual route)
+
 W26	Workload Balancing	Common	requires deep search	FEAT-022	1.1 or 2	📋 Karar bekliyor · [DSE-P1] Kanban çoklu-araç dağıtımı temel iskeleti mevcut
+
 W27	Cross-Docking Orchestration	Common	—	FEAT-023	2	🔵 Muhtemelen 3PL customer trigger
+
 W28	Predictive Failure Detection	Common	—	FEAT-024	2	🔵 Customer-funded (ML risk modeling, ADR-0010 §3.5 trigger)
+
 W29	Mobile Status Updates	Very common	tulipfleet	—	—	🌱 Already done in TulipFleet mobile app · [DSE-P1] approve→public.tasks zinciri Phase 4 push için bu altyapıya bağlanır
+
 W30	Freight Spend Benchmarking	Common	—	FEAT-025	2	🔵 Customer-funded (data aggregation feature)
+
 W31	AI Agent Task Automation	Niche	important	FEAT-105	2	🔵 Customer-funded LLM consumer (ADR-0010 §4)
 
 Legend: [DSE-P1] = Decision Support Engine Phase 1 (Kanban Karar Destek Asistanı), 2026-07-20. Detay: docs/SESSION_NOTES_decision-support-engine.md.

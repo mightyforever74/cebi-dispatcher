@@ -128,10 +128,82 @@ dürüst davranış, motor değil veri akışı meselesi).
    `public.locations`'ta güncel satırları olmalı (özellikle NL-92-VB). Motor tarafı sağlam;
    bu tamamen `fleet-sim` MQTT/location keepalive meselesi.
 
+---
+
+## MILESTONE 0 — "Launchable Basic" KAPANIŞI (2026-07-21)
+
+Stratejik pivot ("tam bitir öyle sun" → "TulipFleet app ile uyumlu basic task management sun,
+her hafta feature ekle") sonrası Milestone 0 tanımı: **görev oluştur → optimize → ata → onayla
+→ sürücünün telefonuna bildirim düşsün.** Bu oturumda zincirin TAMAMI kanıtlandı.
+
+### Phase 4 (Driver Push) — MEMORY DÜZELTMESİ ⚠️
+
+Önceki oturum notları/memory "Phase 4 AÇIK — `internalBridge.js` sadece DB INSERT yapıyor, push
+yok" diyordu. **Bu bilgi ESKİMİŞ.** Gerçek kod (koddan kanıtlandı, 2026-07-21 okuması):
+
+- `tulipfleet-enterprise-backend/routes/tasks.js` approve handler (FIX 2026-07-18): draft'ı
+  araca atar → **sürücüyü araçtan türetir** (`public.drivers.assigned_vehicle_id → user_id`) →
+  köprüye `user_id` dahil POST eder.
+- `tulipfleet-backend/routes/internalBridge.js` (FIX 2026-07-18): `sendPushNotification` —
+  COMMIT SONRASI, best-effort (no-throw), `users.expo_push_token` okur, Expo Push API'ye
+  ("Yeni Görev Atandı") gönderir. Transaction'a dahil değil; push başarısız olsa bile task
+  oluşturma geri alınmaz.
+- Deploy kanıtı: `grep -c sendPushNotification` = **3** hem `/opt/fleet/backend-staging` hem
+  `/opt/fleet/backend` (production Docker). Köprü kodu HER İKİ ortamda deploy'lu.
+- **Fiziksel kanıt:** sürücü telefonunda "Yeni Görev Atandı" push'u alındı (Cem fiziksel teyit).
+
+> DÜZELTME: Phase 4 açık DEĞİL. Staging düzleminde uçtan uca çalışıyor ve fiziksel teyit edildi.
+> Memory'de "Phase 4 open / internalBridge sadece DB INSERT" ifadesi geçersizdir.
+
+### Hangi DÜZLEMDE çalışıyor — kanıt (env, 2026-07-21)
+
+`fleet-enterprise-01` container `tulipfleet-enterprise-backend` env:
+- `DATABASE_URL=...@10.0.0.2:5433/fleet_tracking_staging` → dispatcher **staging DB'ye** yazıyor.
+- `INTERNAL_CORE_API_URL=http://10.0.0.2:3001/api/internal/bridge/tasks` → köprü **staging PM2**
+  (`:3001`, `/opt/fleet/backend-staging`) hedefliyor.
+
+Sonuç: Milestone 0 zinciri **STAGING düzleminde** uçtan uca çalışıyor. Köprü KODU production'a
+da deploy'lu ama enterprise dispatcher hâlâ staging'e bağlı → **production cutover BEKLİYOR**
+(bilinçli; INTEGRATION_BOUNDARIES §3.1: "enterprise production cutover ROADMAP'te ayrı karar").
+Not: ana fleet backend (mobil/admin/driver, `api.tulipfleet.com`, `fleet_tracking`) zaten
+haftalardır canlı — bu ayrı bir düzlem, dispatcher→köprü cutover'ıyla karıştırılmamalı.
+
+### Milestone 0 durum tablosu (kanıta dayalı)
+
+| Katman | Durum | Kanıt |
+|--------|-------|-------|
+| Mobil push mekanizması | ✅ Çalışıyor | Fiziksel cihaz teyidi |
+| Köprü kodu (internalBridge push + sürücü türetme) | ✅ Prod + staging deploy'lu | grep=3 |
+| Ana fleet backend | ✅ Production canlı | (haftalardır) |
+| Enterprise dispatcher → köprü zinciri | ⚠️ **Staging düzleminde** | env: staging DB + `:3001` |
+| Mock → HERE (gerçek VRP, ADR-0014) | ⏸️ Demo sonrası | code-freeze 28.06, 21+ commit backlog |
+
+**KAPANIŞ CÜMLESİ:** Milestone 0 (Launchable Basic) **staging düzleminde uçtan uca kanıtlandı;**
+production cutover ve mock→HERE geçişi demo sonrası planlı ("Sürekli Teslimat Döngüsü").
+
+### %100 launchable için kalan 2 somut engel
+
+1. **Mobil beta build (düşük risk):** TestFlight/Expo beta expired. `RD-NL-78` sürücüsünde
+   `has_token = f` (token yok). Yeni IPA/APK derle → sürücü login → `usePushNotifications`
+   token'ı `POST /api/push/register` ile kaydeder → `has_token = t`. Mobili değiştirmedik;
+   build-number bump + expiry yenileme. EAS: proje `ro3Bh1o33z`, bundle `com.tulipfleet.app`,
+   iOS Build 32 / Android vCode 28 baz.
+2. **Enterprise prod cutover (yüksek risk — tek satır DEĞİL):** `DATABASE_URL` staging→prod
+   TEK BAŞINA yetmez. Koordineli 5 madde: (a) `DATABASE_URL`→`fleet_tracking`; (b)
+   `INTERNAL_CORE_API_URL`→production Docker backend (staging `:3001` değil); (c)
+   `INTERNAL_BRIDGE_TOKEN` prod backend `.env`'iyle birebir eşleşmeli (fail-closed); (d) prod
+   `enterprise.dispatch_tasks`=0 satırdı, ilk gerçek approve prod'a yazacak — demo verisi
+   sızmamalı; (e) JWT_SECRET her iki ortamda aynı + container recreate (plain restart env
+   okumaz). code-freeze (28.06) + "prod container'a dokunma" ilkesiyle çakışır → mock→HERE
+   ile TEK production-launch penceresinde ele alınmalı.
+
 ## Sonraki hamle seçenekleri (karar bekliyor)
 
-- **A) Phase 4 — Driver Push & Mobile Sync:** approve → `public.tasks`'a düşen görevin sürücü
-  mobil uygulamasına (WebSocket/MQTT) anlık düşmesi + "Yeni Görev Atandı" bildirimi.
-- **B) Draft Retention Policy:** yukarıdaki backlog #1'in çözümü.
+- **A) Milestone 0'ı staging'de mühürle + Engel 1 (mobil beta):** demo-ready ol, prod cutover'ı
+  mock→HERE ile birlikte ayrı pencereye bırak. (Önerilen.)
+- **B) FEAT-010 — Automated Exception Handling:** haftalık trenin ilk vagonu; temporal "KAÇIRIR"
+  feasibility sinyali proto-exception feed'i.
 - **C) ADR-0014 — Gerçek HERE Routing:** mock solver'ı kapatıp HERE Tour Planning REST API'sini
   production key ile canlı matrise bağlamak (spatial/temporal scorer'lar haversine→gerçek sürüş).
+  Production cutover ile aynı pencerede.
+- **D) Draft Retention Policy:** yukarıdaki backlog #1'in çözümü.

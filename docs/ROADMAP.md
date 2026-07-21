@@ -70,7 +70,7 @@ Güncellenmiş Wishlist coverage table
 
 W#	Wishlist feature	Frequency	Cem note	FEAT ID	Phase	Status
 
-W1	AI-Powered Route Optimization	Very common	—	FEAT-001	1	✅ Spec v3 (FN-016 cross-spec sync hub) · [DSE-P1] Dispatcher Kanban Karar Destek UI shipped (optimize akışı üstüne)
+| **W1** | **AI-Powered Route Optimization** | Very common | — | FEAT-001 | 1 | ✅ Spec v3 (FN-016 cross-spec sync hub) · **[DSE-P1] Dispatcher Kanban Karar Destek UI shipped** (optimize akışı üstüne). *Not: Aşamalı Sevk Stratejisi (Option 2) uygulandı; Period 2 CO2-klasse 1 ve 5 tarifeleri (24 satır) veritabanına mühürlendi, CO2-klasse 2/3/4 ise INFRA-A paketine bağlandı.* |
 
 W2	Dynamic In-Day Re-routing	Common	—	FEAT-002	1	✅ Spec v1
 
@@ -92,7 +92,7 @@ W10	Multimodal Orchestration	Very common	—	—	—	🚫 OUT-001 (Phase 3 ADR p
 
 W11	Refrigerated Container Monitoring	Common	menu created, customer activates	FEAT-012	1 (skeleton) + 2 (activate)	📋 Spec pending (schema forward-compat, kod path kapalı)
 
-W12	Hazmat & Compliance Routing	Niche	expertise feature	FEAT-013	1.1	📋 Spec pending (ADR-0012 ile uyumlu) · [DSE-P1] hazmat_classes form capture + capacity_required jsonb persist; matching Phase 1.1 (araç ADR yeteneği gerekli)
+| **W12** | **Hazmat & Compliance Routing** | Niche | expertise feature | FEAT-013 | 1.1 | 📋 **Phase 1.1 UI & Schema Persisted (Matching Engine Pending)** (ADR-0012 ile uyumlu) · **[DSE-P1]** `hazmat_classes` form capture + `capacity_required` jsonb persist (sıfır backend riskiyle mühürlendi); matching engine Phase 1.1'de araç ADR yeteneği eklendiğinde aktifleşecek. |
 
 W13	Multi-carrier Tender Management	Common	—	FEAT-014	2	🔵 Customer-funded trigger
 

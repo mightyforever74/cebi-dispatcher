@@ -294,7 +294,7 @@ Started as a HERE sandbox spike; expanded into locking the ZE-Zone routing model
 - **Engine bug caught + fixed:** `CURRENT_DATE` in grant/exemption lookups replaced with `now()::date` (identical in real PG; `CURRENT_DATE` carried a time component under pg-mem, breaking same-day grant matches).
 - Transition cutoffs read from `rules` JSONB (zone-parametric, not hardcoded). Test accounts via prod login (`admin@fleet.com`), company `00000000-0000-0000-0000-000000000001` (Demo Fleet).
 
-**FEAT-008 — Vrachtwagenheffing tariff seed + engine, Period 1 (complete 2026-06-03)**
+FEAT-008 — Vrachtwagenheffing tariff seed + engine, Period 1 + Period 2 (complete 2026-07-20)
 
 The API-independent half of FEAT-008: the static tariff table is now populated and a pure cost engine exists. The API/HERE-dependent consuming half stays deferred (see Phase 1.1 below).
 
@@ -303,9 +303,9 @@ The API-independent half of FEAT-008: the static tariff table is now populated a
 - ✅ **Data correctness:** `18_32t zero_emission = 0.0370` (a 0.038 draft was corrected against the official table). Verified in both DBs.
 - ✅ **`lib/calculateHeffing.js`** (commit `cabc90e`, enterprise repo) — pure fn `calculateHeffing(vehicle, tariffs, distanceInKm, onDate)`, filters `road_type='all_other'` + effective-date window (version handling), returns `{rate_per_km, total_charge, matched}`. 5/5 Jest.
 - ✅ **Deploy method noted:** this project applies migrations by direct `docker exec ... psql < file.sql` against `fleet_tracking` + `fleet_tracking_staging`, with the `pgmigrations` row inserted explicitly — `/opt/fleet/backend` git checkout is stale (`05aad6d`) and `npm run migrate` is not the live runner. Period-1 migration confirmed in both DBs' `pgmigrations`.
-- ⚠️ **OPEN WORK — Period 2 (2026-09-01 → 2026-12-31), −22.3% temporary discount** (Minister Karremans, 22 May 2026). Read the official rounded values from the vrachtwagenheffing.nl table "van 1 september 2026 tot 1 januari 2027" (or the RDW PDF) and insert rows with `effective_from='2026-09-01'`, `effective_to='2026-12-31'`. `onDate` version handling already supports it. 2027 inflation-adjusted rates publish Oct 2026. Also deferred: `euro_0..euro_4` + CO2-klasse 2-4 sub-tiers (currently `matched:false` for those).
-- ⚠️ **Repo placement to reconcile:** the Period-1 migration was committed to `tulipfleet-dispatcher` (`d6d6eb0`), but INTEGRATION_BOUNDARIES §3/§4.2 assigns `enterprise.*` migrations to `tulipfleet-enterprise-backend`. In practice all this session's `enterprise.*` migrations were authored elsewhere and applied by direct psql; the authoritative repo for `enterprise.*` migration files needs a one-time decision.
-
+* ✅ Period 2 seeded (migration `1782200000000`, prod + staging, 24 rows). Window `2026-09-01 → 2026-12-31`, −22.3% temporary discount (Minister Karremans, 22 May 2026). Official rounded values from vrachtwagenheffing.nl "van 1 september 2026 tot 1 januari 2027", browser-verified 2026-07-20. Covers `12_18t`/`18_32t`/`32_plus_t` × `euro_0..euro_6`/`zero_emission` (full Euro range, not just euro_5/6). Zero DDL — no touch to `uq_vrachtwagenheffing_lookup` index or `emission_class` CHECK (effective_from `2026-09-01` ≠ Period 1's `2026-07-01`, so the unique index is satisfied). Verified: both DBs count=24; `18_32t euro_6 = 0.1410` read correctly by `calculateHeffing.js` 4-column lookup. `pgmigrations` row inserted in both DBs.
+* ⚠️ DEFERRED → ships as ONE unit with INFRA-A (Yol B, two-axis): CO2-klasse 2/3/4 sub-tiers. Requires `co2_class SMALLINT` column + `uq_vrachtwagenheffing_lookup` drop/recreate + `calculateHeffing.js` refactor (co2_class axis) + `vehicles.co2_class` schema. Adding klasse 2/3/4 alone would break the unique index and make the engine read the wrong row; also dead code until vehicles carry `co2_class`. 2027 inflation-adjusted rates publish Oct 2026 → future Period 3. Fleet is 90%+ Euro 6 / zero-emission, so current 24 rows cover ~100% of active operations correctly.
+  
 **Sıra 4 — Dispatcher UI: Live Fleet Map (first real screen, FEAT-005)**
 
 Split into three atomic sub-phases. The dispatcher app is the `tulipfleet-dispatcher` repo (Material Dashboard 2 PRO React TS template, CRA, baseUrl `src`).

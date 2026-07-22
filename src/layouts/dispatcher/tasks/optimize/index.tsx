@@ -21,29 +21,23 @@
 * (useDispatchLocationSnapshot) vehicle_id ile BIREBIR eslesir.
 *
 * UPGRADE (2026-07-20, Strateji 3) - Logistics & Constraints + Frontend-State:
-* "+ Nieuwe Taak" formu, VRP/Karar Destek kisitlariyla genisletildi. Onayli
-* mimari hukum (sifir backend degisikligi):
-*   - GRUP A (bugun DB'ye muhurlenir): capacity_required jsonb'sine volume_m3
-*     + weight_kg + hazmat_classes paketlenip gonderilir; skill_required ham
-*     array olarak gonderilir. Backend routes/tasks.js bunlari GERCEK kolonlara
-*     yazar (kanitli).
-*   - GRUP B (kolon YOK - backend'e GONDERILMEZ): direction, location_type,
-*     time_window_start/end. Bunlar submit aninda submittedConstraints +
-*     taskConstraintsMap<taskId, StrictTaskConstraints> icinde FRONTEND-STATE
-*     olarak tutulur ve Scorer'a dogrudan beslenir.
-*   - Scorer, kisitlari POLL SONUCUNDAN DEGIL bu frontend-state'ten okur
-*     (mock zaten donmuyor). Zaman scorer'i time_window_end ile canli
-*     feasibility siralar. Sayfa yenilenene kadar karar destek tam kapasite.
-*   - Tum kisit verisi tek TypeScript kontratindan (types/metadata) akar -
-*     form yazar, scorer okur, typo derlemede yakalanir.
+* GRUP A (capacity_required jsonb + skill_required text[]) backend'in GERCEK
+* kolonlarina gider; GRUP B (direction/location_type/time_window) yalnizca
+* frontend-state (submittedConstraints + taskConstraintsMap) - scorer'a beslenir.
+* Tek kontrat: types/metadata.StrictTaskConstraints.
 *
-* FIX (2026-07-20, 2. tur) - TS2322 + TS7006:
-*   - TS2322 (capacity_required): kok neden hook'ta - OptimizeTaskInput
-*     capacity_required'i Record<string,unknown> idi, strict CapacityRequired
-*     atanamiyordu. Hook tipi CapacityRequired/SkillRequired'a sikilastirildi
-*     (useTaskOptimization.ts); bu satir artik degismeden gecer.
-*   - TS7006: taskConstraintsMap doldururken result.tasks.forEach((t)) param
-*     tipi eklendi (OptimizeResultTask).
+* UPGRADE (2026-07-22) - Form UX v2 Paket 1 (SIFIR yeni bagimlilik):
+*   1. Zaman: datetime-local TextField -> MDDatePicker (sablonun kendi flatpickr
+*      sarmalayicisi, package.json'da ZATEN var - kanitli) + hizli preset
+*      chip'leri (Simdi / +1 saat / Bugun 17:00 / +2 saat / Yarin 09:00 / Temizle).
+*      State string -> Date|null; ISO donusumu submit aninda (dateToIso).
+*   2. Yon + Konum Tipi: Select -> ikonlu segmented ToggleButtonGroup
+*      (2-3 secenekli alanlarda dropdown fazla tik; tek bakis + tek tik).
+*   3. Hazmat + Yetkinlik: checkbox+Autocomplete -> dogrudan tiklanabilir
+*      chip-grid (secili = filled). Hicbiri secili degil = "yok" - ayri
+*      checkbox'a gerek kalmadi. Yetkinlikte serbest ekleme: kucuk input + add.
+*   Flat B2B disiplini korundu (golge yok, bilgi-yogun). Secenek etiketleri
+*   types/metadata sabitlerinden akar (tek kaynak, drift yok).
 =========================================================
 */
 
@@ -59,11 +53,6 @@ import Grid from "@mui/material/Grid";
 import Alert from "@mui/material/Alert";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
@@ -78,6 +67,7 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
+import MDDatePicker from "components/MDDatePicker";
 
 // Konum arama (HERE Discover proxy)
 import LocationSearchInput, { LocationValue } from "components/LocationSearchInput";
@@ -143,12 +133,37 @@ interface KanbanBoardData {
   columns: KanbanColumn[];
 }
 
-// datetime-local input degeri ("2026-07-20T14:30") -> ISO 8601 (UTC), bos ise null.
-function localToIso(local: string): string | null {
-  if (!local) return null;
-  const d = new Date(local);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+// Date|null -> ISO 8601 (UTC), bos ise null. (Form UX v2: state artik Date tutuyor.)
+function dateToIso(d: Date | null): string | null {
+  return d && !Number.isNaN(d.getTime()) ? d.toISOString() : null;
 }
+
+// --- Zaman preset yardimcilari (Form UX v2) ---
+function todayAt(hour: number): Date {
+  const d = new Date();
+  d.setHours(hour, 0, 0, 0);
+  return d;
+}
+function hoursFromNow(h: number): Date {
+  return new Date(Date.now() + h * 3600 * 1000);
+}
+function tomorrowAt(hour: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(hour, 0, 0, 0);
+  return d;
+}
+
+// Segmented toggle ikonlari (Material Icons; etiketler types/metadata'dan gelir)
+const DIRECTION_ICONS: Record<TaskDirection, string> = {
+  outbound: "local_shipping",
+  inbound: "assignment_return",
+};
+const LOCTYPE_ICONS: Record<TaskLocationType, string> = {
+  customer: "storefront",
+  depot: "warehouse",
+  locker: "inventory_2",
+};
 
 // Backend round-robin paritesi. Her zaman ORIJINAL available_vehicles
 // sirasiyla cagrilir - skor siralamasi atamayi DEGISTIRMEZ.
@@ -335,17 +350,18 @@ function OptimizeTask(): JSX.Element {
   const [jobId, setJobId] = useState<string | null>(null);
   const [approveSuccess, setApproveSuccess] = useState<{ pushed: number } | null>(null);
 
-  // --- Logistics & Constraints form state (Strateji 3) ---
+  // --- Logistics & Constraints form state (Strateji 3 + Form UX v2) ---
   const [direction, setDirection] = useState<TaskDirection>("outbound");
   const [locationType, setLocationType] = useState<TaskLocationType>("customer");
   const [volumeM3, setVolumeM3] = useState<string>(""); // input string; submit'te Number/null
   const [weightKg, setWeightKg] = useState<string>("");
-  const [hazmatNone, setHazmatNone] = useState<boolean>(true);
+  // Form UX v2: chip-grid - bos array = "yok" (ayri checkbox kalkti)
   const [hazmatClasses, setHazmatClasses] = useState<string[]>([]);
-  const [noSkill, setNoSkill] = useState<boolean>(true);
   const [skills, setSkills] = useState<string[]>([]);
-  const [timeWindowStart, setTimeWindowStart] = useState<string>(""); // datetime-local
-  const [timeWindowEnd, setTimeWindowEnd] = useState<string>("");
+  const [customSkill, setCustomSkill] = useState<string>("");
+  // Form UX v2: flatpickr Date state (datetime-local string yerine)
+  const [timeWindowStart, setTimeWindowStart] = useState<Date | null>(null);
+  const [timeWindowEnd, setTimeWindowEnd] = useState<Date | null>(null);
 
   // Submit edilen kisitlar (Grup A + Grup B). Scorer bunu poll sonucu yerine
   // buradan okur (mock kisit donmuyor). Grup B yalnizca burada yasar.
@@ -373,6 +389,23 @@ function OptimizeTask(): JSX.Element {
     );
   };
 
+  const toggleHazmat = (cls: string) => {
+    setHazmatClasses((prev) =>
+      prev.includes(cls) ? prev.filter((c) => c !== cls) : [...prev, cls]
+    );
+  };
+
+  const toggleSkill = (s: string) => {
+    setSkills((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  };
+
+  const addCustomSkill = () => {
+    const s = customSkill.trim();
+    if (!s) return;
+    if (!skills.includes(s)) setSkills((prev) => [...prev, s]);
+    setCustomSkill("");
+  };
+
   const validLocation = (p: LocationValue) =>
     p.address.trim() !== "" && p.latitude !== null && p.longitude !== null;
 
@@ -381,14 +414,14 @@ function OptimizeTask(): JSX.Element {
     capacity_required: {
       volume_m3: volumeM3.trim() === "" ? null : Number(volumeM3),
       weight_kg: weightKg.trim() === "" ? null : Number(weightKg),
-      hazmat_classes: hazmatNone ? [] : hazmatClasses,
+      hazmat_classes: hazmatClasses,
     },
-    skill_required: noSkill ? [] : skills,
+    skill_required: skills,
     extended: {
       direction,
       location_type: locationType,
-      time_window_start: localToIso(timeWindowStart),
-      time_window_end: localToIso(timeWindowEnd),
+      time_window_start: dateToIso(timeWindowStart),
+      time_window_end: dateToIso(timeWindowEnd),
     },
   });
 
@@ -584,17 +617,16 @@ function OptimizeTask(): JSX.Element {
     setInitialBoard(null);
     setAssignments(new Map());
     setRankingMode("spatial");
-    // Logistics & Constraints reset
+    // Logistics & Constraints reset (Form UX v2)
     setDirection(EMPTY_CONSTRAINTS.extended.direction);
     setLocationType(EMPTY_CONSTRAINTS.extended.location_type);
     setVolumeM3("");
     setWeightKg("");
-    setHazmatNone(true);
     setHazmatClasses([]);
-    setNoSkill(true);
     setSkills([]);
-    setTimeWindowStart("");
-    setTimeWindowEnd("");
+    setCustomSkill("");
+    setTimeWindowStart(null);
+    setTimeWindowEnd(null);
     setSubmittedConstraints(null);
     setTaskConstraintsMap(new Map());
   };
@@ -603,6 +635,19 @@ function OptimizeTask(): JSX.Element {
   const summaryConstraints =
     submittedConstraints ??
     (taskConstraintsMap.size > 0 ? Array.from(taskConstraintsMap.values())[0] : null);
+
+  // flatpickr ortak ayarlar (24 saat, 5 dk adim)
+  const pickerOptions = {
+    enableTime: true,
+    time_24hr: true,
+    dateFormat: "Y-m-d H:i",
+    minuteIncrement: 5,
+  };
+
+  const fmtChip = (d: Date | null) =>
+    d
+      ? d.toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+      : null;
 
   return (
     <DashboardLayout>
@@ -663,7 +708,7 @@ function OptimizeTask(): JSX.Element {
 
             <Divider sx={{ my: 2 }} />
 
-            {/* ===== Logistics & Constraints (Strateji 3) ===== */}
+            {/* ===== Logistics & Constraints (Strateji 3 + Form UX v2) ===== */}
             <MDTypography variant="h6" mb={0.5}>
               Logistics &amp; Constraints
             </MDTypography>
@@ -674,42 +719,50 @@ function OptimizeTask(): JSX.Element {
             </MDTypography>
 
             <Grid container spacing={2} mb={1}>
-              <Grid item xs={12} sm={6} md={3}>
-                <FormControl fullWidth>
-                  <InputLabel id="direction-label">Yon</InputLabel>
-                  <Select
-                    labelId="direction-label"
-                    label="Yon"
-                    value={direction}
-                    onChange={(e) => setDirection(e.target.value as TaskDirection)}
-                    sx={{ minHeight: 44 }}
-                  >
-                    {DIRECTION_OPTIONS.map((o) => (
-                      <MenuItem key={o.value} value={o.value}>
-                        {o.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              {/* --- Yon: ikonlu segmented toggle (Form UX v2) --- */}
+              <Grid item xs={12} md={5}>
+                <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
+                  Yon
+                </MDTypography>
+                <ToggleButtonGroup
+                  value={direction}
+                  exclusive
+                  fullWidth
+                  size="small"
+                  onChange={(_e, v: TaskDirection | null) => v && setDirection(v)}
+                >
+                  {DIRECTION_OPTIONS.map((o) => (
+                    <ToggleButton key={o.value} value={o.value} sx={{ textTransform: "none" }}>
+                      <Icon sx={{ mr: 0.5 }} fontSize="small">
+                        {DIRECTION_ICONS[o.value]}
+                      </Icon>
+                      {o.label}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
-                <FormControl fullWidth>
-                  <InputLabel id="loctype-label">Konum Tipi</InputLabel>
-                  <Select
-                    labelId="loctype-label"
-                    label="Konum Tipi"
-                    value={locationType}
-                    onChange={(e) => setLocationType(e.target.value as TaskLocationType)}
-                    sx={{ minHeight: 44 }}
-                  >
-                    {LOCATION_TYPE_OPTIONS.map((o) => (
-                      <MenuItem key={o.value} value={o.value}>
-                        {o.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              {/* --- Konum Tipi: ikonlu segmented toggle (Form UX v2) --- */}
+              <Grid item xs={12} md={7}>
+                <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
+                  Konum Tipi
+                </MDTypography>
+                <ToggleButtonGroup
+                  value={locationType}
+                  exclusive
+                  fullWidth
+                  size="small"
+                  onChange={(_e, v: TaskLocationType | null) => v && setLocationType(v)}
+                >
+                  {LOCATION_TYPE_OPTIONS.map((o) => (
+                    <ToggleButton key={o.value} value={o.value} sx={{ textTransform: "none" }}>
+                      <Icon sx={{ mr: 0.5 }} fontSize="small">
+                        {LOCTYPE_ICONS[o.value]}
+                      </Icon>
+                      {o.label}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
               </Grid>
 
               <Grid item xs={12} sm={6} md={3}>
@@ -734,77 +787,122 @@ function OptimizeTask(): JSX.Element {
                 />
               </Grid>
 
+              {/* --- Hazmat: tiklanabilir chip-grid (Form UX v2). Hicbiri secili = yok --- */}
               <Grid item xs={12} md={6}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={hazmatNone}
-                      onChange={(e) => {
-                        setHazmatNone(e.target.checked);
-                        if (e.target.checked) setHazmatClasses([]);
-                      }}
-                    />
-                  }
-                  label="Tehlikeli madde yok"
-                />
-                <Autocomplete
-                  multiple
-                  options={HAZMAT_CLASS_OPTIONS}
-                  value={hazmatClasses}
-                  onChange={(_e, v) => setHazmatClasses(v as string[])}
-                  disabled={hazmatNone}
-                  renderInput={(params) => (
-                    <TextField {...params} label="Hazmat siniflari (ADR)" placeholder="Sinif sec" />
-                  )}
-                />
+                <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
+                  Hazmat siniflari (ADR) — secili yoksa tehlikeli madde yok
+                </MDTypography>
+                <MDBox display="flex" flexWrap="wrap" gap={0.75}>
+                  {HAZMAT_CLASS_OPTIONS.map((cls) => {
+                    const selected = hazmatClasses.includes(cls);
+                    return (
+                      <Chip
+                        key={cls}
+                        label={cls}
+                        size="small"
+                        clickable
+                        color={selected ? "warning" : "default"}
+                        variant={selected ? "filled" : "outlined"}
+                        onClick={() => toggleHazmat(cls)}
+                      />
+                    );
+                  })}
+                </MDBox>
               </Grid>
 
-              <Grid item xs={12} md={6}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={noSkill}
-                      onChange={(e) => {
-                        setNoSkill(e.target.checked);
-                        if (e.target.checked) setSkills([]);
-                      }}
+              {/* --- Yetkinlik: chip-grid + serbest ekleme (Form UX v2) --- */}
+              <Grid item xs={12}>
+                <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
+                  Surucu yetkinlikleri — secili yoksa yetkinlik aranmiyor
+                </MDTypography>
+                <MDBox display="flex" flexWrap="wrap" gap={0.75} alignItems="center">
+                  {SKILL_OPTIONS.map((s) => {
+                    const selected = skills.includes(s);
+                    return (
+                      <Chip
+                        key={s}
+                        label={s}
+                        size="small"
+                        clickable
+                        color={selected ? "info" : "default"}
+                        variant={selected ? "filled" : "outlined"}
+                        onClick={() => toggleSkill(s)}
+                      />
+                    );
+                  })}
+                  {/* Ozel (listede olmayan) yetkinlikler - silinebilir */}
+                  {skills
+                    .filter((s) => !SKILL_OPTIONS.includes(s))
+                    .map((s) => (
+                      <Chip
+                        key={s}
+                        label={s}
+                        size="small"
+                        color="info"
+                        onDelete={() => toggleSkill(s)}
+                      />
+                    ))}
+                  <TextField
+                    size="small"
+                    placeholder="Ozel yetkinlik ekle"
+                    value={customSkill}
+                    onChange={(e) => setCustomSkill(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addCustomSkill();
+                      }
+                    }}
+                    sx={{ width: 190 }}
+                  />
+                  <IconButton size="small" onClick={addCustomSkill} aria-label="yetkinlik ekle">
+                    <Icon fontSize="small">add_circle_outline</Icon>
+                  </IconButton>
+                </MDBox>
+              </Grid>
+
+              {/* --- VRPTW zaman penceresi: MDDatePicker + preset chip'ler (Form UX v2) --- */}
+              <Grid item xs={12} sm={6}>
+                <MDDatePicker
+                  value={timeWindowStart ?? ""}
+                  onChange={(dates: Date[]) => setTimeWindowStart(dates[0] ?? null)}
+                  options={pickerOptions}
+                  input={{ label: "Teslim penceresi baslangic (VRPTW)", fullWidth: true }}
+                />
+                <MDBox display="flex" flexWrap="wrap" gap={0.5} mt={0.75}>
+                  <Chip label="Simdi" size="small" clickable variant="outlined" onClick={() => setTimeWindowStart(new Date())} />
+                  <Chip label="+1 saat" size="small" clickable variant="outlined" onClick={() => setTimeWindowStart(hoursFromNow(1))} />
+                  {timeWindowStart && (
+                    <Chip
+                      label={`Secili: ${fmtChip(timeWindowStart)}`}
+                      size="small"
+                      color="info"
+                      onDelete={() => setTimeWindowStart(null)}
                     />
-                  }
-                  label="Yetkinlik aranmiyor"
-                />
-                <Autocomplete
-                  multiple
-                  freeSolo
-                  options={SKILL_OPTIONS}
-                  value={skills}
-                  onChange={(_e, v) => setSkills(v as string[])}
-                  disabled={noSkill}
-                  renderInput={(params) => (
-                    <TextField {...params} label="Surucu yetkinlikleri" placeholder="Yetkinlik ekle" />
                   )}
-                />
+                </MDBox>
               </Grid>
 
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  label="Teslim penceresi baslangic (VRPTW)"
-                  value={timeWindowStart}
-                  onChange={(e) => setTimeWindowStart(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
+                <MDDatePicker
+                  value={timeWindowEnd ?? ""}
+                  onChange={(dates: Date[]) => setTimeWindowEnd(dates[0] ?? null)}
+                  options={{ ...pickerOptions, minDate: timeWindowStart ?? undefined }}
+                  input={{ label: "Teslim penceresi bitis (VRPTW)", fullWidth: true }}
                 />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  label="Teslim penceresi bitis (VRPTW)"
-                  value={timeWindowEnd}
-                  onChange={(e) => setTimeWindowEnd(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
+                <MDBox display="flex" flexWrap="wrap" gap={0.5} mt={0.75}>
+                  <Chip label="Bugun 17:00" size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(todayAt(17))} />
+                  <Chip label="+2 saat" size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(hoursFromNow(2))} />
+                  <Chip label="Yarin 09:00" size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(tomorrowAt(9))} />
+                  {timeWindowEnd && (
+                    <Chip
+                      label={`Secili: ${fmtChip(timeWindowEnd)}`}
+                      size="small"
+                      color="info"
+                      onDelete={() => setTimeWindowEnd(null)}
+                    />
+                  )}
+                </MDBox>
               </Grid>
             </Grid>
 

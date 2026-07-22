@@ -197,10 +197,78 @@ production cutover ve mock→HERE geçişi demo sonrası planlı ("Sürekli Tesl
    okumaz). code-freeze (28.06) + "prod container'a dokunma" ilkesiyle çakışır → mock→HERE
    ile TEK production-launch penceresinde ele alınmalı.
 
+---
+
+## STAGING DEMO ALTYAPISI (2026-07-21) — mobil build + veri düzeltmeleri
+
+Milestone 0'ı staging'de fiziksel demo etmek için yapılan zincir (BUILD.md §17 ile senkron):
+
+- **config.js hardcoded prod URL kaldırıldı:** `src/constants/config.js` `getApiUrl()` artık
+  `process.env.EXPO_PUBLIC_API_URL` okuyor (öneksiz `API_URL` bundle'a hiç gömülmüyordu — ölü
+  kod, silindi). `eas.json` üç profile de `EXPO_PUBLIC_API_URL` eklendi (staging→staging-api,
+  preview/production→api). Commit `97b6a05` (tulipfleet repo).
+- **EAS env mapping:** `staging` build profiline `"environment": "preview"` — custom `staging`
+  environment plan-kısıtlı (GraphQL hatası). Env'ler preview'dan (Maps key/plist/MQTT), API_URL
+  staging profilinden. `build:inspect` ile kanıtlandı.
+- **nginx zaten doğru:** `staging-api.tulipfleet.com` → `127.0.0.1:3001` (staging backend). İlk
+  "sistem borcu" şüphesi asılsız çıktı; sapma yoktu.
+- **fleet-sim:** `pm2 fleet-sim` stopped'tı, restart edildi → 4 aracı 30sn'de besliyor. AMA
+  sadece BX-TR-42 taze; 34XYZ456 konumsuz, AH-05-KL/RD-NL-78 bayat (06-23). fleet-sim hedef araç
+  listesi ile demo filosu örtüşmüyor → ayrı temizlik kalemi.
+- **Demo sürücüsü (staging DB, kanıtlı):** `pieter@tulipfleet.com` / `Demo123` (bcrypt hash
+  backend'in kendi bcryptjs'iyle üretildi), araç BX-TR-42, token var, konum taze. `test@tulipfleet.com`
+  staging'de YOK (memory yanlıştı). Login handler temiz: `password_hash` + `bcrypt.compare`, ek
+  koşul yok.
+- **Build:** `staging` profili, iOS `661f2e34` + Android `49fd5e76`, buildNumber autoIncrement.
+
+---
+
+## KÖPRÜ ZENGİNLEŞTİRME BULGULARI (2026-07-21) — mobil vs dispatcher task asimetrisi
+
+Mobil admin task ekranları (`CreateTaskScreen.js`, `AdminTasks.js`) + köprü (`internalBridge.js`)
+koddan okundu. Mobil ile dispatcher AYNI `public.tasks`'a FARKLI zenginlikte yazıyor.
+
+**Kanıtlanan `internalBridge.js` payload (köprünün ALDIĞI alanlar):**
+`enterprise_dispatch_task_id, company_id, user_id, vehicle_id, title, description,
+start_location_str, end_location_str, priority`. INSERT ettiği kolonlar: `task_no, driver_id,
+vehicle_id, title, description, start_location, end_location, priority, status='assigned',
+company_id, enterprise_dispatch_task_id, distance_source='manual'`.
+
+**Mobil `CreateTaskScreen` payload:** `title (zorunlu), description, priority, driver_id,
+vehicle_id, start_location/end_location (düz metin), scheduled_start/scheduled_end (ISO),
+waypoints[]`. Kapasite/skill/hazmat YOK.
+
+### Backlog kalemi 1 — Köprü title üretimi (KOLAY, veri köprüde HAZIR)
+
+`AdminTasks.js:212` → `task.title || task.task_no || "-"`. Dispatcher görevlerinde `title` boş
+geldiği için sürücü/admin listesinde `TLP-26-000XX` kodu görünüyor (okunabilir başlık değil).
+Köprü `start_location_str`/`end_location_str`'i ZATEN alıyor (push body'sinde kullanıyor:
+`${task_no}: ${start} → ${end}`). Tek satır: INSERT'te `title` boşsa
+`title = \`${start_location_str} → ${end_location_str}\``. Sıfır yeni veri akışı; köprüde 1 satır.
+
+### Backlog kalemi 2 — scheduled_start/end eşlemesi (ZOR: veri 3 katmanda EKSİK)
+
+"15 dk cila" DEĞİL. `time_window_start/end` verisi köprüye HİÇ ULAŞMIYOR:
+- Grup B (time_window) `enterprise.dispatch_tasks`'a bile yazılmıyor (Strateji 3, frontend-state).
+- Dispatcher approve → köprü çağrısı `time_window` GÖNDERMİYOR (köprü payload'ında yok — kanıtlı).
+- Köprü INSERT'i `scheduled_start`/`scheduled_end` kolonlarını HİÇ kullanmıyor.
+Düzeltme = 3 katman: (a) dispatcher approve time_window'u köprüye göndersin; (b) köprü payload'ına
++ `scheduled_start/end`; (c) INSERT'e + kolon. 3 dosya, 2 repo. Ön koşul: `public.tasks`'ta
+`scheduled_start/end` kolonlarının varlığı canlı `\d tasks` ile doğrulanmalı (mobil gönderiyor ama
+köprü kullanmıyor — kolon var mı kanıtlanmadı).
+
+### Backlog kalemi 3 — INFRA-B: iki kanalın ortak task kontratı
+
+Mobil admin görevleri VRP kısıtlarından (hazmat/m³/kg/skill) YOKSUN doğuyor; dispatcher topluyor.
+FEAT-020 spec'i yazılırken `StrictTaskConstraints` (src/types/metadata.ts) iki kanal için ortak
+kanonik standart yapılmalı — mimari bütünlük. INFRA-B'nin somut gerekçesi.
+
 ## Sonraki hamle seçenekleri (karar bekliyor)
 
 - **A) Milestone 0'ı staging'de mühürle + Engel 1 (mobil beta):** demo-ready ol, prod cutover'ı
   mock→HERE ile birlikte ayrı pencereye bırak. (Önerilen.)
+- **A2) Köprü cilası (demo sonrası, ~15 dk kısmı):** Backlog #1 (title üretimi) — düşük risk,
+  veri hazır, sürücü deneyimini hemen iyileştirir. Backlog #2 (scheduled) ayrı, daha büyük.
 - **B) FEAT-010 — Automated Exception Handling:** haftalık trenin ilk vagonu; temporal "KAÇIRIR"
   feasibility sinyali proto-exception feed'i.
 - **C) ADR-0014 — Gerçek HERE Routing:** mock solver'ı kapatıp HERE Tour Planning REST API'sini

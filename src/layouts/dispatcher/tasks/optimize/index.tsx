@@ -38,6 +38,9 @@
 *      checkbox'a gerek kalmadi. Yetkinlikte serbest ekleme: kucuk input + add.
 *   Flat B2B disiplini korundu (golge yok, bilgi-yogun). Secenek etiketleri
 *   types/metadata sabitlerinden akar (tek kaynak, drift yok).
+*   FIX (2026-07-22): flatpickr degeri DOM ref'iyle yazdigi icin MUI label
+*   shrink olmuyordu (label ile deger UST USTE biniyordu - ekran goruntusu
+*   kanitli). Cozum: input'a InputLabelProps { shrink: true }.
 =========================================================
 */
 
@@ -867,7 +870,11 @@ function OptimizeTask(): JSX.Element {
                   value={timeWindowStart ?? ""}
                   onChange={(dates: Date[]) => setTimeWindowStart(dates[0] ?? null)}
                   options={pickerOptions}
-                  input={{ label: "Teslim penceresi baslangic (VRPTW)", fullWidth: true }}
+                  input={{
+                    label: "Teslim penceresi baslangic (VRPTW)",
+                    fullWidth: true,
+                    InputLabelProps: { shrink: true },
+                  }}
                 />
                 <MDBox display="flex" flexWrap="wrap" gap={0.5} mt={0.75}>
                   <Chip label="Simdi" size="small" clickable variant="outlined" onClick={() => setTimeWindowStart(new Date())} />
@@ -888,7 +895,11 @@ function OptimizeTask(): JSX.Element {
                   value={timeWindowEnd ?? ""}
                   onChange={(dates: Date[]) => setTimeWindowEnd(dates[0] ?? null)}
                   options={{ ...pickerOptions, minDate: timeWindowStart ?? undefined }}
-                  input={{ label: "Teslim penceresi bitis (VRPTW)", fullWidth: true }}
+                  input={{
+                    label: "Teslim penceresi bitis (VRPTW)",
+                    fullWidth: true,
+                    InputLabelProps: { shrink: true },
+                  }}
                 />
                 <MDBox display="flex" flexWrap="wrap" gap={0.5} mt={0.75}>
                   <Chip label="Bugun 17:00" size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(todayAt(17))} />

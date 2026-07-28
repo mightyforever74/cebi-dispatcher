@@ -7,7 +7,7 @@
 | **Frequency rating** | Common |
 | **Cem note** | — (wishlist'te ek not yok) |
 | **Tulipfleet Phase** | Phase 1 (rule-based detection + Mode 1 Advisory notification) + Phase 2 (FEAT-101 Mode 2 Exception-based auto-action) |
-| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-30); **v1.3'te Cem'in mühendislik incelemesiyle 3 fonksiyon eklendi/genişletildi**; **v1.4'te "sıfır iş gücü" UI davranışları netleştirildi**; **v1.5'te yanlış-pozitif önleme (debounce + GPS tamponu) eklendi (2026-07-18)** |
+| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-30); **v1.3'te Cem'in mühendislik incelemesiyle 3 fonksiyon eklendi/genişletildi**; **v1.4'te "sıfır iş gücü" UI davranışları netleştirildi**; **v1.5'te yanlış-pozitif önleme (debounce + GPS tamponu) eklendi (2026-07-18)**; **v1.6'da UNCERTAINTIES #16-18 kapatıldı + iki yeni girdi eklendi: temporal "KAÇIRIR" planlama-anı köprüsü (§1.6) ve tek-aktif-görev 409 hata sözleşmesi (§3.6) (2026-07-28)** |
 | **Pilot note** | Onuncu pilot. Tek iterasyonda **9/10** skor. **§number fabrikasyon = 0** ✅ (F9'daki §188 hatası tekrarlanmadı). Yeni paradigma: **"orkestratör feature"** — 4-5 FEAT'in detection'ını consume edip action'ına route ediyor. |
 
 ---
@@ -92,6 +92,7 @@ Wishlist "AI agents" diyor — bu **TulipFleet için yanıltıcı okuma.** ADR-0
 - **Phase 1 (v1.4 EKLENDİ): Her iki alt-senaryo için "sıfır iş gücü" dispatcher aksiyonu** — `driver_offline` için tek-tık push/arama, `driver_location_mismatch` için mevcut Live Fleet Map'e otomatik odaklanma
 - **Phase 1 (v1.5 EKLENDİ): Yanlış-pozitif önleme** — MQTT disconnect debounce'u (kısa şebeke kesintilerini filtreler) + GPS jitter tamponu (konum ölçüm sapmasını filtreler)
 - **Phase 1 (v1.3 EKLENDİ): Dock çakışması için otomatik bildirim şablonu hazırlama** (gönderim değil, dispatcher onayına sunma)
+- **Phase 1 (v1.6 EKLENDİ): Sürücü-taraflı hata sözleşmesi — tek-aktif-görev 409'u** (bkz. §3.6; 500 yerine anlaşılır 409 Conflict)
 - Phase 2: Policy-based auto-action (Mode 2 Exception)
 - Phase 2: Grace period revert window
 - Audit trail (resolved_at, resolved_by, resolution_type, comment)
@@ -105,14 +106,15 @@ Wishlist "AI agents" diyor — bu **TulipFleet için yanıltıcı okuma.** ADR-0
 - **Email/SMS otomatik GÖNDERİMİ** — Phase 2+ (mevcut backend pattern yok, UNCERTAINTIES #6). **v1.3 netleştirmesi:** Şablon **hazırlama** ve dispatcher panelinde **gösterme** Phase 1'de var (FN-17) — dispatcher'ın "onayla ve gönder" dediği an gerçekleşecek otomatik gönderim altyapısı (SendGrid/Mailgun entegrasyonu) hâlâ Phase 2'de.
 - **Hava durumu tabanlı otomatik ETA ayarlaması (FEAT-005-EXT)** — ayrı spec yazılana kadar kapsam dışı. **v1.3 kısmi çözüm:** FN-16 ile sürücüye doğrudan sorularak bu boşluk Phase 1'de dolduruluyor.
 - **Otomatik telefon araması (gerçek bir çağrı başlatma)** — Phase 1'de sadece `tel:` link, otomatik/sunucu-taraflı çağrı sistemi (Twilio vb.) kapsam dışı (v1.4 EKLENDİ, bkz. §3.3.1).
-- **Adaptif/öğrenen debounce ve GPS tamponu** — v1.5'teki eşikler (öneri: 5 dk, 20m) **statik**, per-company config'ten değiştirilebilir ama sistem kendi kendine öğrenip ayarlamıyor (bu ML olurdu, ADR-0010 disiplinine aykırı). Sabit kurallar, gerekirse Cem manuel ayarlar.
+- **Adaptif/öğrenen debounce ve GPS tamponu** — v1.5'teki eşikler (5 dk, 20m — v1.6'da onaylandı) **statik**, per-company config'ten değiştirilebilir ama sistem kendi kendine öğrenip ayarlamıyor (bu ML olurdu, ADR-0010 disiplinine aykırı). Sabit kurallar, gerekirse Cem manuel ayarlar.
 
-### 1.6 Mimari netleştirme — planlama vs canlı izleme sorumluluk ayrımı (v1.3 EKLENDİ, 2026-07-18)
+### 1.6 Mimari netleştirme — planlama vs canlı izleme sorumluluk ayrımı (v1.3 EKLENDİ, v1.6'da genişletildi)
 
 Cem'in mühendislik incelemesi kritik bir mimari netleştirme sağladı: **FEAT-010'daki 5 monitörün ikisi (ETA, compliance) aslında iki farklı "an"da çalışan, farklı sorumlulukları olan mekanizmalardır — bunları karıştırmamak gerekir.**
 
 - **Compliance zone breach (FN-05):** Asıl önleme **planlama aşamasında** olur — `FEAT-001:FN-012 checkCompliance`, VRP rotası oluşturulurken muafiyeti olmayan araçlar için ZE-Zone'ları HERE'nin `avoid areas` listesine ekler, rota **zaten oradan geçmeyecek şekilde** çizilir. FEAT-010:FN-05, bunun üzerine binen bir **ek güvenlik katmanı** — sadece sürücü planlanan rotadan kendi kararıyla saparsa diye.
 - **ETA deviation (FN-01):** Asıl "önleme" burada mümkün değil (gecikme zaten oluşmuş) — bu yüzden FEAT-010'un görevi önlemek değil, **doğru bilgiyi doğru hızda toplamak.** v1.3, bunu iki dala ayırarak netleştiriyor: makine tespit edebildiğini (trafik) otomatik çözer, tespit edemediğini (arıza, hava) insana (sürücüye) sorar — bkz. §1.7.
+- **Temporal "KAÇIRIR" feasibility sinyali (v1.6 EKLENDİ):** Aynı ayrımın üçüncü örneği, **canlıya çıkmış bir proto-exception feed'i.** Karar Destek Motoru'nun `temporalScorer`'ı (dispatcher repo, DSE Phase 1, 2026-07-20 canlı), görev daha **atanmadan** — yani planlama anında — `time_window_end`'e yetişemeyecek araçları tespit edip skor cezası + "KAÇIRIR ~N dk" memo'su üretiyor. Bu, FN-01'in (canlı izleme, gecikme OLUŞTUKTAN sonra) **planlama-aşaması ikizidir**: aynı VRPTW feasibility matematiği, farklı "an". FEAT-010 Phase 1 implementasyonunda FN-01, temporalScorer'ın eşik/ETA mantığını yeniden icat etmek yerine onunla hizalanmalı (bugün haversine+60km/h varsayımı; ADR-0014 gerçek HERE ETA'sı geldiğinde İKİSİ BİRDEN aynı kaynağa geçer). Dispatcher'ın planlama anında görmezden geldiği bir "KAÇIRIR" uyarısı, görev atandıktan sonra FN-01'in ilk adayıdır — iki katman arasındaki bu süreklilik, exception'ın "sürpriz" değil "öngörülmüş risk" olarak ele alınmasını sağlar.
 
 ### 1.7 ETA gecikme sebebi ayrımı (v1.3 EKLENDİ, 2026-07-18)
 
@@ -139,7 +141,7 @@ HERE Routing API'ye sorulur: bu rotada trafik yoğunluğu var mı?
 
 | # | Function ID | Layer | Signature / Endpoint | Inputs | Outputs | Reads from | Writes to | External deps | ADR ref (alıntılı) | Phase | Shared with FEAT-001..9 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | FEAT-010-FN-01 | worker | `monitorEtaViolations` | taskId, threshold | Exception? | enterprise.dispatch_tasks | enterprise.exception_events | HERE Routing | ADR-0005 §5.2 — "Exception types: No match / Ambiguous match / Rule violation / High-impact event" (4 tip enum) | 1 | **FEAT-005:FN-04** calculateEtaDeviation |
+| 1 | FEAT-010-FN-01 | worker | `monitorEtaViolations` | taskId, threshold | Exception? | enterprise.dispatch_tasks | enterprise.exception_events | HERE Routing | ADR-0005 §5.2 — "Exception types: No match / Ambiguous match / Rule violation / High-impact event" (4 tip enum) | 1 | **FEAT-005:FN-04** calculateEtaDeviation; **v1.6: DSE temporalScorer (planlama-anı ikizi, §1.6)** |
 | 2 | FEAT-010-FN-02 | worker | `monitorTrafficImpacts` | routeId | Exception? | enterprise.routing_jobs | enterprise.exception_events | HERE Traffic | ADR-0011 §6 — FEAT-104 (Trafik-triggered re-routing) | 1 | **FEAT-002:FN-10** trafficTriggerDetector |
 | 3 | FEAT-010-FN-03 | worker | `monitorDriverPresence` (**v1.3'te iki alt-mantığa ayrıldı, v1.5'te debounce+GPS tamponu eklendi, bkz. §3.3**) | driverId, taskId | Exception? (`driver_offline` \| `driver_location_mismatch`) | public.locations, enterprise.dispatch_tasks, MQTT son telemetri zaman damgası, MQTT disconnect event | enterprise.exception_events | — | UNCERTAINTIES #1 (v1.3'te cevaplandı — bkz. §8) | 1 | — |
 | 4 | FEAT-010-FN-04 | worker | `monitorDockConflicts` | facilityId, window | Exception? | enterprise.dock_appointments | enterprise.exception_events | — | ADR-belirsiz (dock slip warning — UNCERTAINTIES #2) | 1 | **FEAT-006:FN-03** refreshTaskEtas |
@@ -154,10 +156,10 @@ HERE Routing API'ye sorulur: bu rotada trafik yoğunluğu var mı?
 | 13 | FEAT-010-FN-13 | frontend | `<ExceptionStatusPanel />` | filterStatus | UI Component | enterprise.exception_events | — | — | ADR-0001 §3.6 — React Table | 1 | — |
 | 14 | FEAT-010-FN-14 | frontend | `<ResolutionActionPanel />` (**v1.3+v1.4 genişletildi, bkz. §3.3.1**) | exceptionId, exceptionType | UI Component | enterprise.exception_events.detection_payload, public.drivers.phone (v1.4) | — | — | ADR-0001 §3.6 | 1 | **v1.4: mevcut Live Fleet Map `focusPlate` mekanizması** |
 | 15 | FEAT-010-FN-15 | worker | `executeAutoResolution` | exceptionId | Result | enterprise.exception_events | enterprise.dispatch_tasks, enterprise.exception_events (status=auto_handled) | HERE Tour Planning | ADR-0005 §5.3 | 2 | **FEAT-002:FN-02** POST /replan |
-| 16 | FEAT-010-FN-16 | backend + frontend (mobile) | `requestDelayReasonFromDriver` (**v1.3 EKLENDİ**) | taskId, driverId, delayMinutes | void (push gönderir) | enterprise.exception_events | enterprise.exception_events.detection_payload (driver_response) | Expo Push API | Bu spec'in kendi kararı (§1.7) | 1 | `tulipfleet-backend/routes/internalBridge.js:sendPushNotification` (Faz 4, `f4536a7`) |
+| 16 | FEAT-010-FN-16 | backend + frontend (mobile) | `requestDelayReasonFromDriver` (**v1.3 EKLENDİ**) | taskId, driverId, delayMinutes | void (push gönderir) | enterprise.exception_events | enterprise.exception_events.detection_payload (driver_response) | Expo Push API | Bu spec'in kendi kararı (§1.7) | 1 | `tulipfleet-backend/routes/internalBridge.js:sendPushNotification` (Faz 4, `f4536a7`; **v1.6: A2 `72d21f6` derivedTitle ile aynı köprü — staging'de uçtan uca kanıtlı**) |
 | 17 | FEAT-010-FN-17 | backend | `prepareDockNotificationTemplate` (**v1.3 EKLENDİ**) | exceptionId, delayMinutes, dockContactInfo | { template: string } | enterprise.dispatch_tasks, enterprise.dock_appointments | enterprise.exception_events.detection_payload (template) | — | Bu spec'in kendi kararı (§3.5) | 1 (hazırlama) / 2 (gönderim) | — |
 
-**Konsolidasyon notları (özet, tam tarihçe v1.4'te):** FN-05 + FN-07 konsolidasyonda eklendi; FN-16 + FN-17 v1.3'te eklendi; FN-14 v1.4'te "sıfır iş gücü" davranışına genişletildi; **v1.5'te yeni fonksiyon eklenmedi, FN-03'ün iç mantığı (§3.3.2) genişletildi.**
+**Konsolidasyon notları (özet, tam tarihçe v1.4'te):** FN-05 + FN-07 konsolidasyonda eklendi; FN-16 + FN-17 v1.3'te eklendi; FN-14 v1.4'te "sıfır iş gücü" davranışına genişletildi; **v1.5'te yeni fonksiyon eklenmedi, FN-03'ün iç mantığı (§3.3.2) genişletildi; v1.6'da yeni fonksiyon eklenmedi — FN-01'e temporalScorer hizalaması, FN-16'ya kanıtlı köprü referansı işlendi + §3.6 hata sözleşmesi eklendi.**
 
 ---
 
@@ -217,7 +219,7 @@ Görev başlama saati geldi (task.scheduled_start)
 
 *(Tam detay ve gerekçe önceki versiyonda korunuyor.)*
 
-#### 3.3.2 Yanlış-pozitif önleme — debounce ve GPS tamponu (v1.5 EKLENDİ, 2026-07-18)
+#### 3.3.2 Yanlış-pozitif önleme — debounce ve GPS tamponu (v1.5 EKLENDİ, v1.6'da değerler onaylandı)
 
 **Sorun 1 — MQTT disconnect spam'i:**
 
@@ -230,7 +232,7 @@ MQTT broker "client disconnected" event'i üretir (ANLIK, saniyeler içinde)
         │
         ▼
 Sistem HEMEN exception ÜRETMEZ — bir "debounce timer" başlatır
-(öneri: 5 dakika, bkz. UNCERTAINTIES #16)
+(5 dakika — v1.6'da ONAYLANDI, eski UNCERTAINTIES #16)
         │
         ├─── Timer süresi İÇİNDE yeni telemetri/reconnect gelirse ──▶ Timer iptal,
         │                                                              hiçbir exception
@@ -256,7 +258,7 @@ Cem'in uyarısı: *"GPS cihazları veya telefonlar bazen bulutlu havada veya yü
 v1.3'ün `driver_location_mismatch` eşiği "geofence yarıçapı 100m" idi — bu, **GPS'in doğal ölçüm hatasını hiç hesaba katmıyordu.** v1.5, geofence yarıçapına bir tolerans tamponu ekliyor:
 
 ```
-Efektif eşik = geofence_yarıçapı (100m, task/depo bazlı) + gps_tolerans_tamponu (öneri: +20m)
+Efektif eşik = geofence_yarıçapı (100m, task/depo bazlı) + gps_tolerans_tamponu (+20m — v1.6'da ONAYLANDI, global)
              = 120m (varsayılan senaryoda)
 
 Sürücünün GPS koordinatı, geofence merkezine olan mesafe:
@@ -275,11 +277,27 @@ Sürücünün GPS koordinatı, geofence merkezine olan mesafe:
 
 ### 3.4 FN-16 requestDelayReasonFromDriver — akış detayı (v1.3 EKLENDİ)
 
-*(v1.4'ten değişmedi — bkz. önceki versiyon)*
+*(v1.4'ten değişmedi — bkz. önceki versiyon. v1.6 notu: FN-16'nın dayandığı push altyapısı artık varsayım değil — internalBridge.js `sendPushNotification` staging düzleminde uçtan uca fiziksel kanıtlı, A2 kapanışı `72d21f6`, bkz. SESSION_NOTES_decision-support-engine.md.)*
 
 ### 3.5 FN-17 prepareDockNotificationTemplate — akış detayı (v1.3 EKLENDİ)
 
 *(v1.4'ten değişmedi — bkz. önceki versiyon)*
+
+### 3.6 Sürücü-taraflı hata sözleşmesi — tek-aktif-görev 409'u (v1.6 EKLENDİ, 2026-07-28)
+
+**Saha bulgusu (A2 test turu, 2026-07-28):** Sürücü, aktif bir `in_progress` görevi varken ikinci bir göreve "Başla" dediğinde backend **500 Internal Server Error** döndürüyor. Oysa bu bir sistem hatası değil, **bilinen bir iş kuralının ihlali** — mobil tarafta kural zaten tanımlı (`DriverTasks.js:803-805`: aynı anda yalnızca 1 `in_progress` olabilir). Cem'in sahada yaşadığı deneyim: "usul hatası yapmışım" — ama sistemin verdiği mesaj "sistem bozuk" diyordu.
+
+**Prensip:** Exception handling yalnızca dispatcher'a olay bildirmek değildir; **hatanın doğasını doğru HTTP semantiğiyle ve anlaşılır dille iletmek** de bu spec'in ruhuna dahildir. Kural ihlali ≠ sunucu çökmesi.
+
+**Sözleşme:**
+
+| Durum | Bugünkü davranış | Hedef davranış |
+|---|---|---|
+| Aktif `in_progress` görev varken `PUT /api/driver/tasks/:id/start` | 500 Internal Server Error | **409 Conflict** + `{ error: "Conflict", message: "Aktif bir göreviniz var (TLP-XX-XXXXX). Yeni göreve başlamadan önce mevcut görevi tamamlayın veya geri çekin.", active_task_no: "..." }` |
+
+- Mobil taraf 409'u yakalayıp kullanıcıya aktif görev numarasıyla anlaşılır bir uyarı gösterir (mevcut Alert deseni yeterli, yeni UI gerekmiyor).
+- **Uygulama yeri:** `tulipfleet-backend` `/api/driver/tasks/:id/start` handler'ı (staging'de doğrulanıp code-freeze penceresinde prod'a). Bu, FEAT-010'un dispatcher-taraflı pipeline'ından bağımsız, küçük ve erken yapılabilir bir kalem — Phase 1 backlog'una eklendi (§10.2).
+- **Genelleme notu:** Aynı ilke gelecekte diğer iş-kuralı ihlallerine de uygulanır (örn. tamamlanmış görevi geri çekme) — her biri 4xx + anlaşılır mesaj, asla 500.
 
 ---
 
@@ -308,7 +326,7 @@ Sürücünün GPS koordinatı, geofence merkezine olan mesafe:
 | **Compliance breach** | araç ZE-zone'a hatalı emission ile girdi | critical |
 | *(diğer satırlar — Locker/Tender/Returns/Invoice/Rest/Border/Range/CSRD — v1.4'ten değişmedi)* | | |
 
-Per-company override: `public.companies.settings.exception_thresholds` JSONB key (bkz. §6.3, v1.5'te genişletildi).
+Per-company override: `public.companies.settings.exception_thresholds` JSONB key (bkz. §6.3, v1.6'da değerler onaylandı).
 
 ---
 
@@ -337,7 +355,7 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 
 *(v1.4'ten değişmedi)*
 
-### 6.3 `public.companies.settings` — exception_thresholds JSONB (v1.5'te genişletildi)
+### 6.3 `public.companies.settings` — exception_thresholds JSONB (v1.6'da değerler ONAYLANDI)
 
 ```jsonc
 {
@@ -347,9 +365,9 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
     "dock_slip_lead_minutes": 60,
     "compliance_breach_lead_minutes": 30,
     "dedup_cooldown_minutes": 10,
-    // v1.5 YENİ — yanlış-pozitif önleme
-    "offline_debounce_minutes": 5,        // MQTT disconnect event sonrası bekleme (öneri, Cem onayı bekliyor — UNCERTAINTIES #16)
-    "location_gps_buffer_meters": 20      // geofence yarıçapına eklenen GPS tolerans payı (öneri, Cem onayı bekliyor — UNCERTAINTIES #17)
+    // v1.5 eklendi, v1.6'da ONAYLANDI (Cem, 2026-07-28)
+    "offline_debounce_minutes": 5,        // ONAYLI — MQTT disconnect event sonrası bekleme
+    "location_gps_buffer_meters": 20      // ONAYLI — global varsayılan; per-bölge ayrım Phase 1.1
   }
 }
 ```
@@ -358,7 +376,7 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 
 ## 7. Shared infrastructure with previous FEAT'leri
 
-*(v1.4'ten değişmedi — bkz. önceki versiyon. v1.5 yeni bir shared infrastructure eklemiyor, mevcut FN-03'ün iç mantığını güçlendiriyor.)*
+*(v1.4'ten değişmedi — bkz. önceki versiyon. v1.5 yeni bir shared infrastructure eklemiyor, mevcut FN-03'ün iç mantığını güçlendiriyor. v1.6 eklemesi: DSE temporalScorer [dispatcher repo, services/dispatch/scoring] FN-01'in planlama-anı ikizi olarak §1.6'ya bağlandı; FN-16'nın push altyapısı [internalBridge.js sendPushNotification] artık staging'de uçtan uca kanıtlı.)*
 
 ---
 
@@ -366,31 +384,34 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 
 *(#1-15 v1.4'ten değişmedi — bkz. önceki versiyon. UNCERTAINTIES #1 zaten "v1.4'te tamamen kapatıldı" durumundaydı; v1.5 bu kapatılmış maddeyi yeniden açmıyor, üstüne yeni, ayrı bir tolerans katmanı ekliyor.)*
 
-### v1.5'te yeni açılan (Cem onayı bekleyen)
+### v1.5'te açılan → v1.6'da KAPATILAN (Cem kararları, 2026-07-28)
 
-16. **`offline_debounce_minutes` kesin değeri:** Cem "3-5 dakikalık bir tolerans süresi" önerdi — aralık verildi, kesin sayı verilmedi. **Öneri:** 5 dakika (aralığın üst sınırı — daha temkinli, daha az spam riski; 3 dakika seçilirse spam azaltma etkisi biraz daha zayıf ama tespit biraz daha hızlı olur). Cem kararı bekliyor.
+16. **`offline_debounce_minutes` = 5 dakika — ✅ KAPANDI.** Cem, spec önerisini (aralığın temkinli üst sınırı: daha az spam riski) onayladı.
 
-17. **`location_gps_buffer_meters` kesin değeri:** Cem "+20 metrelik bir GPS tolerans tamponu" önerdi — bu net bir sayı, muhtemelen onaylı, ama **her müşteri/bölge için aynı mı olmalı?** Şehir merkezi (yüksek binalar arası GPS sapması daha fazla olabilir) ile kırsal bölge (açık gökyüzü, daha az sapma) arasında farklı bir varsayılan gerekip gerekmediği düşünülebilir. **Öneri:** Phase 1'de tek, global bir varsayılan (20m) yeterli — per-bölge ayrım Phase 1.1'e ertelenebilir. Cem kararı bekliyor.
+17. **`location_gps_buffer_meters` = 20m, tek global varsayılan — ✅ KAPANDI.** Per-bölge (şehir merkezi vs kırsal) farklılaşma Phase 1.1'e ertelendi; Phase 1'de tek değer.
 
-18. **Debounce timer'ının teknik implementasyonu:** MQTT disconnect event'i (LWT) gerçekten EMQX'ten backend'e bir webhook/event olarak mı geliyor, yoksa mevcut "poll ile son telemetri zaman damgasına bak" mantığı mı bu debounce'u simüle edecek? Bu, bir ürün kararı değil, bir **teknik implementasyon** kararı — EMQX'in webhook/event bridge özelliğinin (Faz 4.2'de kurulan MQTT altyapısında) bu tür bir "disconnect" event'i verip vermediği doğrulanmalı. Cem/implementation aşaması kararı bekliyor, ürün tasarımını etkilemiyor.
+18. **Debounce teknik implementasyonu (EMQX LWT webhook mu, polling mi) — ✅ KAPANDI (devir kararıyla).** Ürün kararı değil, implementasyon kararı olduğu teyit edildi: Phase 1 kodlama aşamasında EMQX'in (Faz 4.2 MQTT altyapısı) webhook/event-bridge "disconnect" event'i verip vermediği canlı olarak doğrulanacak; veriyorsa LWT-event yolu, vermiyorsa mevcut son-telemetri-damgası polling'i debounce'u simüle eder. Ürün tasarımı iki durumda da aynı kalır (§3.3.2 akışı değişmez).
 
 ---
 
 ## 9. Pilot süreç notları
 
-*(v1.4'ten değişmedi, F10 karşılaştırma tablosu ve NotebookLM trend yorumu korunuyor — bkz. önceki versiyon. v1.5 üçüncü bir insan-mühendislik-incelemesi turu olarak §9.3'e eklenebilir bir gözlem taşıyor: Cem'in üç ardışık turda (v1.3 doğru ayrım, v1.4 somut aksiyon, v1.5 yanlış-pozitif önleme) giderek daha ince taneli, üretim-kalitesi detaylara indiği görülüyor — bu, spec'in olgunlaşma sürecinin doğal bir ilerlemesi.)*
+*(v1.4'ten değişmedi, F10 karşılaştırma tablosu ve NotebookLM trend yorumu korunuyor — bkz. önceki versiyon. v1.5 üçüncü bir insan-mühendislik-incelemesi turu olarak §9.3'e eklenebilir bir gözlem taşıyor: Cem'in üç ardışık turda (v1.3 doğru ayrım, v1.4 somut aksiyon, v1.5 yanlış-pozitif önleme) giderek daha ince taneli, üretim-kalitesi detaylara indiği görülüyor — bu, spec'in olgunlaşma sürecinin doğal bir ilerlemesi. v1.6 dördüncü tur: saha testinden [A2, canlı staging] doğan gerçek kullanıcı deneyimi bulgusunun [500→409] spec'e geri beslenmesi — spec artık yalnızca masa başı incelemeyle değil, çalışan sistemin sahada üretttiği kanıtlarla olgunlaşıyor.)*
 
 ---
 
 ## 10. Next steps
 
-### 10.2 Phase 1 implementation backlog (v1.5 eklemeleri)
+### 10.2 Phase 1 implementation backlog (v1.5 + v1.6 eklemeleri)
 
 *(v1.4'teki liste geçerliliğini koruyor, ayrıca:)*
 
-- [ ] **v1.5 YENİ — MQTT disconnect debounce timer'ı** — FN-03'ün offline dalına, disconnect event'i alındığında hemen exception açmak yerine 5 dakikalık (UNCERTAINTIES #16 kararına bağlı) bir bekleme mekanizması eklenmesi
-- [ ] **v1.5 YENİ — GPS tolerans tamponu** — FN-03'ün location_mismatch dalına, geofence yarıçapına +20m (UNCERTAINTIES #17 kararına bağlı) ekleyen basit bir matematiksel düzeltme
-- [ ] **v1.5 YENİ — `exception_thresholds` JSONB'ye iki yeni alan** — `offline_debounce_minutes`, `location_gps_buffer_meters` (migration gerektirmez, JSONB additive)
+- [ ] **v1.5 — MQTT disconnect debounce timer'ı** — FN-03'ün offline dalına, disconnect event'i alındığında hemen exception açmak yerine **5 dakikalık (ONAYLI)** bekleme mekanizması
+- [ ] **v1.5 — GPS tolerans tamponu** — FN-03'ün location_mismatch dalına, geofence yarıçapına **+20m (ONAYLI, global)** ekleyen basit bir matematiksel düzeltme
+- [ ] **v1.5 — `exception_thresholds` JSONB'ye iki yeni alan** — `offline_debounce_minutes: 5`, `location_gps_buffer_meters: 20` (migration gerektirmez, JSONB additive)
+- [ ] **v1.6 YENİ — Tek-aktif-görev 409 sözleşmesi (§3.6)** — `tulipfleet-backend` `/api/driver/tasks/:id/start` handler'ında 500 → 409 Conflict + `active_task_no` içeren anlaşılır mesaj; mobil Alert ile gösterim. Staging'de doğrula, prod'a code-freeze penceresinde. FEAT-010 pipeline'ından bağımsız, erken yapılabilir.
+- [ ] **v1.6 YENİ — FN-01 ↔ temporalScorer hizalama kontrolü** — FN-01 implementasyonu başlarken DSE temporalScorer'ın eşik/ETA mantığı okunup aynı feasibility matematiği kullanılmalı (§1.6); ADR-0014 gerçek HERE ETA'sı geldiğinde iki katman birlikte aynı kaynağa geçirilmeli.
+- [ ] **v1.6 YENİ — EMQX LWT doğrulaması (eski UNCERTAINTIES #18 devri)** — debounce implementasyonuna başlamadan önce EMQX webhook/event-bridge "disconnect" event'inin varlığı canlı kanıtlanacak.
 
 *(§10.1, 10.3, 10.4 v1.4'ten değişmedi.)*
 
@@ -400,6 +421,7 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 
 *(v1.4'ten değişmedi, ayrıca:)*
 - **v1.5 kaynağı:** Cem'in saha deneyimi gözlemi (2026-07-18) — MQTT/GPS yanlış-pozitif önleme, dış referans/ADR yok, bu spec'in kendi kararı.
+- **v1.6 kaynağı:** A2 saha test turu (2026-07-28, staging canlı) — 500→409 bulgusu + DSE temporalScorer canlı kanıtı; bkz. `docs/SESSION_NOTES_decision-support-engine.md` (A2 KAPANIŞ bölümü).
 
 ---
 
@@ -410,3 +432,4 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 | Version | Date | Author | Change |
 |---|---|---|---|
 | **1.5 (yanlış-pozitif önleme)** | **2026-07-18** | **Cem Sahinkaya + Claude** | **Cem'in üçüncü turdaki gözlemi üzerine FN-03'ün her iki dalına da yanlış-pozitif önleme tamponu eklendi — yeni fonksiyon yok, mevcut FN-03'ün iç mantığı genişletildi.** Yeni **§3.3.2** "Yanlış-pozitif önleme — debounce ve GPS tamponu" eklendi: (1) **MQTT disconnect debounce'u** — broker'ın anlık "disconnect" event'ine karşı, hemen exception açmak yerine 3-5 dakikalık (öneri: 5 dk) bir bekleme süresi; bu süre içinde reconnect olursa exception hiç açılmaz. Bu, FN-07'nin dedup mekanizmasından (açık bir exception'ın tekrarını önler) farklı bir katman (exception'ın ilk kez açılmasını geciktirir) olarak açıkça ayrıştırıldı. (2) **GPS jitter tamponu** — `driver_location_mismatch` eşiğine geofence yarıçapının üstüne +20m (öneri) sabit bir tolerans payı eklendi, efektif eşik 100m→120m; sürücünün gerçekte doğru yerde olduğu ama GPS'in ölçüm hatası yaptığı durumları filtreler. §4 Severity matrix'e, zaman eşiklerinin artık debounce/tampon *sonrasında* sayıldığını netleştiren bir not eklendi. §6.3 `exception_thresholds` JSONB'ye iki yeni alan eklendi (`offline_debounce_minutes`, `location_gps_buffer_meters`) — additive, migration gerektirmiyor. 3 yeni UNCERTAINTIES açıldı (#16 debounce kesin süresi, #17 GPS tamponu bölgesel farklılaşması, #18 debounce'un MQTT LWT event'i mi yoksa polling mi kullanacağı — teknik implementasyon kararı). Bu, Cem'in art arda üçüncü turdaki mühendislik incelemesi — spec'in olgunlaşma sürecinde her turun bir öncekinden daha ince taneli, üretim-kalitesi bir detaya odaklandığı gözlemlendi (v1.3: doğru ayrım, v1.4: somut aksiyon, v1.5: yanlış-pozitif önleme). |
+| **1.6 (kararlar + saha geri beslemesi)** | **2026-07-28** | **Cem Sahinkaya + Claude** | **(1) UNCERTAINTIES #16-18 KAPATILDI:** `offline_debounce_minutes = 5` (onaylı), `location_gps_buffer_meters = 20` global (per-bölge Phase 1.1'e ertelendi), #18 implementasyon aşamasına devredildi (EMQX LWT doğrulaması Phase 1 kodlamasında; ürün tasarımı iki durumda da değişmez). §6.3 JSONB değerleri onaylı olarak işaretlendi. **(2) Temporal "KAÇIRIR" planlama-anı köprüsü (§1.6 üçüncü madde):** DSE temporalScorer'ın canlı VRPTW feasibility sinyali FN-01'in planlama-aşaması ikizi olarak tanımlandı — aynı matematik, farklı "an"; FN-01 implementasyonu temporalScorer ile hizalanmalı, ADR-0014 HERE ETA'sı geldiğinde ikisi birlikte geçmeli (backlog maddesi §10.2). **(3) Yeni §3.6 — tek-aktif-görev 409 hata sözleşmesi:** A2 saha testinde (staging canlı) bulunan gerçek UX hatası — iş kuralı ihlali (aktif görev varken ikinci "Başla") 500 dönüyordu; hedef 409 Conflict + `active_task_no` içeren anlaşılır mesaj. Genelleme ilkesi: kural ihlali ≠ sunucu çökmesi, her iş-kuralı ihlali 4xx + anlaşılır mesaj. FN-16'nın push altyapısının artık staging'de uçtan uca kanıtlı olduğu (A2 `72d21f6`) fonksiyon kataloğuna ve §3.4'e not düşüldü. Yeni fonksiyon eklenmedi. |

@@ -48,7 +48,9 @@ chip'leri. Round-robin **ilk atama paritesi korundu** — sıralama atamayı DE�
 ### Commit zinciri (dispatcher)
 `42aeffd` scoring modülü → `2bb5f64` Kanban→Karar Destek → `73e8078` TS7006 →
 `c772bd2` dikey liste + Popover (UX) → `8da9f75` REST snapshot bypass (Mekan/Zaman fix) →
-`95d1891` metadata + Logistics & Constraints (Strateji 3) → `27d6a36` TS2322/TS7006 fix.
+`95d1891` metadata + Logistics & Constraints (Strateji 3) → `27d6a36` TS2322/TS7006 fix →
+`129bedab` Form UX v2 Paket 1 (MDDatePicker+preset, segmented, chip-grid) →
+`c13b566` MDDatePicker label shrink fix (flatpickr/MUI çakışması).
 
 ---
 
@@ -183,11 +185,9 @@ production cutover ve mock→HERE geçişi demo sonrası planlı ("Sürekli Tesl
 
 ### %100 launchable için kalan 2 somut engel
 
-1. **Mobil beta build (düşük risk):** TestFlight/Expo beta expired. `RD-NL-78` sürücüsünde
-   `has_token = f` (token yok). Yeni IPA/APK derle → sürücü login → `usePushNotifications`
-   token'ı `POST /api/push/register` ile kaydeder → `has_token = t`. Mobili değiştirmedik;
-   build-number bump + expiry yenileme. EAS: proje `ro3Bh1o33z`, bundle `com.tulipfleet.app`,
-   iOS Build 32 / Android vCode 28 baz.
+1. **Mobil beta build (düşük risk):** ✅ ÇÖZÜLDÜ (2026-07-21/28) — staging profili build'leri
+   (iOS `661f2e34` sonrası `f1026a5f`, Android `49fd5e76`) + config.js EXPO_PUBLIC_API_URL fix
+   ile app staging'e bağlandı; pieter login + push + görev listesi fiziksel kanıtlı (aşağıda A2).
 2. **Enterprise prod cutover (yüksek risk — tek satır DEĞİL):** `DATABASE_URL` staging→prod
    TEK BAŞINA yetmez. Koordineli 5 madde: (a) `DATABASE_URL`→`fleet_tracking`; (b)
    `INTERNAL_CORE_API_URL`→production Docker backend (staging `:3001` değil); (c)
@@ -238,13 +238,7 @@ company_id, enterprise_dispatch_task_id, distance_source='manual'`.
 vehicle_id, start_location/end_location (düz metin), scheduled_start/scheduled_end (ISO),
 waypoints[]`. Kapasite/skill/hazmat YOK.
 
-### Backlog kalemi 1 — Köprü title üretimi (KOLAY, veri köprüde HAZIR)
-
-`AdminTasks.js:212` → `task.title || task.task_no || "-"`. Dispatcher görevlerinde `title` boş
-geldiği için sürücü/admin listesinde `TLP-26-000XX` kodu görünüyor (okunabilir başlık değil).
-Köprü `start_location_str`/`end_location_str`'i ZATEN alıyor (push body'sinde kullanıyor:
-`${task_no}: ${start} → ${end}`). Tek satır: INSERT'te `title` boşsa
-`title = \`${start_location_str} → ${end_location_str}\``. Sıfır yeni veri akışı; köprüde 1 satır.
+### Backlog kalemi 1 — Köprü title üretimi ✅ A2 OLARAK KAPANDI (aşağıda)
 
 ### Backlog kalemi 2 — scheduled_start/end eşlemesi (ZOR: veri 3 katmanda EKSİK)
 
@@ -255,7 +249,8 @@ Köprü `start_location_str`/`end_location_str`'i ZATEN alıyor (push body'sinde
 Düzeltme = 3 katman: (a) dispatcher approve time_window'u köprüye göndersin; (b) köprü payload'ına
 + `scheduled_start/end`; (c) INSERT'e + kolon. 3 dosya, 2 repo. Ön koşul: `public.tasks`'ta
 `scheduled_start/end` kolonlarının varlığı canlı `\d tasks` ile doğrulanmalı (mobil gönderiyor ama
-köprü kullanmıyor — kolon var mı kanıtlanmadı).
+köprü kullanmıyor — kolon var mı kanıtlanmadı). NOT: dispatcher GET /api/dispatcher/tasks sorgusu
+`t.scheduled_start, t.scheduled_end` SELECT'liyor — kolonların VARLIĞINA güçlü işaret, yine de \d şart.
 
 ### Backlog kalemi 3 — INFRA-B: iki kanalın ortak task kontratı
 
@@ -263,15 +258,67 @@ Mobil admin görevleri VRP kısıtlarından (hazmat/m³/kg/skill) YOKSUN doğuyo
 FEAT-020 spec'i yazılırken `StrictTaskConstraints` (src/types/metadata.ts) iki kanal için ortak
 kanonik standart yapılmalı — mimari bütünlük. INFRA-B'nin somut gerekçesi.
 
-## Sonraki hamle seçenekleri (karar bekliyor)
+---
 
-- **A) Milestone 0'ı staging'de mühürle + Engel 1 (mobil beta):** demo-ready ol, prod cutover'ı
-  mock→HERE ile birlikte ayrı pencereye bırak. (Önerilen.)
-- **A2) Köprü cilası (demo sonrası, ~15 dk kısmı):** Backlog #1 (title üretimi) — düşük risk,
-  veri hazır, sürücü deneyimini hemen iyileştirir. Backlog #2 (scheduled) ayrı, daha büyük.
-- **B) FEAT-010 — Automated Exception Handling:** haftalık trenin ilk vagonu; temporal "KAÇIRIR"
-  feasibility sinyali proto-exception feed'i.
-- **C) ADR-0014 — Gerçek HERE Routing:** mock solver'ı kapatıp HERE Tour Planning REST API'sini
-  production key ile canlı matrise bağlamak (spatial/temporal scorer'lar haversine→gerçek sürüş).
-  Production cutover ile aynı pencerede.
-- **D) Draft Retention Policy:** yukarıdaki backlog #1'in çözümü.
+## A2 KAPANIŞ — Köprü Title Cilası ✅ (2026-07-28, uçtan uca fiziksel kanıt)
+
+**Sorun:** Dispatcher görevleri mobil listede `TLP-26-XXXXX` / `Sevk Gorevi <hex>` görünüyordu.
+
+**Kök neden (2 katman, ikisi de koddan kanıtlı):**
+1. Köprü `title`'ı olduğu gibi basıyordu (fallback yoktu).
+2. İlk fix (köprüye fallback) tek başına YETMEDİ — DB kanıtı: yeni görev yine `Sevk Gorevi
+   51c79139` çıktı. Çünkü enterprise approve handler'ı `title: \`Sevk Gorevi ${draft.id.slice(0,8)}\``
+   şeklinde SENTETİK başlık gönderiyordu → köprü fallback'i hiç tetiklenmiyordu.
+
+**Çözüm (onaylanan mimari: türetme TEK YERDE — köprüde):**
+- `tulipfleet-backend/routes/internalBridge.js` commit `72d21f6`: `derivedTitle =
+  (title || \`${start_location_str} → ${end_location_str}\`).slice(0,255)` → INSERT'te kullanılır.
+  Mobil admin görevlerinde title dolu gelir, fallback devreye girmez.
+- `tulipfleet-enterprise-backend/routes/tasks.js` commit `2640342`: sentetik başlık kaldırıldı,
+  `title: null` gönderilir.
+
+**Deploy:**
+- Staging PM2: `/opt/fleet/backend-staging` git pull + `pm2 restart fleet-staging`, grep
+  `derivedTitle` = 3 ✓
+- Enterprise Docker: `/opt/enterprise` git pull + `docker compose up -d --build` (build: .
+  imajı — bind mount değil, rebuild şart), container içi grep `title: null` = 2 ✓
+- Prod core backend'e DOKUNULMADI (code-freeze; `72d21f6` prod'a 21+ commit backlog ile gidecek).
+
+**Uçtan uca kanıt (TLP-26-00010):**
+- Push metni: `TLP-26-00010: Utrecht, Nederland → Rotterdam, Zuid-Holland, Nederland` (lockscreen
+  ekran görüntüsü) ✓
+- Dispatcher listesi: `TLP-26-00010 | Utrecht → Rotterdam | Pieter van den Berg | BX-TR-42 |
+  ASSIGNED` ✓
+- DB: `driver_id = pieter (d1d2...0001)`, status=assigned, plate=BX-TR-42 ✓
+- Telefon (pieter login): görev listede adres başlığıyla görünüyor ✓
+
+**Yol notları (bu testte öğrenilen):**
+- "Görev listede görünmüyor" yanlış alarmı: telefonda FARKLI hesapla girişliydi. Push token
+  CİHAZA bağlıdır (pieter'in token'ı = bu cihaz) → push, girişli hesaptan bağımsız düşer; liste
+  ise `GET /api/driver/tasks` = girişli sürücünün `driver_id` filtresi. İki mekanizma AYRI.
+- Mobil liste `assigned`'ı gösteriyor (DriverTasks.js:807 `["pending_review","accepted","pending",
+  "assigned"]` — 18.07 fix build'de mevcut).
+- **Yeni backlog — 500→409:** aktif `in_progress` görev varken ikinci göreve "Başla" denirse
+  backend **Internal Server Error (500)** dönüyor. Tek-aktif-görev kuralı (DriverTasks.js:803)
+  ihlali aslında usul hatası → backend **409 Conflict + anlaşılır mesaj** ("önce aktif görevi
+  tamamla/geri çek") dönmeli. FEAT-010 (Exception Handling) spec'ine doğal madde.
+
+**Form UX v2 Paket 1 de bu pencerede kapandı** (dispatcher `129bedab` + `c13b566`): MDDatePicker
+(flatpickr, SIFIR yeni bağımlılık) + preset chip'ler, ikonlu segmented Yön/Konum Tipi,
+hazmat/yetkinlik chip-grid, label-shrink fix. Ekran doğrulaması Cem tarafından yapıldı ("pürüz
+kalmadı"). Paket 2 (araç mini kartları + yapışkan özet) backlog'da.
+
+---
+
+## Sonraki hamle sırası (Cem onayı: "hepsini sırayla kabul", 2026-07-28)
+
+- ~~**A2) Köprü title cilası**~~ ✅ KAPANDI (yukarıda).
+- **B) FEAT-010 — Automated Exception Handling: SPEC TURU (sıradaki iş).** Girdi adayları:
+  temporal "KAÇIRIR" feasibility sinyali (proto-exception feed), 500→409 tek-aktif-görev kuralı,
+  başarısız teslimat/iade (direction='inbound' form capture hazır).
+- **C) ADR-0014 — Gerçek HERE Routing + production cutover penceresi.** Cem'in zaman-koordinasyon
+  fikri (görev süresi + başlangıç → hesaplanan ETA; hedef<ETA = sert bloke "görev süresinden kısa
+  olamaz", hedef>ETA = "erken varış, teslim koordinasyonu kurdun mu?" yumuşak uyarı) bu pencereye
+  bağlı — gerçek ETA olmadan uyarılar yanıltıcı; (a) form-level "yaklaşık" etiketli validasyon
+  erken yapılabilir, (b) gerçek ETA HERE ile.
+- **D) Draft Retention Policy** (backlog #1 çözümü).

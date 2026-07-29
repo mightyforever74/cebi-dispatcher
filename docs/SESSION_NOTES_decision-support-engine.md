@@ -310,12 +310,72 @@ kalmadı"). Paket 2 (araç mini kartları + yapışkan özet) backlog'da.
 
 ---
 
+## B KAPANIŞ (kısmi) — FEAT-010 Spec v1.7/v1.8 + FN-18 CANLI ✅ (2026-07-29)
+
+**Bağlam:** ML-analiz katmanı planlama oturumu. Üç-katman ayrımı netleşti: **HERE = ML consumer**
+(ETA/rota), **dispatcher = optimizasyon + karar destek**, **ML-analiz (Phase 3, ADR-0010 §3.3) =
+karar değerlendirme** (override analizi, planned-vs-actual, feature importance). Karar: ML değil,
+ML'in İLERİDE tüketeceği **veri temeli** bugünden kurulur — FEAT-010'a işlendi.
+
+### Spec turu (tulipfleet-dispatcher)
+
+- **v1.7** commit `5cae86a`: §1.8 (üç kanıta dayalı gerekçe: locations retention 7 gün / Grup B
+  hiçbir yerde kalıcı değil / override sinyali her approve'da üretilip kayboluyor), §6.4
+  `dispatch_decision_log` + §6.5 `trip_summaries` şemaları, FN-18/19/20, UNCERTAINTIES #19-21.
+- **v1.8** commit `736b381`: #19-21 KAPANDI (Cem onayı) — #19 trip_summaries yazarı = **Seçenek A
+  enterprise worker**; #20 override_reason enum sabit (`driver_familiarity|customer_preference|
+  vehicle_condition|workload_balance|scorer_data_stale|other`), **opsiyonel**; #21 retention
+  **YOK (süresiz)**.
+
+### Migration (staging + prod, ayna kuralı)
+
+`1782300000000_create-enterprise-dispatch-decision-log.sql` — her iki kopya klasörüne
+(`/opt/fleet/backend-staging/migrations` + `/opt/fleet/backend/migrations`) yazıldı, hem
+`fleet_tracking_staging` hem `fleet_tracking`'e uygulandı. Kanıtlar: `\dt enterprise.*` çakışma
+yok (9 tablo), PG 15.2, her iki DB'de INSERT testi `is_override = t` (GENERATED column canlı),
+3 index. Yol notu: psql superuser `postgres` DEĞİL — `fleetadmin` (container env'den kanıtlı).
+
+### FN-18 endpoint (tulipfleet-enterprise-backend)
+
+- Commit `b3cdd06`: `routes/decisionLog.js` (yeni) + `server.js` kayıt.
+  `POST /api/dispatcher/decision-log` — notificationPreferences pattern'i (`fastify.pg.query`,
+  `fastify.authenticate`, id+company_id claim → 403; CORS zaten GET/POST/OPTIONS).
+  Validasyon: `scorer_snapshot` zorunlu dizi (400), uuid regex (400), override_reason enum (400).
+  `is_override` DB'de GENERATED — backend hesaplamaz. Best-effort/no-throw sorumluluğu ÇAĞIRAN
+  frontend'te (FN-16 push paterni).
+- Deploy: `/opt/enterprise` git pull + `docker compose up -d --build` ✓ (boot temiz,
+  `db_user: enterprise_backend`).
+
+### Duman testi kanıt zinciri (canlı, 2026-07-29)
+
+- JWT: `POST /api/auth/login` (path mobil `api.js`'ten kanıtlı) admin@fleet.com → 299 char token.
+- Geçerli istek → `{"success":true,"logId":"3a29093e-...","is_override":true}` ✓
+- `{}` → 400 "scorer_snapshot is required and must be an array" ✓
+- Geçersiz enum → 400 (6 değer listesiyle) ✓
+- DB: satır **staging'de** (`fleet_tracking_staging`, logId birebir, `decided_by` JWT'den dolu),
+  **prod DB boş** ✓ — doğru düzlem (Milestone 0 staging, cutover bilinçli beklemede).
+
+### Kalan işler (B'nin devamı)
+
+1. **Frontend entegrasyonu (sıradaki):** approve akışına best-effort POST — `scorer_snapshot`
+   `rankVehicles` çıktısından, `constraints_snapshot` `taskConstraintsMap`'ten;
+   `<OverrideReasonDialog />` (`chosen ≠ recommended` ise, boş geçilebilir).
+   FN-18 hazır — frontend'i bloklayan hiçbir şey yok.
+2. **FN-19 trip_summaries worker:** ön koşullar: (a) `public.tasks` `scheduled_start/end` +
+   `actual_start/end` canlı `\d tasks` kanıtı (SCHEMA_REFERENCE.md bu kolonları listeliyor —
+   güçlü işaret; doğrulama tarihi 2026-06-18, yine de canlı `\d` şart); (b) `enterprise_backend`
+   rolünün `public.locations` + `public.alerts` üzerinde SELECT'i YOK (grant migration'ından
+   kanıtlı) → FN-19 öncesi ek GRANT migration'ı gerekli.
+3. FEAT-010 exception pipeline'ının kendisi (5 monitör + UI) ayrı sprint.
+
+---
+
 ## Sonraki hamle sırası (Cem onayı: "hepsini sırayla kabul", 2026-07-28)
 
 - ~~**A2) Köprü title cilası**~~ ✅ KAPANDI (yukarıda).
-- **B) FEAT-010 — Automated Exception Handling: SPEC TURU (sıradaki iş).** Girdi adayları:
-  temporal "KAÇIRIR" feasibility sinyali (proto-exception feed), 500→409 tek-aktif-görev kuralı,
-  başarısız teslimat/iade (direction='inbound' form capture hazır).
+- **B) FEAT-010 — Automated Exception Handling:** ~~SPEC TURU~~ ✅ v1.8'de KAPANDI + **FN-18
+  (karar logu) CANLI** (2026-07-29, yukarıda). Kalan: frontend entegrasyonu (sıradaki iş) →
+  FN-19/20 → exception pipeline sprint'i.
 - **C) ADR-0014 — Gerçek HERE Routing + production cutover penceresi.** Cem'in zaman-koordinasyon
   fikri (görev süresi + başlangıç → hesaplanan ETA; hedef<ETA = sert bloke "görev süresinden kısa
   olamaz", hedef>ETA = "erken varış, teslim koordinasyonu kurdun mu?" yumuşak uyarı) bu pencereye

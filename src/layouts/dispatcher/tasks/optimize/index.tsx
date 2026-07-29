@@ -44,7 +44,7 @@
 =========================================================
 */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 // @asseinfo/react-kanban (ADR-0001 §3.6)
@@ -117,6 +117,11 @@ import {
   SKILL_OPTIONS,
   EMPTY_CONSTRAINTS,
 } from "types/metadata";
+
+// FEAT-010:FN-18/FN-20 - karar logu (ML-analiz veri temeli; best-effort, approve'u bloke etmez)
+import { useAuthStore } from "store/useAuthStore";
+import { postDecisionLog } from "services/dispatch/decisionLog";
+import OverrideReasonDialog from "components/OverrideReasonDialog";
 
 const emptyLocation: LocationValue = { address: "", latitude: null, longitude: null };
 
@@ -386,6 +391,11 @@ function OptimizeTask(): JSX.Element {
   const pollQuery = usePollOptimization(jobId);
   const approveMutation = useApproveOptimization();
 
+  // FEAT-010:FN-18 - karar logu: son siralama + override dialog state'i
+  const token = useAuthStore((s) => s.token);
+  const lastRankedRef = useRef<{ mode: RankingMode; ranked: ReturnType<typeof rankVehicles> } | null>(null);
+  const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
+
   const toggleVehicle = (id: string) => {
     setSelectedVehicleIds((prev) =>
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
@@ -533,6 +543,7 @@ function OptimizeTask(): JSX.Element {
       const frames = framesOverride ?? locationsQuery.data;
       const snapshots = buildSnapshots(result.available_vehicles, frames);
       const ranked = rankVehicles(mode, snapshots, scoringTasks);
+      lastRankedRef.current = { mode, ranked }; // FN-18: approve aninda snapshot icin
       const orderedIds =
         ranked.length > 0 ? ranked.map((r) => r.vehicleId) : result.available_vehicles;
       const scoreById =
@@ -595,8 +606,15 @@ function OptimizeTask(): JSX.Element {
     });
   };
 
-  const handleApprove = () => {
+  // FEAT-010:FN-18 - scorer #1 onerisi (siralama yoksa null; sahte deger uretilmez)
+  const getRecommendedVehicleId = (): string | null => {
+    const lr = lastRankedRef.current;
+    return lr && lr.ranked.length > 0 ? lr.ranked[0].vehicleId : null;
+  };
+
+  const proceedApprove = (overrideReason: string | null) => {
     if (!jobId) return;
+    setOverrideDialogOpen(false);
     const vehicle_assignments: VehicleAssignment[] = Array.from(assignments.entries()).map(
       ([taskId, vehicleId]) => ({ taskId, vehicleId })
     );
@@ -605,9 +623,47 @@ function OptimizeTask(): JSX.Element {
       {
         onSuccess: (data) => {
           setApproveSuccess({ pushed: data.pushed });
+          // FEAT-010:FN-18 - karar logu, approve BASARISINDAN sonra, best-effort
+          // (no-throw sozlesmesi postDecisionLog icinde; approve asla bloke olmaz).
+          const lr = lastRankedRef.current;
+          const recommended = getRecommendedVehicleId();
+          const snapshot = lr
+            ? lr.ranked.map((r, i) => ({
+                vehicle_id: r.vehicleId,
+                rank: i + 1,
+                score: r.detail.value,
+                memo: r.detail.memo,
+                mode: lr.mode,
+              }))
+            : [];
+          vehicle_assignments.forEach(({ taskId, vehicleId }) => {
+            postDecisionLog(token, {
+              routing_job_id: jobId,
+              dispatch_task_id: taskId,
+              scorer_snapshot: snapshot,
+              constraints_snapshot: taskConstraintsMap.get(taskId) ?? null,
+              recommended_vehicle_id: recommended,
+              chosen_vehicle_id: vehicleId,
+              override_reason: overrideReason,
+            });
+          });
         },
       }
     );
+  };
+
+  const handleApprove = () => {
+    if (!jobId) return;
+    const recommended = getRecommendedVehicleId();
+    const hasOverride =
+      recommended !== null &&
+      Array.from(assignments.values()).some((vehicleId) => vehicleId !== recommended);
+    if (hasOverride) {
+      // FN-20: sebep OPSIYONEL (#20 ONAYLI) - dialog bos gecilebilir, approve engellenmez
+      setOverrideDialogOpen(true);
+      return;
+    }
+    proceedApprove(null);
   };
 
   const handleReset = () => {
@@ -632,6 +688,7 @@ function OptimizeTask(): JSX.Element {
     setTimeWindowEnd(null);
     setSubmittedConstraints(null);
     setTaskConstraintsMap(new Map());
+    setOverrideDialogOpen(false);
   };
 
   const inactiveScorers = SCORERS.filter((s) => !s.available);
@@ -1104,6 +1161,12 @@ function OptimizeTask(): JSX.Element {
                 </MDButton>
               </MDBox>
             )}
+
+            <OverrideReasonDialog
+              open={overrideDialogOpen}
+              onCancel={() => setOverrideDialogOpen(false)}
+              onConfirm={(reason) => proceedApprove(reason)}
+            />
 
             {approveSuccess && (
               <MDBox>

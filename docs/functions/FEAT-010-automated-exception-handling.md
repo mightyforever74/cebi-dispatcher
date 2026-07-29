@@ -7,7 +7,7 @@
 | **Frequency rating** | Common |
 | **Cem note** | — (wishlist'te ek not yok) |
 | **Tulipfleet Phase** | Phase 1 (rule-based detection + Mode 1 Advisory notification) + Phase 2 (FEAT-101 Mode 2 Exception-based auto-action) |
-| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-30); **v1.3'te Cem'in mühendislik incelemesiyle 3 fonksiyon eklendi/genişletildi**; **v1.4'te "sıfır iş gücü" UI davranışları netleştirildi**; **v1.5'te yanlış-pozitif önleme (debounce + GPS tamponu) eklendi (2026-07-18)**; **v1.6'da UNCERTAINTIES #16-18 kapatıldı + iki yeni girdi eklendi: temporal "KAÇIRIR" planlama-anı köprüsü (§1.6) ve tek-aktif-görev 409 hata sözleşmesi (§3.6) (2026-07-28)** |
+| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-30); **v1.3'te Cem'in mühendislik incelemesiyle 3 fonksiyon eklendi/genişletildi**; **v1.4'te "sıfır iş gücü" UI davranışları netleştirildi**; **v1.5'te yanlış-pozitif önleme (debounce + GPS tamponu) eklendi (2026-07-18)**; **v1.6'da UNCERTAINTIES #16-18 kapatıldı + iki yeni girdi eklendi: temporal "KAÇIRIR" planlama-anı köprüsü (§1.6) ve tek-aktif-görev 409 hata sözleşmesi (§3.6) (2026-07-28)**; **v1.7'de ML-analiz veri temeli eklendi: karar logu + override nedeni + sefer özetleri (§1.8, §6.4-6.5) (2026-07-29)** |
 | **Pilot note** | Onuncu pilot. Tek iterasyonda **9/10** skor. **§number fabrikasyon = 0** ✅ (F9'daki §188 hatası tekrarlanmadı). Yeni paradigma: **"orkestratör feature"** — 4-5 FEAT'in detection'ını consume edip action'ına route ediyor. |
 
 ---
@@ -135,6 +135,26 @@ HERE Routing API'ye sorulur: bu rotada trafik yoğunluğu var mı?
                                               sınıflandırır. FN-16 tetiklenir.
 ```
 
+### 1.8 ML-analiz veri temeli — karar logu, override nedeni, sefer özetleri (v1.7 EKLENDİ, 2026-07-29)
+
+**ADR-0010 disiplini korunuyor:** Bu bölüm spec'e ML EKLEMEZ. ADR-0010 §3.3 uyarınca ML-tabanlı analiz Phase 3 adayıdır ve "consume yes, build no" ilkesi geçerlidir. Buradaki üç kalem, o katmanın (planned-vs-actual analizi, override analizi, feature importance, zorlanılan-senaryo kümeleme) İLERİDE tüketeceği veriyi BUGÜNDEN biriktiren saf loglama/özetleme altyapısıdır. Model eğitimi, anomaly detection, öğrenilmiş ağırlık — hiçbiri bu spec'in kapsamında değildir.
+
+**Neden FEAT-010'da ve neden ŞİMDİ (üç kanıta dayalı gerekçe):**
+
+1. **`public.locations` retention 7 gün** (TimescaleDB `add_retention_policy('locations', '7 days')` — canlı prod politikası). Görev kapanışında sefer özeti mühürlenmezse, FN-01'in kalibre edilmesi için gereken planned-vs-actual verisi kalıcı olarak yok oluyor. Bugün başlamayan birikim, yarın telafi edilemez.
+2. **Grup B kısıtları (time_window, direction, location_type) HİÇBİR yerde kalıcı değil** (Strateji 3 — yalnızca frontend-state, DSE session notes kanıtı). Karar logu, bu kısıtların TEK kalıcı kaydı olur; aksi hâlde "dispatcher hangi zaman penceresi bilgisiyle karar verdi" sorusu geriye dönük cevaplanamaz.
+3. **Override sinyali bugün doğal üretiliyor ama kaybediliyor:** DSE scorer sıralaması karar destektir, atamayı DEĞİŞTİRMEZ (bilinçli parite). "Scorer #1 önerdi, dispatcher #3'ü seçti" bilgisi her approve'da mevcut — loglanmadığı için buharlaşıyor. Bu sinyal hem FEAT-010'un exception politika kalibrasyonunun hem de Phase 3 ML analizinin ana girdisidir.
+
+**Üç kalem:**
+
+| Kalem | Ne | Nereye | Kim yazar |
+|---|---|---|---|
+| Karar logu | Approve anında scorer sıralaması + kısıt snapshot'ı + dispatcher'ın gerçek seçimi | `enterprise.dispatch_decision_log` (§6.4) | FN-18 (frontend'den best-effort POST) |
+| Override nedeni | `chosen ≠ recommended` ise tek dropdown | Karar logunun `override_reason` kolonu | FN-20 dialog → FN-18 |
+| Sefer özetleri | Görev kapanışında planned-vs-actual + ADXL345 olay sayıları, retention'dan ÖNCE | `enterprise.trip_summaries` (§6.5) | FN-19 worker (UNCERTAINTIES #19) |
+
+**"Best-effort" ilkesi (FN-16 push paterniyle aynı):** Karar logu INSERT'i approve akışını ASLA bloke etmez — log başarısız olsa bile approve tamamlanır (no-throw). Loglama, operasyonun önüne geçemez.
+
 ---
 
 ## 2. Function catalog
@@ -158,8 +178,11 @@ HERE Routing API'ye sorulur: bu rotada trafik yoğunluğu var mı?
 | 15 | FEAT-010-FN-15 | worker | `executeAutoResolution` | exceptionId | Result | enterprise.exception_events | enterprise.dispatch_tasks, enterprise.exception_events (status=auto_handled) | HERE Tour Planning | ADR-0005 §5.3 | 2 | **FEAT-002:FN-02** POST /replan |
 | 16 | FEAT-010-FN-16 | backend + frontend (mobile) | `requestDelayReasonFromDriver` (**v1.3 EKLENDİ**) | taskId, driverId, delayMinutes | void (push gönderir) | enterprise.exception_events | enterprise.exception_events.detection_payload (driver_response) | Expo Push API | Bu spec'in kendi kararı (§1.7) | 1 | `tulipfleet-backend/routes/internalBridge.js:sendPushNotification` (Faz 4, `f4536a7`; **v1.6: A2 `72d21f6` derivedTitle ile aynı köprü — staging'de uçtan uca kanıtlı**) |
 | 17 | FEAT-010-FN-17 | backend | `prepareDockNotificationTemplate` (**v1.3 EKLENDİ**) | exceptionId, delayMinutes, dockContactInfo | { template: string } | enterprise.dispatch_tasks, enterprise.dock_appointments | enterprise.exception_events.detection_payload (template) | — | Bu spec'in kendi kararı (§3.5) | 1 (hazırlama) / 2 (gönderim) | — |
+| 18 | FEAT-010-FN-18 | backend | `POST /api/dispatcher/decision-log` (**v1.7 EKLENDİ**) | routing_job_id, dispatch_task_id, scorer_snapshot, constraints_snapshot, recommended_vehicle_id, chosen_vehicle_id, override_reason?, **decided_by (JWT.user_id)** | { logId } | — | enterprise.dispatch_decision_log | — | ADR-0010 §3.3 — ML-analiz veri temeli, ML DEĞİL (§1.8) | 1 | **DSE scoring registry** (dispatcher repo, `rankVehicles` çıktısı payload'ın kaynağı); best-effort no-throw paterni FN-16 push ile aynı |
+| 19 | FEAT-010-FN-19 | worker | `buildTripSummary` (**v1.7 EKLENDİ**) | taskId | Summary? | public.tasks, public.locations, public.alerts (SELECT-only — rol sınırı korunur) | enterprise.trip_summaries | — | ADR-0010 §3.3 (§1.8); UNCERTAINTIES #19 (yazma sorumluluğu) | 1 | **FEAT-005** planned-vs-actual tüketicisi; **FEAT-007** ADXL345 olay sayıları |
+| 20 | FEAT-010-FN-20 | frontend | `<OverrideReasonDialog />` (**v1.7 EKLENDİ**) | recommendedVehicleId, chosenVehicleId | UI Component (reason → FN-18 payload'ına) | — | — | — | ADR-0001 §3.6; UNCERTAINTIES #20 (enum + zorunluluk) | 1 | Approve akışına eklenir (FEAT-001:FN-013 approve pattern) |
 
-**Konsolidasyon notları (özet, tam tarihçe v1.4'te):** FN-05 + FN-07 konsolidasyonda eklendi; FN-16 + FN-17 v1.3'te eklendi; FN-14 v1.4'te "sıfır iş gücü" davranışına genişletildi; **v1.5'te yeni fonksiyon eklenmedi, FN-03'ün iç mantığı (§3.3.2) genişletildi; v1.6'da yeni fonksiyon eklenmedi — FN-01'e temporalScorer hizalaması, FN-16'ya kanıtlı köprü referansı işlendi + §3.6 hata sözleşmesi eklendi.**
+**Konsolidasyon notları (özet, tam tarihçe v1.4'te):** FN-05 + FN-07 konsolidasyonda eklendi; FN-16 + FN-17 v1.3'te eklendi; FN-14 v1.4'te "sıfır iş gücü" davranışına genişletildi; **v1.5'te yeni fonksiyon eklenmedi, FN-03'ün iç mantığı (§3.3.2) genişletildi; v1.6'da yeni fonksiyon eklenmedi — FN-01'e temporalScorer hizalaması, FN-16'ya kanıtlı köprü referansı işlendi + §3.6 hata sözleşmesi eklendi; v1.7'de 3 yeni fonksiyon eklendi (FN-18 karar logu, FN-19 sefer özeti worker'ı, FN-20 override nedeni dialogu) — üçü de ML-analiz veri temeli, exception pipeline'ından bağımsız (§1.8).**
 
 ---
 
@@ -372,6 +395,57 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 }
 ```
 
+### 6.4 `enterprise.dispatch_decision_log` (v1.7 EKLENDİ)
+
+```sql
+CREATE TABLE enterprise.dispatch_decision_log (
+  id                     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id             uuid NOT NULL,
+  routing_job_id         uuid,              -- enterprise.routing_jobs ref
+  dispatch_task_id       uuid,              -- enterprise.dispatch_tasks ref
+  decided_at             timestamptz NOT NULL DEFAULT now(),
+  decided_by             uuid,              -- JWT.user_id
+  scorer_snapshot        jsonb NOT NULL,    -- [{vehicle_id, rank, score, per_scorer:{spatial,temporal,...}, memo, available}]
+  constraints_snapshot   jsonb,             -- StrictTaskConstraints — Grup B dahil (TEK kalıcı kayıt, §1.8 gerekçe 2)
+  recommended_vehicle_id uuid,              -- scorer sıralamasında #1
+  chosen_vehicle_id      uuid,              -- dispatcher'ın gerçek seçimi
+  is_override            boolean GENERATED ALWAYS AS
+                           (recommended_vehicle_id IS DISTINCT FROM chosen_vehicle_id) STORED,
+  override_reason        text,              -- enum — UNCERTAINTIES #20
+  override_comment       text
+);
+CREATE INDEX ON enterprise.dispatch_decision_log (company_id, decided_at DESC);
+CREATE INDEX ON enterprise.dispatch_decision_log (company_id, is_override) WHERE is_override;
+```
+
+**Karar — neden hypertable DEĞİL:** `exception_events`'in aksine yazma hacmi düşük (approve başına 1 satır). Normal tablo + iki index yeterli; TimescaleDB overhead'i gereksiz. Retention: UNCERTAINTIES #21.
+
+### 6.5 `enterprise.trip_summaries` (v1.7 EKLENDİ)
+
+```sql
+CREATE TABLE enterprise.trip_summaries (
+  task_id              uuid PRIMARY KEY,   -- public.tasks.id
+  company_id           uuid NOT NULL,
+  vehicle_id           uuid,
+  driver_id            uuid,
+  planned_start        timestamptz,        -- public.tasks.scheduled_start (varlık kanıtı ön koşul — §10.2)
+  planned_end          timestamptz,
+  actual_start         timestamptz,        -- status geçiş zamanları (in_progress / completed)
+  actual_end           timestamptz,
+  planned_distance_km  numeric,
+  actual_distance_km   numeric,            -- public.locations ardışık nokta haversine toplamı
+  location_points      int,                -- özet anındaki ham nokta sayısı (veri kalitesi göstergesi)
+  eta_deviation_min    numeric,            -- (actual_end - planned_end) dakika
+  alert_counts         jsonb,              -- {"hard_brake": 2, "overspeed": 1, ...} sefer penceresi ADXL345/alert sayıları
+  summarized_at        timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ON enterprise.trip_summaries (company_id, actual_end DESC);
+```
+
+**Zamanlama disiplini (retention yarışı):** `locations` retention 7 gün → worker cron'u saatlik "completed VE özetlenmemiş" görevleri tarar; görev kapanışından en geç 24 saat içinde özet mühürlenir (6 günlük emniyet payı). `location_points = 0` olan özet dürüstçe "ham veri yoktu" der — sahte doldurma YOK (Graceful Degradation, DSE ilkesiyle aynı).
+
+**Rol sınırı:** FN-19 enterprise worker'ı yalnızca SELECT yapar (`public.tasks/locations/alerts`) ve yalnızca `enterprise.trip_summaries`'e yazar — `enterprise_backend` rolünün mevcut yetki modeli İHLAL EDİLMEZ, core backend'e dokunulmaz (code-freeze uyumlu). Alternatif (core backend completion handler'ı yazar) UNCERTAINTIES #19'da.
+
 ---
 
 ## 7. Shared infrastructure with previous FEAT'leri
@@ -391,6 +465,14 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 17. **`location_gps_buffer_meters` = 20m, tek global varsayılan — ✅ KAPANDI.** Per-bölge (şehir merkezi vs kırsal) farklılaşma Phase 1.1'e ertelendi; Phase 1'de tek değer.
 
 18. **Debounce teknik implementasyonu (EMQX LWT webhook mu, polling mi) — ✅ KAPANDI (devir kararıyla).** Ürün kararı değil, implementasyon kararı olduğu teyit edildi: Phase 1 kodlama aşamasında EMQX'in (Faz 4.2 MQTT altyapısı) webhook/event-bridge "disconnect" event'i verip vermediği canlı olarak doğrulanacak; veriyorsa LWT-event yolu, vermiyorsa mevcut son-telemetri-damgası polling'i debounce'u simüle eder. Ürün tasarımı iki durumda da aynı kalır (§3.3.2 akışı değişmez).
+
+### v1.7'de açılan (Cem onayı bekleyen, 2026-07-29)
+
+19. **`trip_summaries` yazma sorumluluğu.** Seçenek A (ÖNERİ): FN-19 enterprise worker — rol sınırı temiz (SELECT public.* → INSERT enterprise.*), core backend'e ve code-freeze'e dokunmaz. Seçenek B: core backend task-completion handler'ı yazar — daha anlık ama `public` düzlemine kod ekler ve prod deploy penceresi gerektirir.
+
+20. **`override_reason` enum değerleri + zorunluluk.** Öneri enum: `driver_familiarity | customer_preference | vehicle_condition | workload_balance | scorer_data_stale | other`. Öneri zorunluluk: **opsiyonel** — zorunlu kılmak dispatcher'ı ya rastgele neden seçmeye ya da scorer önerisine yapay uymaya iter; boş bırakılan override da başlı başına sinyaldir.
+
+21. **Karar logu + sefer özetleri retention.** Öneri: retention YOK (süresiz) — analiz değeri zamanla artar, hacim düşük (approve başına 1 + görev başına 1 satır). Asgari kabul: 24 ay.
 
 ---
 
@@ -412,6 +494,9 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 - [ ] **v1.6 YENİ — Tek-aktif-görev 409 sözleşmesi (§3.6)** — `tulipfleet-backend` `/api/driver/tasks/:id/start` handler'ında 500 → 409 Conflict + `active_task_no` içeren anlaşılır mesaj; mobil Alert ile gösterim. Staging'de doğrula, prod'a code-freeze penceresinde. FEAT-010 pipeline'ından bağımsız, erken yapılabilir.
 - [ ] **v1.6 YENİ — FN-01 ↔ temporalScorer hizalama kontrolü** — FN-01 implementasyonu başlarken DSE temporalScorer'ın eşik/ETA mantığı okunup aynı feasibility matematiği kullanılmalı (§1.6); ADR-0014 gerçek HERE ETA'sı geldiğinde iki katman birlikte aynı kaynağa geçirilmeli.
 - [ ] **v1.6 YENİ — EMQX LWT doğrulaması (eski UNCERTAINTIES #18 devri)** — debounce implementasyonuna başlamadan önce EMQX webhook/event-bridge "disconnect" event'inin varlığı canlı kanıtlanacak.
+- [ ] **v1.7 YENİ — `enterprise.dispatch_decision_log` migration + FN-18 endpoint** — pgmig (staging→prod ayna kuralı) + `POST /api/dispatcher/decision-log`; dispatcher approve akışına best-effort (no-throw) çağrı. Exception pipeline'ından BAĞIMSIZ, erken yapılabilir.
+- [ ] **v1.7 YENİ — FN-20 `<OverrideReasonDialog />`** — UNCERTAINTIES #20 kararına bağlı (enum + zorunluluk); `chosen ≠ recommended` ise tetiklenir.
+- [ ] **v1.7 YENİ — `enterprise.trip_summaries` migration + FN-19 worker** — UNCERTAINTIES #19 kararına bağlı. **Ön koşul (ispat şart):** `public.tasks`'ta `scheduled_start/scheduled_end` kolonlarının ve status geçiş zaman damgalarının varlığı canlı `\d tasks` ile kanıtlanmalı (köprü bulgusu: dispatcher SELECT'i bu kolonları okuyor — güçlü işaret, kanıt değil).
 
 *(§10.1, 10.3, 10.4 v1.4'ten değişmedi.)*
 
@@ -422,6 +507,7 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 *(v1.4'ten değişmedi, ayrıca:)*
 - **v1.5 kaynağı:** Cem'in saha deneyimi gözlemi (2026-07-18) — MQTT/GPS yanlış-pozitif önleme, dış referans/ADR yok, bu spec'in kendi kararı.
 - **v1.6 kaynağı:** A2 saha test turu (2026-07-28, staging canlı) — 500→409 bulgusu + DSE temporalScorer canlı kanıtı; bkz. `docs/SESSION_NOTES_decision-support-engine.md` (A2 KAPANIŞ bölümü).
+- **v1.7 kaynağı:** ML-analiz katmanı planlama oturumu (2026-07-29) — HERE (ML consumer) / dispatcher (optimizasyon) / ML-analiz (karar değerlendirme) üç-katman ayrımı; ADR-0010 §3.3 Phase 3 hazırlığı olarak veri temeli kararı. Retention kanıtı: `add_retention_policy('locations', '7 days')` (canlı prod). Grup B kalıcılık boşluğu kanıtı: `docs/SESSION_NOTES_decision-support-engine.md` (Strateji 3 bölümü).
 
 ---
 
@@ -433,3 +519,4 @@ Per-company override: `public.companies.settings.exception_thresholds` JSONB key
 |---|---|---|---|
 | **1.5 (yanlış-pozitif önleme)** | **2026-07-18** | **Cem Sahinkaya + Claude** | **Cem'in üçüncü turdaki gözlemi üzerine FN-03'ün her iki dalına da yanlış-pozitif önleme tamponu eklendi — yeni fonksiyon yok, mevcut FN-03'ün iç mantığı genişletildi.** Yeni **§3.3.2** "Yanlış-pozitif önleme — debounce ve GPS tamponu" eklendi: (1) **MQTT disconnect debounce'u** — broker'ın anlık "disconnect" event'ine karşı, hemen exception açmak yerine 3-5 dakikalık (öneri: 5 dk) bir bekleme süresi; bu süre içinde reconnect olursa exception hiç açılmaz. Bu, FN-07'nin dedup mekanizmasından (açık bir exception'ın tekrarını önler) farklı bir katman (exception'ın ilk kez açılmasını geciktirir) olarak açıkça ayrıştırıldı. (2) **GPS jitter tamponu** — `driver_location_mismatch` eşiğine geofence yarıçapının üstüne +20m (öneri) sabit bir tolerans payı eklendi, efektif eşik 100m→120m; sürücünün gerçekte doğru yerde olduğu ama GPS'in ölçüm hatası yaptığı durumları filtreler. §4 Severity matrix'e, zaman eşiklerinin artık debounce/tampon *sonrasında* sayıldığını netleştiren bir not eklendi. §6.3 `exception_thresholds` JSONB'ye iki yeni alan eklendi (`offline_debounce_minutes`, `location_gps_buffer_meters`) — additive, migration gerektirmiyor. 3 yeni UNCERTAINTIES açıldı (#16 debounce kesin süresi, #17 GPS tamponu bölgesel farklılaşması, #18 debounce'un MQTT LWT event'i mi yoksa polling mi kullanacağı — teknik implementasyon kararı). Bu, Cem'in art arda üçüncü turdaki mühendislik incelemesi — spec'in olgunlaşma sürecinde her turun bir öncekinden daha ince taneli, üretim-kalitesi bir detaya odaklandığı gözlemlendi (v1.3: doğru ayrım, v1.4: somut aksiyon, v1.5: yanlış-pozitif önleme). |
 | **1.6 (kararlar + saha geri beslemesi)** | **2026-07-28** | **Cem Sahinkaya + Claude** | **(1) UNCERTAINTIES #16-18 KAPATILDI:** `offline_debounce_minutes = 5` (onaylı), `location_gps_buffer_meters = 20` global (per-bölge Phase 1.1'e ertelendi), #18 implementasyon aşamasına devredildi (EMQX LWT doğrulaması Phase 1 kodlamasında; ürün tasarımı iki durumda da değişmez). §6.3 JSONB değerleri onaylı olarak işaretlendi. **(2) Temporal "KAÇIRIR" planlama-anı köprüsü (§1.6 üçüncü madde):** DSE temporalScorer'ın canlı VRPTW feasibility sinyali FN-01'in planlama-aşaması ikizi olarak tanımlandı — aynı matematik, farklı "an"; FN-01 implementasyonu temporalScorer ile hizalanmalı, ADR-0014 HERE ETA'sı geldiğinde ikisi birlikte geçmeli (backlog maddesi §10.2). **(3) Yeni §3.6 — tek-aktif-görev 409 hata sözleşmesi:** A2 saha testinde (staging canlı) bulunan gerçek UX hatası — iş kuralı ihlali (aktif görev varken ikinci "Başla") 500 dönüyordu; hedef 409 Conflict + `active_task_no` içeren anlaşılır mesaj. Genelleme ilkesi: kural ihlali ≠ sunucu çökmesi, her iş-kuralı ihlali 4xx + anlaşılır mesaj. FN-16'nın push altyapısının artık staging'de uçtan uca kanıtlı olduğu (A2 `72d21f6`) fonksiyon kataloğuna ve §3.4'e not düşüldü. Yeni fonksiyon eklenmedi. |
+| **1.7 (ML-analiz veri temeli)** | **2026-07-29** | **Cem Sahinkaya + Claude** | **ML-analiz katmanı hazırlığı — ADR-0010 disiplini KORUNARAK (ML eklenmedi, yalnızca veri temeli).** Üç-katman ayrımı netleştirildi: HERE = ML consumer (ETA/rota), dispatcher = optimizasyon + karar destek, ML-analiz (Phase 3, ADR-0010 §3.3) = karar değerlendirme (override analizi, planned-vs-actual, feature importance). O katmanın veri temeli bugünden kurulmazsa telafi edilemez üç boşluk kanıtlandı: (1) `locations` retention 7 gün — sefer verisi kalıcı değil; (2) Grup B kısıtları yalnızca frontend-state'te yaşıyor — hiçbir kalıcı kayıt yok; (3) scorer-önerisi-vs-dispatcher-seçimi override sinyali her approve'da üretilip kaybediliyor. Yeni **§1.8** (gerekçe + üç kalem + best-effort ilkesi), yeni **§6.4** `enterprise.dispatch_decision_log` (normal tablo, hypertable değil — düşük hacim) + **§6.5** `enterprise.trip_summaries` (saatlik worker, 24h mühürleme, 6 gün emniyet payı, Graceful Degradation), 3 yeni fonksiyon: **FN-18** decision-log endpoint (best-effort no-throw, FN-16 push paterni), **FN-19** buildTripSummary worker (SELECT-only rol sınırı korunur), **FN-20** OverrideReasonDialog. UNCERTAINTIES **#19-21 açıldı** (trip_summaries yazarı, override enum/zorunluluk, retention). §10.2'ye 3 backlog maddesi — üçü de exception pipeline'ından bağımsız, erken yapılabilir; trip_summaries ön koşulu: `scheduled_start/end` canlı `\d` kanıtı. |

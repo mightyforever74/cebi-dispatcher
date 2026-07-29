@@ -391,7 +391,20 @@ yok (9 tablo), PG 15.2, her iki DB'de INSERT testi `is_override = t` (GENERATED 
    yorumundaki yıldız-bölü dizisi blok yorumu erken kapatıp boot'u kırdı (crash-loop,
    ~7 dk) — `d3a468e` ile düzeltildi. YENİ KURAL: MCP ile push'lanan her JS dosyası push
    öncesi sandbox'ta `node --check`'ten geçirilir.
-3. FEAT-010 exception pipeline'ının kendisi (5 monitör + UI) ayrı sprint.
+3. ~~**§3.6 tek-aktif-görev 409 sözleşmesi**~~ ✅ STAGING'DE CANLI (2026-07-29 gece):
+   `tulipfleet-backend/server.js` start handler'ına (satır ~5144) ön kontrol
+   (aktif in_progress varsa 409 + `active_task_no`; istenen görev aktif görevin
+   KENDİSİYSE muaf) + catch'e 23505/`uniq_driver_single_in_progress` yarış emniyeti.
+   Patch anchor-assert'li script + `node --check` (yeni kural ilk kez uygulandı).
+   Staging PM2 deploy; canlı kanıt: pieter (aktif TLP-26-00009) → TLP-26-00011'e
+   start → `HTTP 409 {"error":"Conflict","active_task_no":"TLP-26-00009"}`.
+   Prod'a DOKUNULMADI (code-freeze — commit 21+ backlog'a katıldı).
+   **Kalan mobil cilası (backlog, bir sonraki mobil build'e biner):** `api.js`'te
+   mesaj eşlemesi YOK (kanıtlı) → catch'lerdeki `e.message` jenerik axios metni
+   gösterir; `DriverRouteMapScreen.js:1380` + `DriverTaskDetail.js` catch'lerine
+   `e.response?.data?.message || e.message` eşlemesi eklenmeli ki 409 mesajı
+   kullanıcıya aynen ulaşsın.
+4. FEAT-010 exception pipeline'ının kendisi (5 monitör + UI) ayrı sprint.
 
 ---
 

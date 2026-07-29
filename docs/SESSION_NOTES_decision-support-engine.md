@@ -357,10 +357,23 @@ yok (9 tablo), PG 15.2, her iki DB'de INSERT testi `is_override = t` (GENERATED 
 
 ### Kalan işler (B'nin devamı)
 
-1. **Frontend entegrasyonu (sıradaki):** approve akışına best-effort POST — `scorer_snapshot`
-   `rankVehicles` çıktısından, `constraints_snapshot` `taskConstraintsMap`'ten;
-   `<OverrideReasonDialog />` (`chosen ≠ recommended` ise, boş geçilebilir).
-   FN-18 hazır — frontend'i bloklayan hiçbir şey yok.
+1. ~~**Frontend entegrasyonu**~~ ✅ KAPANDI (2026-07-29 gece, commit `7fb8f60`):
+   `services/dispatch/decisionLog.ts` (FN-18 istemcisi, best-effort no-throw; DİKKAT:
+   FN-18 path'i `/api` ÖNEKLİ, optimize route'larının aksine) + `components/
+   OverrideReasonDialog.tsx` (FN-20, sebep opsiyonel) + `optimize/index.tsx`
+   (lastRankedRef, proceedApprove ayrımı, log approve BAŞARISINDAN sonra atılır).
+   `tsc --noEmit` temiz. **Uçtan uca kanıt (22:19:12):** gerçek UI approve →
+   `dispatch_decision_log` satırı: has_task=t, has_job=t, is_override=t,
+   override_reason=driver_familiarity, snap_n=4, has_constraints=t.
+   **Yol bulgusu — varchar(100) bug'ı (§3.6 ailesi):** ilk approve denemeleri köprüde
+   PG `22001 value too long` ile 500 patlattı (`internalBridge.js:203`) — kök neden:
+   A2 `derivedTitle` `slice(0,255)` yapıyor ama `public.tasks.title` varchar(100) idi;
+   Utrecht→Rotterdam (~55 kr) sığmış, Paris/Schiphol tarzı uzun geocode adresi sığmamıştı.
+   Çözüm: migration `1782400000000_widen-tasks-title-255.sql` — `title` → varchar(255)
+   (start/end_location zaten 255; kod sözleşmesiyle hizalandı), staging+prod ayna
+   kuralıyla uygulandı, iki DB'de 255 kanıtlı. Kod değişmedi, restart gerekmedi.
+   Not: başarısız denemeler `company_task_counters` sayacında atlama bırakmış olabilir
+   (kozmetik; task_no benzersizliği etkilenmez).
 2. **FN-19 trip_summaries worker:** ön koşullar: (a) `public.tasks` `scheduled_start/end` +
    `actual_start/end` canlı `\d tasks` kanıtı (SCHEMA_REFERENCE.md bu kolonları listeliyor —
    güçlü işaret; doğrulama tarihi 2026-06-18, yine de canlı `\d` şart); (b) `enterprise_backend`

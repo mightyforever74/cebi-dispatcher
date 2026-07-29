@@ -374,11 +374,23 @@ yok (9 tablo), PG 15.2, her iki DB'de INSERT testi `is_override = t` (GENERATED 
    kuralıyla uygulandı, iki DB'de 255 kanıtlı. Kod değişmedi, restart gerekmedi.
    Not: başarısız denemeler `company_task_counters` sayacında atlama bırakmış olabilir
    (kozmetik; task_no benzersizliği etkilenmez).
-2. **FN-19 trip_summaries worker:** ön koşullar: (a) `public.tasks` `scheduled_start/end` +
-   `actual_start/end` canlı `\d tasks` kanıtı (SCHEMA_REFERENCE.md bu kolonları listeliyor —
-   güçlü işaret; doğrulama tarihi 2026-06-18, yine de canlı `\d` şart); (b) `enterprise_backend`
-   rolünün `public.locations` + `public.alerts` üzerinde SELECT'i YOK (grant migration'ından
-   kanıtlı) → FN-19 öncesi ek GRANT migration'ı gerekli.
+2. ~~**FN-19 trip_summaries worker**~~ ✅ KAPANDI (2026-07-29 gece): ön koşullar canlı
+   kanıtlandı (`\d tasks`: scheduled_*/actual_* + planned_* + actual_distance_km VAR;
+   `\d locations`: device_id anahtarlı, zaman kolonu `"time"` — zincir tasks.vehicle_id →
+   vehicles.esp32_device_id → locations.device_id; `\d alerts`: task_id VAR → doğrudan
+   task-bazlı sayım). Migration `1782500000000` (tablo + locations/alerts SELECT GRANT,
+   staging+prod ayna, has_table_privilege üçlü kanıt). Worker: enterprise-backend
+   `plugins/tripSummaryWorker.js` (`d3a468e`) — saatlik + boot'ta bir kez, tek set-based
+   SQL (PostGIS ST_DistanceSphere), Graceful Degradation. **Canlı kanıt:** ilk boot turunda
+   `count:21` — staging'in 21 completed görevinin TAMAMI mühürlendi; `sapmali=12`
+   (planned-vs-actual akıyor), `konumlu=0` DÜRÜST (eski görevlerin ham konumu retention'da
+   çoktan silinmişti — worker'ın varlık sebebi tam da bu; bu geceden itibaren yeni
+   tamamlanan görevler gerçek pts/km alır).
+   **Aktarım-hatası dersi (2 olay, ikisi de dakikalar içinde yakalandı):** (a) `091f387`
+   server.js sonuna hatalı artık — `2c7ce38` ile deploy'dan ÖNCE düzeltildi; (b) worker
+   yorumundaki yıldız-bölü dizisi blok yorumu erken kapatıp boot'u kırdı (crash-loop,
+   ~7 dk) — `d3a468e` ile düzeltildi. YENİ KURAL: MCP ile push'lanan her JS dosyası push
+   öncesi sandbox'ta `node --check`'ten geçirilir.
 3. FEAT-010 exception pipeline'ının kendisi (5 monitör + UI) ayrı sprint.
 
 ---

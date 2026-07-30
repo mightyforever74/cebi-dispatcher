@@ -418,6 +418,27 @@ yok (9 tablo), PG 15.2, her iki DB'de INSERT testi `is_override = t` (GENERATED 
    HERE-yetenek dokümanı istisna kalemi). Tasarım: keepalive'ın rota-takip modlu
    v2'si, düz-hat interpolasyon (HERE polyline sonra), pm2. **Güncel sıra:
    1) mobil hata-eşleme cilası → 2) fleet-sim v2 → 3) pipeline sprint'i.**
+   → **1 ✅ KAPANDI** (2026-07-30, mobil `791c97f`): 9 catch'te `response.data.message`
+   önceliğe alındı (TaskDetail eski eşleme `data.error`'du — 409'da kullanıcıya
+   "Conflict" gösterirdi, kanıtlandı ve düzeltildi); `node --check` temiz, sonraki
+   EAS build'e biner.
+   → **2 ✅ KAPANDI** (2026-07-30, backend `644c0b2`): `simulate_route_movement.js`
+   — dürüst fizik (yazılan hız = adım hızı; rampa 12→60 DB'de kanıtlı, 60 km/h×10sn
+   =167m ✓), koordinat çözümü route_json(sayısal)→enterprise JOIN→SKIP (sözlük
+   BİLİNÇLİ yok; 00009 5.862 km'lik uzak dropoff'u dürüstçe gösterdi), varışta
+   hız-0 keepalive, opsiyonel `--complete` gerçek API akışıyla (DB bypass yok).
+   pm2: `fleet-sim-route`. **Uçtan uca kanıt:** TLP-26-00010 Utrecht→Rotterdam
+   penceresinde sim sürdü, telefonda gerçek complete → worker özeti:
+   `pts=5, km=1.40, alert_counts={task_started:1, task_completed:1}` — sistemin
+   İLK gerçek-fizik sefer özeti (00009: pts=8, km=0.97). TZ tuzağı YOK kanıtı:
+   DB Etc/UTC, now()=localtimestamp → without-tz kolonlar fiilen UTC.
+   **Dersler/backlog:** (a) ÇİFT-YAZAR ÇAKIŞMASI — eski `fleet-sim` keepalive
+   aynı cihaza sabit konum basıp km'yi şişirir; testte elle durduruldu; v2.1:
+   keepalive aktif-seferdeki (in_progress görevli) araçları ATLASIN. (b) Mobil
+   RouteMap dispatcher-doğumlu görevde rota çizmiyor (route_json boş, Google
+   Directions metin adresle sessiz düşüyor olabilir) — ayrı inceleme kalemi.
+   (c) Worker restart'ı /opt/enterprise'ta = fleet-enterprise-01 (prod-01 değil)
+   — operasyon notu.
 5. FEAT-010 exception pipeline'ının kendisi (5 monitör + UI) ayrı sprint.
 
 ---

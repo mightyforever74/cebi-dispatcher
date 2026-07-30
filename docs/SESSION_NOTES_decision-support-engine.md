@@ -404,7 +404,21 @@ yok (9 tablo), PG 15.2, her iki DB'de INSERT testi `is_override = t` (GENERATED 
    gösterir; `DriverRouteMapScreen.js:1380` + `DriverTaskDetail.js` catch'lerine
    `e.response?.data?.message || e.message` eşlemesi eklenmeli ki 409 mesajı
    kullanıcıya aynen ulaşsın.
-4. FEAT-010 exception pipeline'ının kendisi (5 monitör + UI) ayrı sprint.
+4. **PLAN GÜNCELLEMESİ (Cem onayı, 2026-07-30):** Pipeline sprint'inden ÖNCE araya
+   **fleet-sim v2 (canlı hareket simülatörü)** alındı. Gerekçe — mevcut simülasyon
+   envanteri kanıtlandı ve üçüncü mod EKSİK: (1) `pm2 fleet-sim` = statik keepalive
+   (araç kımıldamaz, sadece "çevrimiçi" görünür); (2) `FEAT-007-EXT/07-demo/seed.js`
+   = 180 günlük TARİHSEL batch jeneratör (dashboard doldurma, canlı değil);
+   (3) canlı rota-takip simülatörü YOK. v2'nin dört getirisi: demo'da haritada
+   gerçekten hareket eden araç; trip_summaries'e gerçek pts/km (bugünkü dürüst
+   sıfırlar dolar — NOT: "veri birikiyor" iddiası düzeltildi, gerçek hareket
+   olmadan birikim ~0); FEAT-010 pipeline'ının fiili TEST RIG'i (yavaşlat→FN-01
+   ETA sapması, öldür→FN-03 offline debounce, saptır→location mismatch — §3.3.2
+   tampon değerleri bununla doğrulanır); breadcrumbs analizi test verisi (QA
+   HERE-yetenek dokümanı istisna kalemi). Tasarım: keepalive'ın rota-takip modlu
+   v2'si, düz-hat interpolasyon (HERE polyline sonra), pm2. **Güncel sıra:
+   1) mobil hata-eşleme cilası → 2) fleet-sim v2 → 3) pipeline sprint'i.**
+5. FEAT-010 exception pipeline'ının kendisi (5 monitör + UI) ayrı sprint.
 
 ---
 

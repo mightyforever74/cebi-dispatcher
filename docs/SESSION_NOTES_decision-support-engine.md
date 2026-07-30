@@ -439,6 +439,14 @@ yok (9 tablo), PG 15.2, her iki DB'de INSERT testi `is_override = t` (GENERATED 
    Directions metin adresle sessiz düşüyor olabilir) — ayrı inceleme kalemi.
    (c) Worker restart'ı /opt/enterprise'ta = fleet-enterprise-01 (prod-01 değil)
    — operasyon notu.
+   (d) **fleet-sim v3 "Filo Modu" (Cem fikri, 2026-07-30 kapanış):** real-life
+   benzeri çoklu araç + çoklu rota. Tasarım: TEK daemon, iki mod — her tikte
+   DB'den keşif: koordinatı çözülebilen her in_progress görev → hareketli araç;
+   kalan filo → statik keepalive. Çift-yazar sorunu kökten çözülür (cihaz başına
+   tek yazar). Araç başına hız profili (FEAT-007-EXT stilleri), faz kaydırmalı
+   tik. HERE polyline + ADXL345 sentezi bilinçli sonraya. SIRA: pipeline
+   sprint'i (tek araç rig yeter) → v3 filo modu (FN-04/çoklu-exception + demo
+   canlı filo görüntüsü için) → demo.
 5. FEAT-010 exception pipeline'ının kendisi (5 monitör + UI) ayrı sprint.
 
 ---

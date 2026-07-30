@@ -419,4 +419,8 @@ yok (9 tablo), PG 15.2, her iki DB'de INSERT testi `is_override = t` (GENERATED 
   olamaz", hedef>ETA = "erken varış, teslim koordinasyonu kurdun mu?" yumuşak uyarı) bu pencereye
   bağlı — gerçek ETA olmadan uyarılar yanıltıcı; (a) form-level "yaklaşık" etiketli validasyon
   erken yapılabilir, (b) gerçek ETA HERE ile.
+  **YENİ ürün kararı (Cem, 2026-07-30):** HERE `routingMode: fastest | shortest`
+  (Google Maps'teki en-kısa-zaman/en-kısa-mesafe ayrımının karşılığı) — kim seçecek:
+  şirket ayarı mı, görev bazlı mı, sabit politika mı? ADR-0014 canlıya alma
+  penceresinin karar listesine eklendi; mock bu ayrımı üretemez (yol ağı yok).
 - **D) Draft Retention Policy** (backlog #1 çözümü).

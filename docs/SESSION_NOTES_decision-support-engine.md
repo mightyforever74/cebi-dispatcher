@@ -447,6 +447,37 @@ yok (9 tablo), PG 15.2, her iki DB'de INSERT testi `is_override = t` (GENERATED 
    tik. HERE polyline + ADXL345 sentezi bilinçli sonraya. SIRA: pipeline
    sprint'i (tek araç rig yeter) → v3 filo modu (FN-04/çoklu-exception + demo
    canlı filo görüntüsü için) → demo.
+
+## PIPELINE SPRINT KAPANIŞI (2026-07-31) — FEAT-010 Phase 1 UÇTAN UCA CANLI ✅
+**Dilim 1** `exception_events` hypertable: staging id=5 / prod id=17, retention 90g
+(job 1000/1001), 3 index, 18 enum (v1.3 dahil). SPEC DÜZELTMESİ: çift-PK hatası
+→ yalnız kompozit PK (id, occurred_at). Migration `1782600000000`, iki DB ayna.
+**Dilim 2** `plugins/exceptionMonitors.js` (`fa9bf3b`): FN-01/03/05 aktif,
+FN-02/04 guard'lı pasif, FN-06 logger + FN-07 DB-dedup (10dk NOT EXISTS).
+Rig kanıtları: driver_offline high ORGANİK (DAGO-0412, sipariş edilmeden!) +
+driver_location_mismatch medium (00011, dist=47237m, matris ✓) + eta_delay
+critical (dev=697dk, kalan=664.5km, matematik ✓). Dedup canlı kanıtlı (00011
+offline'ı araç-bazında yutuldu — doğru davranış).
+**Dilim 3** `routes/exceptions.js` (`203a580`): FN-10 (company-scope liste,
+filtreler) + FN-11 (acknowledge→acknowledged; manual_replan/reassign/dismiss→
+resolved+audit). Durum makinesi 4 yönden kanıtlı (dup-ack 404, kapalıya 404).
+**ŞİRKET İZOLASYONU ÇİFT KANITLI:** offline→Tulip Lojistik, mismatch+eta→Dobbe;
+admin@fleet.com yalnız Tulip'i, dispatcher UI oturumu yalnız Dobbe'yi gördü.
+**Dilim 4** `useExceptions.ts` + `exceptions/index.tsx` (`32d40c4`) + routes
+girişi (`4d1b0af`): 20sn polling, severity rozetleri, TR etiketler, payload
+özeti, Onayla/Çöz dialogu. UI'dan 2 olay çözüldü → audit: resolved |
+manual_replan | has_user=t. **Zincir: monitör→hypertable→API→UI→resolve→audit.**
+**DERSLER:** (e) enterprise HOST'ta node YOK — bütünlük kapısı container İÇİNDE
+koşulur (`docker compose exec ... node --check`). (f) Notistack kurulu DEĞİL
+(yalnız spec/ADR metninde) — FN-12 sayfa-içi vurguyla MVP'lendi, toast cila.
+(g) staging kullanıcı evreni ≠ prod (admin@fleet.com=Tulip; Dobbe'nin staging
+admin'i YOK — demo hazırlık boşluğu).
+**SPRINT SONRASI BACKLOG:** rig temizliği (00011 scheduled_start/end NULL +
+görev durumu kararı — Cem); Dobbe staging admin kullanıcısı; DAGO-0412
+çapraz-şirket araç bağı; Notistack toast (FN-12 tam); FN-14 tel:/Focus-on-Map;
+FN-09 MQTT push; company-bazlı eşik override; köprüye scheduled_start/end
+yazımı; keepalive hedef listesi (v3'te kökten çözülür).
+**SIRA:** fleet-sim v3 Filo Modu → Demo 🏁 → Pencere.
 5. FEAT-010 exception pipeline'ının kendisi (5 monitör + UI) ayrı sprint.
 
 ---

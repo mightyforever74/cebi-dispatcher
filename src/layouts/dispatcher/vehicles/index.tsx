@@ -68,6 +68,7 @@ function VehiclesLayout(): JSX.Element {
     const columns = [
       { Header: "Plaat / Model", accessor: "vehicle_info" },
       { Header: "Categorie", accessor: "category_badge" },
+      { Header: "Mülkiyet", accessor: "ownership_badge" },
       { Header: "Brandstof", accessor: "fuel_type_badge" },
       { Header: "Brandstofniveau", accessor: "fuel_level_gauge" },
       { Header: "Totaal km", accessor: "total_km_display" },
@@ -109,6 +110,15 @@ function VehiclesLayout(): JSX.Element {
       ) : (
         <MDTypography variant="caption">—</MDTypography>
       );
+
+      const ownershipBadge =
+        v.ownership_type === "rented" ? (
+          <Chip label={`Kiralık · ${v.owner_name || "—"}`} size="small" color="warning" variant="outlined" />
+        ) : v.ownership_type === "leased" ? (
+          <Chip label={`Leasing · ${v.owner_name || "—"}`} size="small" color="info" variant="outlined" />
+        ) : (
+          <Chip label="Özmal" size="small" color="success" variant="outlined" />
+        );
 
       const fuelTypeBadge = v.fuel_type ? (
         <Chip label={v.fuel_type} size="small" variant="outlined" />
@@ -182,6 +192,7 @@ function VehiclesLayout(): JSX.Element {
       return {
         vehicle_info: vehicleInfo,
         category_badge: categoryBadge,
+        ownership_badge: ownershipBadge,
         fuel_type_badge: fuelTypeBadge,
         fuel_level_gauge: fuelLevelGauge,
         total_km_display: totalKmDisplay,

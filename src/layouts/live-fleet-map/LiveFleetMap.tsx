@@ -30,6 +30,7 @@ import { useVehicleStore, VehicleStatus, VehicleTelemetry } from "store/useVehic
 
 // Leaflet CSS
 import { useMqttTelemetry } from "hooks/useMqttTelemetry";
+import { useFleetSnapshot } from "hooks/useFleetSnapshot";
 import "leaflet/dist/leaflet.css";
 
 const STATUS_COLOR: Record<VehicleStatus, string> = {
@@ -99,6 +100,7 @@ type StatusFilter = "all" | "moving" | "stopped" | "ze";
 function LiveFleetMap(): JSX.Element {
   const { vehicles, selectedVehicleId, selectVehicle } = useVehicleStore();
   const { state: mqttState } = useMqttTelemetry();
+  useFleetSnapshot(); // Sıra 4.3: mock→gerçek filo bootstrap + 20sn REST tazeleme
   const vehicleList = Object.values(vehicles);
 
   const [searchTerm, setSearchTerm] = useState("");

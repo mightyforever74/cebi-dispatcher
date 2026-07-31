@@ -565,3 +565,36 @@ pieter start → v3 HAREKET → haritada canli → tamamla → trip_summary + ka
 logu) → Pencere (backlog prod inisi → HERE staging → cutover; + prod keepalive
 DELETE tehlikesi bu pencerede cozulur — v3 prod'a tasininca eski script
 emekli olur).
+
+## DEMO TURU + HERE ILK ISIK (31.07 ogleden sonra) ✅
+**TAM GOSTERI TURU UCTAN UCA:** dispatcher optimize→approve→PUSH (telefona
+dustu, teyitli)→Kabul/Basla→v3 KEEPALIVE→HAREKET gecisi (son-konumdan,
+isinlanmasiz)→haritada canli→VARIS→Tamamla→worker: **TLP-26-00012 pts=265,
+km=28.12 (hedef 28.2 — %99.7)**. Karar logu: 2 kayit is_override=t.
+**KOR NOKTA BULUNDU+FIXLENDI (`30a614b`):** Mock dedup + tuketilmis draft =
+approve sessiz "pushed:0" donuyordu (200/32ms, hicbir sey yazmadan) — gorev/
+kopru/push zinciri hic baslamiyordu. Fix: dedup vurdugunda draft=0 ise ayni
+jobId'ye taslaklar yeniden dogurulur. Canli kanit: "taslaklar yeniden
+dogurulacak" logu + 00012 dogumu.
+**HERE ILK CANLI CAGRI:** routes/active artik gercek yol geometrisi donduruyor
+(`e2b723e`+`8f3a159`): sifir-bagimlilik flexible polyline decoder (32-bit
+tasma emniyetli, bitwise'siz), gorev basina in-memory cache (60sn negatif),
+transportMode=truck, tam Graceful Degradation. KANIT: "HERE geometri
+cache'lendi points=911" + dispatcher haritada Utrecht→Rotterdam GERCEK yol
+hatti (ekran). Frontend: useActiveRoutes geometry alani (`f588208`) +
+Polyline geometri-oncelikli (`44bcfad`; fallback kesikli hedef-yonu).
+**DERS (i):** container'a yeni UST DIZIN eklerken Dockerfile COPY listesi
+kontrol edilir — utils/ kopyalanmayinca crash-loop (`fix: COPY utils/`).
+**MOBIL-DISPATCHER ROTA UYUMSUZLUGU TESHISI (3 kok):** (1) saglayici ayriligi
+(mobil Google/Direkt, dispatcher HERE) → ADR-0014 cutover cozer; (2) kopru
+route_json yazmiyor → mobil "Direkt rota"ya dusuyor (pencere kalemi);
+(3) mobil telefon GPS'ini izler — simulasyonda kamyonda telefon yok, prod'da
+gercek surucuyle kendiliginden dogru.
+**UI BACKLOG (demo turu bulgulari):** sofor secim izgarasi (kiralikta aracin
+soforu gorunsun — 3PL devami); sahte override ikazi (arac degismeden uyari;
+DB izi: is_override=t x2) + override_reason dialogda kaydolmuyor (bugun NULL);
+job_id yerine task_no/user-friendly ad; approve "pushed:0" UI'da basari gibi
+gorunmesin; arac animasyon+bearing cilasi; hiz ondalik yuvarlama; v3 heading.
+**SIRA:** Demo hazirlik (Dobbe staging admin, DEMO_OLUSTURMA v4 gozden
+gecirme, senaryo provasi) → Pencere (backlog prod inisi → HERE tam gecis:
+VRP+mobil+cutover → prod keepalive emekliligi).

@@ -131,6 +131,19 @@ Kök sebep: `internalBridge.js`'in `POST /api/internal/bridge/tasks` handler'ı 
 - **`enterprise.behavior_events`:** `docs/SCHEMA_REFERENCE.md`'de yok — henüz gerçek değil, `FEAT-007`/`FEAT-010` blueprint'lerinde tanımlı (tasarım niyeti). **Kanıt hiyerarşisi:** `SCHEMA_REFERENCE.md` + `ROADMAP.md`'nin "Done/✅" maddeleri = kanıt; `FEAT-*` = niyet. Çelişkide SCHEMA_REFERENCE kazanır.
 - `FEAT-105`/`FN-09`: Phase 2, customer-funded, henüz spec aşamasında, production'da doğrulanamaz.
 
+### 4.2 — 31 TEMMUZ 2026 REVİZYONU: "Tamamlandı" Zincirinde Kör Nokta + HERE İlk Işık
+
+§4'ün anlatısı 18 Tem'da doğruydu ama **eksik** çıktı (bkz. ders 6.10'un ikinci
+kanıtı): demo kuru koşusunda **dedup kör noktası** bulundu — aynı problem girdisi
+ikinci kez optimize edilince Mock dedup'u completed job'ı draft DOĞURMADAN
+döndürüyor, approve "pushed:0" ile sessizce başarılı görünüyordu (görev/köprü/
+push zinciri hiç başlamadan). **Fix `30a614b`:** dedup vurduğunda draft=0 ise
+aynı jobId'ye taslaklar yeniden doğurulur — canlı kanıt TLP-26-00012 (push dahil
+tam zincir + trip_summary pts=265/km=28.12). Ayrıca "HERE yorum satırında" notu
+kısmen eskidi: **HERE Routing v8 ilk canlı çağrısını yaptı** (routes/active
+geometri, 911 nokta, cache'li) — VRP tarafı hâlâ mock (o, pencere işi).
+Saha testinin 6 yeni bulgusu: `docs/SAHA_TESTI_2026-07-31_bug-spec.md`.
+
 ---
 
 ## 5. Revize Uygulama Çeklisti
@@ -231,3 +244,4 @@ Bir özelliğin olmadığını tespit etmek ("push notification tetiklenmiyor") 
 | 2026-07-04 (7. tur) | Kullanıcı kritik açık nokta buldu: sürücüye görev bildirimi yok. İki ayrı bug (assigned filtre eksikliği + atıl push altyapısı) kesin kod kanıtıyla tespit edildi. §4.1 ve Faz 4 eklendi. |
 | 2026-07-15 (8. tur) | **BUG #1 tamamen çözüldü ve uçtan uca doğrulandı.** `GET /api/driver/tasks` filtresine `assigned` eklendi. 253KB'lik `server.js`'in GitHub'a doğrudan yazılamayacağı keşfedildi — yama sunucuda uygulanıp normal git akışıyla push edildi (`20d9ad0`). Hem production hem staging senkronize edilip restart edildi. Canlı testte beklenenden fazla kanıt çıktı: iki eski görev de (`TLP-26-00001/2`) ortaya çıktı. §6.12 ve §6.13 yeni dersler olarak eklendi. |
 | 2026-07-18 (9. tur) | **BUG #2 tamamen çözüldü ve uçtan uca doğrulandı — Faz 4 tamamen bitti.** Kullanıcıyla "eksik" teriminin ne anlama geldiği netleştirildi (§4.1, §6.15) — eski sistemde push hiç yoktu, bu dispatcher'ın yeni bir gereksinimi. `sendPushNotification` helper `internalBridge.js`'e eklendi (`f4536a7`, COMMIT-sonrası best-effort), hem production hem staging'e deploy edildi. Gerçek bir test isteğiyle (`TLP-26-00004`) canlı doğrulandı: `pm2` log'unda `"[Push] Notification sent"`. Küçük bir GitHub yazma denemesinde geçici TLS timeout yaşandı, SHA kontrolüyle güvenle tekrar denendi (§6.14). **Faz 1, 2, 3, 4 — dördü de tam anlamıyla production'da çalışıyor, canlı kanıtlı.** |
+| 2026-07-31 (10. tur) | **§4.2 revizyonu:** dedup kör noktası bulundu+fixlendi (`30a614b`), HERE ilk canlı geometri çağrısı, saha testi 6 bulgu ayrı spec dosyasına mühürlendi (`SAHA_TESTI_2026-07-31_bug-spec.md`). |

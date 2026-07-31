@@ -534,3 +534,34 @@ yazımı; keepalive hedef listesi (v3'te kökten çözülür).
   şirket ayarı mı, görev bazlı mı, sabit politika mı? ADR-0014 canlıya alma
   penceresinin karar listesine eklendi; mock bu ayrımı üretemez (yol ağı yok).
 - **D) Draft Retention Policy** (backlog #1 çözümü).
+## GECE VARDIYASI 2 (31.07) — v3 + HARITA GERCEGE BAGLANDI + 3PL ✅
+**fleet-sim v3 Filo Modu CANLI** (`118e2ca`, pm2 `fleet-sim-v3`, staging):
+10 cihaz tek daemon'da — stiller serpistirildi (5 sakin/3 normal/2 agresif
+70-92), faz ofsetleri 3-26sn (DB kaniti: 10 cihaz x 6 yazim/3dk, damgalar
+saniyelere yayili), 7 hic-konumsuza sirket-ussu SEED (Tulip→Lage Weide,
+NL-92-VB→Waalhaven), BX-TR-42'yi 00011 icin kendiliginden HAREKET'e aldi.
+Eski `fleet-sim-route` silindi. **KRITIK KESIF:** prod `fleet-sim` keepalive
+PROD DB'ye yaziyormus (script path kaniti) — staging'de cift-yazar hic yokmus;
+ayrica her restart'ta prod Dobbe locations'i DELETE ediyor (FEAT-007 seed'i
+icin tehlike — pencere kalemi). Prod keepalive'a DOKUNULMADI.
+**Live Fleet Map GERCEGE BAGLANDI:** mock kaniti (NL-991-X yalniz
+useVehicleStore.ts'te) → Sira 4.3 eksik halkaydi. `useFleetSnapshot.ts`
+(`1510851`): bootstrap mock→gercek filo (device_id anahtarli) + 20sn REST
+tazeleme applyLocationFrame/stale-guard yolundan; endpoint'e emission_class +
+vehicle_category eklendi (`2e4ac50` — kanit: weight kolonu YOK, kategori
+eslemesi truck_heavy→32_plus_t/van→12_18t istemcide); LiveFleetMap tek satir
+(`29d3ef4`). EKRAN KANITI: 4 gercek Dobbe araci, BX-TR-42 56 km/h hareket
+halinde, mock plakalar gitti, izolasyon haritada da dogru. Kozmetik backlog:
+hiz ondalik yuvarlama; v3 heading yazmiyor (ok hep kuzey).
+**3PL/KIRALIK ARAC (Cem talebi) CANLI:** migration `1782700000000`
+(ownership_type owned|rented|leased DEFAULT owned + owner_name; staging+prod
+sema aynasi, demo verisi yalniz staging: NL-92-VB rented Van Dijk Verhuur,
+AH-05-KL leased ABN AMRO Lease); vehicles endpoint +2 kolon (`c072ce0`);
+Vehicles tablosu Mulkiyet kolonu — Ozmal yesil/Kiralik turuncu/Leasing mavi
+(`4b7239f`). EKRAN KANITI: uc rozet tipi canlida. Mobil Admin arac formu
+alanlari backlog.
+**SIRA:** Demo tam gosteri turu (taze dispatcher gorevi → optimize → onay →
+pieter start → v3 HAREKET → haritada canli → tamamla → trip_summary + karar
+logu) → Pencere (backlog prod inisi → HERE staging → cutover; + prod keepalive
+DELETE tehlikesi bu pencerede cozulur — v3 prod'a tasininca eski script
+emekli olur).

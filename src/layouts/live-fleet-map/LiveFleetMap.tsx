@@ -445,14 +445,23 @@ function LiveFleetMap(): JSX.Element {
                 {filteredVehicles.map((truck) => {
                   const r = activeRoutes[truck.id];
                   if (!r) return null;
+                  const hasGeo = !!(r.geometry && r.geometry.length > 1);
+                  const line: [number, number][] = hasGeo
+                    ? (r.geometry as [number, number][])
+                    : [
+                        [truck.latitude, truck.longitude],
+                        [r.dropoff.lat, r.dropoff.lng],
+                      ];
                   return (
                     <Polyline
                       key={`route-${truck.id}`}
-                      positions={[
-                        [truck.latitude, truck.longitude],
-                        [r.dropoff.lat, r.dropoff.lng],
-                      ]}
-                      pathOptions={{ color: "#7C3AED", weight: 3, dashArray: "8 10", opacity: 0.85 }}
+                      positions={line}
+                      pathOptions={{
+                        color: "#7C3AED",
+                        weight: hasGeo ? 4 : 3,
+                        dashArray: hasGeo ? undefined : "8 10",
+                        opacity: 0.85,
+                      }}
                     />
                   );
                 })}

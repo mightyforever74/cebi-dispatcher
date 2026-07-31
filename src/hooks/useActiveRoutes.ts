@@ -1,9 +1,9 @@
 /**
  * useActiveRoutes — hareket eden araçların hedef koordinatları (30 sn polling).
  * Demo turu ihtiyacı (2026-07-31): haritada aracın NEREYE gittiği görünsün.
- * DÜRÜSTLÜK: dönen veri "hedef yönü"dür (pickup/dropoff nokta çifti), planlanan
- * yol geometrisi DEĞİL — HERE polyline (ADR-0014) gelince aynı hook gerçek
- * geometri dizisine terfi eder, tüketici bileşen değişmez.
+ * HERE-geometri dilimi (aynı gün, Cem onaylı): backend artık `geometry` alanında
+ * GERÇEK yol koordinat dizisi döndürebiliyor — varsa Polyline ona çizilir,
+ * yoksa kesikli hedef-yönü fallback (Graceful Degradation).
  */
 import { useEffect, useState } from "react";
 import { useAuthStore } from "store/useAuthStore";
@@ -20,6 +20,7 @@ export interface ActiveRoute {
   task_no: string;
   pickup: LatLng;
   dropoff: LatLng;
+  geometry?: [number, number][];
 }
 
 interface ApiRouteRow {
@@ -27,6 +28,7 @@ interface ApiRouteRow {
   task_no: string;
   pickup_location: { lat?: number | string; lng?: number | string } | null;
   dropoff_location: { lat?: number | string; lng?: number | string } | null;
+  geometry?: number[][] | null;
 }
 
 function numPair(o: ApiRouteRow["pickup_location"]): LatLng | null {
@@ -34,6 +36,17 @@ function numPair(o: ApiRouteRow["pickup_location"]): LatLng | null {
   const lat = Number(o.lat);
   const lng = Number(o.lng);
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+function cleanGeometry(g: ApiRouteRow["geometry"]): [number, number][] | undefined {
+  if (!Array.isArray(g)) return undefined;
+  const pts = g
+    .filter(
+      (p) =>
+        Array.isArray(p) && p.length >= 2 && Number.isFinite(Number(p[0])) && Number.isFinite(Number(p[1]))
+    )
+    .map((p) => [Number(p[0]), Number(p[1])] as [number, number]);
+  return pts.length > 1 ? pts : undefined;
 }
 
 export function useActiveRoutes(): Record<string, ActiveRoute> {
@@ -56,7 +69,12 @@ export function useActiveRoutes(): Record<string, ActiveRoute> {
           const pickup = numPair(r.pickup_location);
           const dropoff = numPair(r.dropoff_location);
           if (pickup && dropoff) {
-            next[r.device_id] = { task_no: r.task_no, pickup, dropoff };
+            next[r.device_id] = {
+              task_no: r.task_no,
+              pickup,
+              dropoff,
+              geometry: cleanGeometry(r.geometry),
+            };
           }
           // koordinat kanıtsızsa çizgi çizilmez (dürüst SKIP)
         });

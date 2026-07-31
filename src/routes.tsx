@@ -13,6 +13,7 @@
 import Drivers from "layouts/dispatcher/drivers";
 import Tasks from "layouts/dispatcher/tasks";
 import OptimizeTask from "layouts/dispatcher/tasks/optimize";
+import Exceptions from "layouts/dispatcher/exceptions";
 import Vehicles from "layouts/dispatcher/vehicles";
 import LiveFleetMap from "layouts/live-fleet-map/LiveFleetMap";
 
@@ -83,6 +84,19 @@ const routes = [
     key: "task-optimize",
     route: "/dispatcher/tasks/optimize",
     component: <OptimizeTask />,
+  },
+  {
+    type: "collapse",
+    name: "İstisna Yönetimi (İkaz)",
+    key: "exceptions",
+    icon: (
+      <Icon fontSize="medium" color="error">
+        warning
+      </Icon>
+    ),
+    route: "/dispatcher/exceptions",
+    component: <Exceptions />,
+    noCollapse: true,
   },
 
   // ═══════════ GRUP 2 — YAPAY ZEKÂ & OPTİMİZASYON (gated) ═══════════

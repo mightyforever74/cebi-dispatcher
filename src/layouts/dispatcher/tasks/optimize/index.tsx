@@ -569,10 +569,24 @@ function OptimizeTask(): JSX.Element {
       !initialBoard &&
       locationsQuery.isFetched
     ) {
-      const initialAssignments = buildRoundRobinAssignments(
-        result.tasks,
-        result.available_vehicles
-      );
+      // BUG-6 fix (31.07): varsayilan atama = scorer #1 ONERISI (tek-task).
+      // Eski davranis round-robin idi; scorer'in #1'i round-robin'den farkli
+      // oldugu anda kullanici HICBIR SEYE dokunmadan "override" sayiliyordu
+      // (sahte uyari + is_override=t kirliligi — 31.07 karar logu kaniti).
+      // Simdi: dokunulmamis onay = chosen==recommended = is_override=f;
+      // dialog yalniz kullanici karti SURUKLERSE acilir. Coklu-task fallback:
+      // round-robin (Phase 1 form tek-task).
+      let initialAssignments: Map<string, string>;
+      const initSnapshots = buildSnapshots(result.available_vehicles, locationsQuery.data);
+      const initRanked = rankVehicles(rankingMode, initSnapshots, scoringTasks);
+      if (result.tasks.length === 1 && initRanked.length > 0) {
+        initialAssignments = new Map([[result.tasks[0].id, initRanked[0].vehicleId]]);
+      } else {
+        initialAssignments = buildRoundRobinAssignments(
+          result.tasks,
+          result.available_vehicles
+        );
+      }
       setAssignments(initialAssignments);
       // taskId -> kisit haritasi (onayli plan veri yapisi). Tek-task => 1:1.
       if (submittedConstraints) {

@@ -56,6 +56,13 @@ Bugün 2 onay da is_override=t, override_reason=NULL.
   taşınması uçtan uca doğrulanır. "Öneri dışında araç seçtiniz" ikazı da aynı
   karşılaştırmadan beslendiği için birlikte düzelir.
 
+### BUG-6 GUNCELLEME (ayni gece, kod kaniti + fix c6dc3c6):
+Kok neden KESIN: varsayilan atama round-robin, "override" tanimi scorer #1'e
+gore — ikisi farkli oldugu anda dokunulmamis onay bile override sayiliyordu.
+FIX: tek-task akisinda varsayilan atama = scorer #1 (coklu-task round-robin
+fallback). Dokunulmamis onay artik is_override=f; dialog yalniz gercek
+suruklemede. override_reason=NULL kod bug'i DEGIL (dialog #20 geregi opsiyonel).
+
 ## GÖZLEM-7 — Push Tutarsızlığı (A yok, B var) [İZLENECEK]
 Görev A onayı push üretmedi (görev oluştu), B üretti. Hipotez: A anında app
 ÖN PLANDAYDI (Expo foreground'da sistem banner'ı göstermez). Doğrulama: app

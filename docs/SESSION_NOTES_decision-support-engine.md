@@ -598,3 +598,30 @@ gorunmesin; arac animasyon+bearing cilasi; hiz ondalik yuvarlama; v3 heading.
 **SIRA:** Demo hazirlik (Dobbe staging admin, DEMO_OLUSTURMA v4 gozden
 gecirme, senaryo provasi) → Pencere (backlog prod inisi → HERE tam gecis:
 VRP+mobil+cutover → prod keepalive emekliligi).
+
+## GECE VARDIYASI 3 (31.07 gece) — DEMO HAZIRLIK + SAHA TESTI ✅
+**DEMO_OLUSTURMA v5+temizlik** (`563df27`,`c348f76`,`af53160`): fleet-sim v3
+staging standardi (§5.6), seed_locations LEGACY etiketi + 5 referans yonlendirme,
+PROD keepalive DELETE uyarisi, 3 yeni senaryo satiri (Ikaz/HERE harita/3PL),
+§9.9-9.10. ONEMLI DUZELTME: staging'de demo@tulipfleet.com = DOBBE company_admin
+(psql kaniti — sabahki "Dobbe staging admin yok" cikarimi YANLISTI, geri alindi;
+kalem 1 kendiliginden kapali). Bonus: role enum'da 'dispatcher' VAR (yetki
+matrisi backlog).
+**SAHA TESTI (kuru kosu):** Gorev A Amsterdam→Den Haag (TLP-26-00013) +
+Gorev B Rotterdam→Utrecht. A: optimize→approve→(push YOK — gozlem-7,
+foreground hipotezi)→Kabul/Basla→v3 HAREKET→HERE 911-nokta hatti dispatcher
+haritada→VARIS→Tamamla. B: approve→push GELDI.
+**BULGULAR** `docs/SAHA_TESTI_2026-07-31_bug-spec.md` (`7931613`,`4b42de4`):
+BUG-1 zaman-penceresi cakisma 409 (§3.6 genellemesi), BUG-2 coklu-arac bulk
+guard, BUG-3a KAPANDI (mobil focus-fix `5f7120b` — loadActiveTask mount-only
+idi, kod kaniti; EAS build bekler), BUG-3b gorev adi nav ekraninda yok,
+BUG-3c tasarim notu (telefon-GPS baslangici dogru), BUG-4 secici rota katmani,
+BUG-5 ARCHITECTURE_DECISION §4.2 revizyonu YAPILDI (dedup kor noktasi + HERE
+ilk isik + changelog 10. tur), BUG-6 sahte-override koku (UI recommended_
+vehicle_id gondermiyor adayi + override_reason kaybi — ML verisi kirleniyor,
+oncelik 2), GOZLEM-7 push tutarsizligi (foreground hipotezi), GOZLEM-8 v3
+pickup bacagi yok (v3.1 cila). MD2 PRO/MD3 UI uyum sarti spec'te mühürlü.
+**ONCELIK (spec'te):** BUG-6 → BUG-1 → BUG-2/4 → 3b → gozlem dogrulamalari.
+**SIRA:** Demo ucus karti 6 sahne hazir (Canli Filo → Gorev+push → Canli sefer
++HERE → Ikaz cozumu → 3PL → Sefer kapanisi/ML anlatisi) → bug sprint'i →
+Pencere.

@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 
 // Leaflet & react-leaflet
 import L from "leaflet";
-import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, TileLayer, useMap } from "react-leaflet";
 
 // MUI
 import Chip from "@mui/material/Chip";
@@ -31,6 +31,7 @@ import { useVehicleStore, VehicleStatus, VehicleTelemetry } from "store/useVehic
 // Leaflet CSS
 import { useMqttTelemetry } from "hooks/useMqttTelemetry";
 import { useFleetSnapshot } from "hooks/useFleetSnapshot";
+import { useActiveRoutes } from "hooks/useActiveRoutes";
 import "leaflet/dist/leaflet.css";
 
 const STATUS_COLOR: Record<VehicleStatus, string> = {
@@ -77,6 +78,13 @@ const createVehicleSvgIcon = (truck: VehicleTelemetry, isSelected: boolean) => {
   });
 };
 
+const destFlagIcon = L.divIcon({
+  html: '<svg width="20" height="24" viewBox="0 0 20 24" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="1" x2="3" y2="23" stroke="#ffffff" stroke-width="2"/><path d="M3 2 L17 6 L3 10 Z" fill="#7C3AED" stroke="#fff" stroke-width="0.5"/></svg>',
+  className: "tf-dest-flag",
+  iconSize: [20, 24],
+  iconAnchor: [3, 23],
+});
+
 function MapViewController({
   center,
   shouldFly,
@@ -100,6 +108,7 @@ type StatusFilter = "all" | "moving" | "stopped" | "ze";
 function LiveFleetMap(): JSX.Element {
   const { vehicles, selectedVehicleId, selectVehicle } = useVehicleStore();
   const { state: mqttState } = useMqttTelemetry();
+  const activeRoutes = useActiveRoutes(); // hedef-yonu cizgileri (HERE gelince gercek geometri)
   useFleetSnapshot(); // Sıra 4.3: mock→gerçek filo bootstrap + 20sn REST tazeleme
   const vehicleList = Object.values(vehicles);
 
@@ -432,6 +441,28 @@ function LiveFleetMap(): JSX.Element {
                     }}
                   />
                 ))}
+
+                {filteredVehicles.map((truck) => {
+                  const r = activeRoutes[truck.id];
+                  if (!r) return null;
+                  return (
+                    <Polyline
+                      key={`route-${truck.id}`}
+                      positions={[
+                        [truck.latitude, truck.longitude],
+                        [r.dropoff.lat, r.dropoff.lng],
+                      ]}
+                      pathOptions={{ color: "#7C3AED", weight: 3, dashArray: "8 10", opacity: 0.85 }}
+                    />
+                  );
+                })}
+                {filteredVehicles.map((truck) => {
+                  const r = activeRoutes[truck.id];
+                  if (!r) return null;
+                  return (
+                    <Marker key={`dest-${truck.id}`} position={[r.dropoff.lat, r.dropoff.lng]} icon={destFlagIcon} />
+                  );
+                })}
               </MapContainer>
 
               {selectedVehicle && (

@@ -27,6 +27,18 @@ TLP-26-00013 in_progress; "Haritada Göster" → rota ve özet YOK.
 - Teşhis adımı (Cem talimatı): app kill&relaunch → görev detayı → Haritada
   Göster → console/API hatası kaydı.
 
+### BUG-3 GUNCELLEME (ayni gece, kanit + fix):
+Relaunch sonrasi rota GELDI (Google geocoding metin adresle calisiyor;
+route_json boslugu engel DEGIL). Yeniden siniflandirma:
+- **3a KAPANDI (mobil `focus fix` commit'i):** kok neden kod kanitiyla —
+  loadActiveTask yalniz mount'ta kosuyordu, focus-yenileme yoktu; gorev baska
+  ekrandan baslatilinca RouteMap bayat task ile rotayi bloke ediyordu.
+  Fix: navigation focus listener. Sonraki EAS build'e biner.
+- **3b ACIK [KUCUK]:** navigasyon ekraninda gorev adi/task_no hicbir yerde yok.
+- **3c TASARIM (bug degil):** cizim telefonun GERCEK konumundan baslar (surucu
+  navigasyonu icin dogru); listedeki "Baslangic" metni gorevin pickup'i.
+  Demo notu: simulasyonda telefon kamyonda degil.
+
 ## BUG-4 / UX — Dispatcher Haritada Seçici Rota Katmanı [ORTA]
 Varsayılan: yalnız konum ikonları. Rota+bayrak yalnız listede seçili araç(lar)
 için çizilir (checkbox/tıklama). Onlarca araçlı filoda "çorba" önlenir.

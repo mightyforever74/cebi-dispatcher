@@ -43,6 +43,38 @@ route_json boslugu engel DEGIL). Yeniden siniflandirma:
 Varsayılan: yalnız konum ikonları. Rota+bayrak yalnız listede seçili araç(lar)
 için çizilir (checkbox/tıklama). Onlarca araçlı filoda "çorba" önlenir.
 
+### BUG-4 v2 REVİZYON — Rota Katmanı Kontrol Paneli & İnteraktif UX Standartları (2026-08-02, Cem onaylı)
+v1'in "yalnız tekil seçim" çözümü saha kullanımı için kısıtlayıcı bulundu ve
+4 fonksiyonel gereksinime genişletildi:
+
+1. **Çoklu Katman Kontrol Paneli (Global & Granular):** Haritaya dinamik etki
+   eden Filtre/Seçim Paneli. Olasılık A — Global Switch "Tüm Rotaları Göster"
+   (tek tıkla tüm aktif rotalar açılır/gizlenir). Olasılık B — plaka bazlı
+   seçim (işaretlenen plakanın rota+bayrakları belirir). Olasılık C — sürücü
+   adı bazlı seçim (sürücü seçilince aracı ve rotası izole edilir).
+2. **Anlık (Real-time) Dinamik Yanıt:** Seçim değişimi 0-delay harita
+   katmanına yansır; sayfa yenileme/bekleme yok.
+3. **İki Yönlü Hover Senkronizasyonu (Cross-Highlighting):** Haritadan menüye —
+   rota hover'ında çizgi kalınlaşır/parlar, sol listedeki araç kartı highlight
+   olur. Menüden haritaya — kart hover'ında o aracın rotası öne çıkar.
+4. **UI/UX Standardı:** Dark-mode tema (MD2 PRO / MD3 referansı) bozulmadan,
+   yer kaplamayan Floating Map Control Widget olarak.
+
+**İlk açılış varsayılanı (Cem kararı):** Global switch KAPALI — sayfa yalnız
+araç ikonlarıyla açılır; rota katmanı kullanıcı seçimiyle eklenir (v1 amacı +
+50-300 araçlık hedef filo ölçeği; demoda canlı açılış geçişi anlatı öğesi).
+
+**DURUM: UYGULANDI ✅ (2026-08-02, commits `d958729` + `5f6539c`).** Dosyalar:
+`src/store/useRouteLayerStore.ts` (görünürlük tek kaynağı + hover state,
+0-delay Zustand), `src/components/MapControlWidget/index.tsx` (floating panel,
+daraltılabilir), `src/hooks/useDriverIndex.ts` (Olasılık C — atanmamış sürücü
+deviceId:null guard'lı, Cem düzeltmesi #1), `LiveFleetMap.tsx` entegrasyonu
+(isRouteVisible tek karar noktası; TEK Polyline/araç SABİT key + dinamik
+pathOptions hover stili — unmount/remount yok, titreme yok, Cem düzeltmesi #2;
+Marker+Polyline+kart çift yönlü hover-sync; durum lejantı sağ-alta taşındı).
+Eşleme zinciri: drivers.assigned_vehicle_id (UUID) → VehicleTelemetry.vehicle_id
+(snapshot) → device_id. Sıfır backend dokunuşu; esbuild sözdizimi kapısı PASS.
+
 ## BUG-5 — ARCHITECTURE_DECISION_task-management doc revizyonu [DOKÜMAN]
 §4 anlatısı 18 Tem'da donmuş; 31 Tem revizyon bloğu eklendi (dedup kör noktası
 + fix 30a614b, HERE ilk ışık, saha bulguları işaretçisi). Bu commit'te yapıldı.
@@ -76,3 +108,6 @@ v3.1: iki bacaklı sürüş (konum→pickup→dropoff). Demo anlatısında şimd
 ## ÖNCELİK SIRASI (mühürlü öneri)
 1) BUG-3 (demo-kritik) → 2) BUG-6 (karar logu ML verisini kirletiyor) →
 3) BUG-1 (veri bütünlüğü) → 4) BUG-2 + BUG-4 (UX) → GÖZLEM-7/8 doğrulama/cila.
+GÜNCEL DURUM (2026-08-02): BUG-9 ✅ (3947d54) · BUG-6 ✅ (c6dc3c6) ·
+BUG-3a fix hazır (EAS build bekler) · **BUG-4 v2 ✅ (d958729 + 5f6539c)** ·
+KALAN: BUG-1 → BUG-2 → BUG-3b → GÖZLEM-7/8 doğrulama.

@@ -20,10 +20,15 @@ import { CapacityRequired, SkillRequired } from "types/metadata";
 //                           available_vehicles:[...], tasks:[{id, pickup_location, dropoff_location}]}
 //     FIX (2026-07-18): "tasks" alani eklendi - Kanban UI (Plan Review, Secenek B)
 //     kartlari icin gercek dispatch_tasks.id lazimdi, oncesinde poll bunu hic dondurmuyordu.
-//   POST approve          -> {success, message, pushed, tasks:[...]}
+//   POST approve          -> {success, message, pushed, tasks:[...], overridden_conflicts?}
 //     FIX (2026-07-18): body'ye opsiyonel "vehicle_assignments" eklendi -
 //     dispatcher'in Kanban UI'da surukle-birak ile yaptigi manuel atamalar.
 //     Yoksa (undefined), backend eski round-robin davranisina duser (geriye donuk uyumlu).
+//     BUG-1 Faz A/C (2026-08-02): body'ye opsiyonel time_windows
+//     ([{taskId, start(ISO)}]), override (bool) ve override_reason (string)
+//     eklendi. Backend cakismada HTTP 409 + conflict_metadata doner - hook
+//     bunu yapilandirilmis ApproveConflictError olarak firlatir ki UI
+//     MD2 PRO sert modali acabilsin (jenerik Error'a EZILMEZ).
 //
 // ONEMLI: Su an ROUTING_PROVIDER=mock (lib/routing/factory.js'te HERE entegrasyonu
 // yorum satirinda, Temmuz 2026 icin planli ama henuz yazilmadi). Mock, "vehicles"
@@ -78,11 +83,24 @@ export interface OptimizePollResponse {
   error?: string | null;
 }
 
+// BUG-1 (2026-08-02): koprunun urettigi cakisma muhru (routes/internalBridge.js kanitli).
+export interface ConflictMetadata {
+  conflicting_task_no: string;
+  overlap_minutes: number;
+}
+
+// BUG-1 Faz C: override ile gecilen cakisma kaydi (approve yanitindan).
+export interface OverriddenConflict extends ConflictMetadata {
+  draft_id: string;
+  vehicle_id: string;
+}
+
 export interface ApproveResponse {
   success: boolean;
   message: string;
   pushed: number;
   tasks?: string[];
+  overridden_conflicts?: OverriddenConflict[]; // BUG-1 Faz C: FN-18 muhurleme malzemesi
 }
 
 // FIX (2026-07-18): dispatcher'in Kanban UI'da yaptigi manuel atama.
@@ -91,9 +109,43 @@ export interface VehicleAssignment {
   vehicleId: string;
 }
 
+// BUG-1 Faz A: gorev basina istenen baslangic penceresi (ISO string).
+export interface TimeWindow {
+  taskId: string;
+  start: string;
+}
+
 export interface ApprovePayload {
   routing_job_id: string;
   vehicle_assignments?: VehicleAssignment[]; // FIX (2026-07-18): opsiyonel, verilmezse backend round-robin'e duser
+  time_windows?: TimeWindow[]; // BUG-1 Faz A: opsiyonel, verilmezse backend NOW() ile pencereler
+  override?: boolean; // BUG-1 Faz C: Mode 1 "Gerekceli Onay" bayragi
+  override_reason?: string; // BUG-1 Faz C: serbest metin gerekce (routing_jobs'a muhurlenir)
+}
+
+// BUG-1 Faz C: 409 Conflict, jenerik Error yerine yapilandirilmis firlatilir -
+// UI instanceof kontrolu ile sert modali acar (conflict_metadata elinde hazir).
+export class ApproveConflictError extends Error {
+  readonly status = 409;
+
+  readonly conflict_metadata: ConflictMetadata | null;
+
+  readonly conflicting_draft_id?: string;
+
+  readonly pushed_before_conflict?: number;
+
+  constructor(
+    message: string,
+    meta: ConflictMetadata | null,
+    conflictingDraftId?: string,
+    pushedBeforeConflict?: number
+  ) {
+    super(message);
+    this.name = "ApproveConflictError";
+    this.conflict_metadata = meta;
+    this.conflicting_draft_id = conflictingDraftId;
+    this.pushed_before_conflict = pushedBeforeConflict;
+  }
 }
 
 function authHeaders(token: string | null) {
@@ -160,6 +212,26 @@ export function useApproveOptimization() {
         headers: authHeaders(token),
         body: JSON.stringify(payload),
       });
+      // BUG-1 Faz C: 409 yapilandirilmis firlatilir (jenerik Error'a ezilmez)
+      if (res.status === 409) {
+        let body: {
+          message?: string;
+          conflict_metadata?: ConflictMetadata | null;
+          conflicting_draft_id?: string;
+          pushed_before_conflict?: number;
+        } = {};
+        try {
+          body = await res.json();
+        } catch {
+          // govde bos olabilir - metadata'siz conflict error firlatilir
+        }
+        throw new ApproveConflictError(
+          body.message || "Bu araca belirtilen aralıkta atanmış görev var.",
+          body.conflict_metadata || null,
+          body.conflicting_draft_id,
+          body.pushed_before_conflict
+        );
+      }
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`Optimize approve failed: ${res.status} ${text}`);

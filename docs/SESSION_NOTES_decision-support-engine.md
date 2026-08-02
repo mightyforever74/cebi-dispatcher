@@ -625,3 +625,14 @@ pickup bacagi yok (v3.1 cila). MD2 PRO/MD3 UI uyum sarti spec'te mühürlü.
 **SIRA:** Demo ucus karti 6 sahne hazir (Canli Filo → Gorev+push → Canli sefer
 +HERE → Ikaz cozumu → 3PL → Sefer kapanisi/ML anlatisi) → bug sprint'i →
 Pencere.
+
+## BUG SPRINT 1 KAPANDI (31.07 gece gec) - OZET
+BUG-9 FIX CANLI (3947d54): dedup yas sartsiz, open/ack varken dogum yok;
+kanit acik=3 sabit. 89-olay seli kapandi, Mode 1 yeniden-tespit korundu.
+BUG-6 FIX CANLI (c6dc3c6): varsayilan atama = scorer #1 (tek-task); kanit
+17:06 karar logu is_override=f rec=chosen, dialog acilmadi. Ilk temiz ML satiri.
+GOZLEM-7: bu turda push GELDI (app arka planda) - foreground hipotezi guclendi.
+Mobil focus-fix (5f7120b) EAS build bekliyor (BUG-3a dogrulamasi build sonrasi).
+KALAN: BUG-1 409 -> BUG-2 bulk -> BUG-4 secici katman -> BUG-3b -> GOZLEM-8.
+SIRA: Demo Ucus Karti 6 sahne hazir (canli filo, gorev zinciri, 3 organik acik
+Ikaz, HERE rotasi, 3PL, temiz karar logu). Prova ya da kalan buglar - kahvalti karari.

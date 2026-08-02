@@ -9,6 +9,13 @@
  * DİKKAT (path): optimize/poll/approve route'ları /api ÖNEKSİZ, ama FN-18
  * /api/dispatcher/decision-log ÖNEKLİdir (enterprise-backend routes/decisionLog.js,
  * commit b3cdd06 — koddan kanıtlı, varsayılmadı).
+ *
+ * BUG-1 Faz C (2026-08-02): opsiyonel conflict_metadata + override_comment.
+ * Zaman penceresi çakışması "Gerekçeli Onay" ile geçildiğinde köprünün mührü
+ * (conflicting_task_no + overlap_minutes) conflict_metadata'ya, serbest metin
+ * gerekçe override_comment'e yazılır. §6.4 override_reason enum'una DOKUNULMAZ;
+ * çakışma override'ının işareti conflict_metadata IS NOT NULL'dur (backend
+ * routes/decisionLog.js c478bee + migration 1782900000000 kanıtlı).
  */
 import { StrictTaskConstraints } from "types/metadata";
 
@@ -32,6 +39,12 @@ export interface ScorerSnapshotEntry {
   mode: string;
 }
 
+// BUG-1 Faz C: köprü mührünün şekli (routes/internalBridge.js kanıtlı).
+export interface ConflictMetadataSeal {
+  conflicting_task_no: string;
+  overlap_minutes: number;
+}
+
 export interface DecisionLogPayload {
   routing_job_id: string;
   dispatch_task_id: string;
@@ -40,6 +53,9 @@ export interface DecisionLogPayload {
   recommended_vehicle_id: string | null;
   chosen_vehicle_id: string;
   override_reason: string | null;
+  // BUG-1 Faz C — çakışma override'ı (opsiyonel; normal akışta gönderilmez)
+  override_comment?: string | null;
+  conflict_metadata?: ConflictMetadataSeal | null;
 }
 
 export function postDecisionLog(token: string | null, payload: DecisionLogPayload): void {

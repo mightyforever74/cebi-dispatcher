@@ -41,6 +41,16 @@
 *   FIX (2026-07-22): flatpickr degeri DOM ref'iyle yazdigi icin MUI label
 *   shrink olmuyordu (label ile deger UST USTE biniyordu - ekran goruntusu
 *   kanitli). Cozum: input'a InputLabelProps { shrink: true }.
+*
+* BUG-1 Spec v3 Faz A+C (2026-08-02) - Zaman Penceresi Cakismasi:
+*   - Faz A frontend bacagi: formdaki VRPTW baslangici (time_window_start)
+*     approve payload'ina time_windows olarak tasinir; backend scheduled_start
+*     olarak muhurler, estimated_end'i HERE/fallback ile hesaplar.
+*   - Faz C: approve 409 doner -> ApproveConflictError yakalanir ->
+*     ConflictOverrideModal (MD2 PRO sert modal) acilir. "Gerekceli Onay":
+*     zorunlu serbest-metin gerekce ile override:true + override_reason
+*     yeniden firlatilir; donen overridden_conflicts FN-18 karar loguna
+*     conflict_metadata olarak, gerekce override_comment olarak muhurlenir.
 =========================================================
 */
 
@@ -90,6 +100,9 @@ import {
   useApproveOptimization,
   OptimizeResultTask,
   VehicleAssignment,
+  ApproveConflictError,
+  ConflictMetadata,
+  TimeWindow,
 } from "hooks/useTaskOptimization";
 
 // Canli telemetri snapshot'i (store bypass)
@@ -122,6 +135,8 @@ import {
 import { useAuthStore } from "store/useAuthStore";
 import { postDecisionLog } from "services/dispatch/decisionLog";
 import OverrideReasonDialog from "components/OverrideReasonDialog";
+// BUG-1 Faz C - zaman penceresi cakismasi sert modali (Gerekceli Onay)
+import ConflictOverrideModal from "components/ConflictOverrideModal";
 
 const emptyLocation: LocationValue = { address: "", latitude: null, longitude: null };
 
@@ -395,6 +410,13 @@ function OptimizeTask(): JSX.Element {
   const token = useAuthStore((s) => s.token);
   const lastRankedRef = useRef<{ mode: RankingMode; ranked: ReturnType<typeof rankVehicles> } | null>(null);
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
+  // BUG-1 Faz C: approve 409 (zaman penceresi cakismasi) sert modal state'i.
+  // fn20Reason: ilk denemedeki arac-secimi override sebebi (FN-20) saklanir ki
+  // "Gerekceli Onay" ile yeniden firlatista kaybolmasin.
+  const [conflictPrompt, setConflictPrompt] = useState<{
+    conflict: ConflictMetadata | null;
+    fn20Reason: string | null;
+  } | null>(null);
 
   const toggleVehicle = (id: string) => {
     setSelectedVehicleIds((prev) =>
@@ -626,16 +648,36 @@ function OptimizeTask(): JSX.Element {
     return lr && lr.ranked.length > 0 ? lr.ranked[0].vehicleId : null;
   };
 
-  const proceedApprove = (overrideReason: string | null) => {
+  const proceedApprove = (
+    overrideReason: string | null,
+    conflictReason: string | null = null
+  ) => {
     if (!jobId) return;
     setOverrideDialogOpen(false);
     const vehicle_assignments: VehicleAssignment[] = Array.from(assignments.entries()).map(
       ([taskId, vehicleId]) => ({ taskId, vehicleId })
     );
+    // BUG-1 Faz A (frontend bacagi): formdaki VRPTW baslangici approve'a tasinir;
+    // backend scheduled_start = bu deger, estimated_end = HERE/fallback hesabi.
+    // Pencere girilmemisse gonderilmez -> backend NOW() fallback'i (kontrat).
+    const time_windows: TimeWindow[] = Array.from(taskConstraintsMap.entries())
+      .filter(([, cst]) => cst.extended.time_window_start)
+      .map(([taskId, cst]) => ({
+        taskId,
+        start: cst.extended.time_window_start as string,
+      }));
     approveMutation.mutate(
-      { routing_job_id: jobId, vehicle_assignments },
+      {
+        routing_job_id: jobId,
+        vehicle_assignments,
+        ...(time_windows.length > 0 ? { time_windows } : {}),
+        // BUG-1 Faz C: Mode 1 "Gerekceli Onay" - yalniz cakisma modalinin
+        // onayindan gelir; normal akista override alanlari HIC gonderilmez.
+        ...(conflictReason ? { override: true, override_reason: conflictReason } : {}),
+      },
       {
         onSuccess: (data) => {
+          setConflictPrompt(null);
           setApproveSuccess({ pushed: data.pushed });
           // FEAT-010:FN-18 - karar logu, approve BASARISINDAN sonra, best-effort
           // (no-throw sozlesmesi postDecisionLog icinde; approve asla bloke olmaz).
@@ -650,7 +692,13 @@ function OptimizeTask(): JSX.Element {
                 mode: lr.mode,
               }))
             : [];
+          // BUG-1 Faz C: override ile gecilen cakismalar task bazinda eslestirilir
+          // (approve yanitindaki overridden_conflicts -> draft_id === taskId).
+          const conflictByTask = new Map(
+            (data.overridden_conflicts ?? []).map((oc) => [oc.draft_id, oc])
+          );
           vehicle_assignments.forEach(({ taskId, vehicleId }) => {
+            const sealed = conflictByTask.get(taskId);
             postDecisionLog(token, {
               routing_job_id: jobId,
               dispatch_task_id: taskId,
@@ -659,8 +707,26 @@ function OptimizeTask(): JSX.Element {
               recommended_vehicle_id: recommended,
               chosen_vehicle_id: vehicleId,
               override_reason: overrideReason,
+              // BUG-1 Faz C: cakisma muhru (audit/ML) + serbest gerekce
+              // override_comment'te (SS6.4 enum'una dokunulmaz).
+              conflict_metadata: sealed
+                ? {
+                    conflicting_task_no: sealed.conflicting_task_no,
+                    overlap_minutes: sealed.overlap_minutes,
+                  }
+                : null,
+              override_comment: sealed && conflictReason ? conflictReason : null,
             });
           });
+        },
+        onError: (err) => {
+          // BUG-1 Faz C: 409 yapilandirilmis gelir -> sert modal acilir.
+          if (err instanceof ApproveConflictError) {
+            setConflictPrompt({
+              conflict: err.conflict_metadata,
+              fn20Reason: overrideReason,
+            });
+          }
         },
       }
     );
@@ -703,6 +769,7 @@ function OptimizeTask(): JSX.Element {
     setSubmittedConstraints(null);
     setTaskConstraintsMap(new Map());
     setOverrideDialogOpen(false);
+    setConflictPrompt(null);
   };
 
   const inactiveScorers = SCORERS.filter((s) => !s.available);
@@ -1160,11 +1227,12 @@ function OptimizeTask(): JSX.Element {
                   </MDTypography>
                 )}
 
-                {approveMutation.isError && (
-                  <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
-                    Could not approve plan — try again
-                  </MDTypography>
-                )}
+                {approveMutation.isError &&
+                  !(approveMutation.error instanceof ApproveConflictError) && (
+                    <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
+                      Could not approve plan — try again
+                    </MDTypography>
+                  )}
                 <MDButton
                   variant="gradient"
                   color="success"
@@ -1180,6 +1248,19 @@ function OptimizeTask(): JSX.Element {
               open={overrideDialogOpen}
               onCancel={() => setOverrideDialogOpen(false)}
               onConfirm={(reason) => proceedApprove(reason)}
+            />
+
+            {/* BUG-1 Faz C: zaman penceresi cakismasi sert modali (MD2 PRO).
+                Vazgec -> atama yok (backend rollback zaten yapti);
+                Gerekceli Onay -> ayni payload + override:true + zorunlu gerekce. */}
+            <ConflictOverrideModal
+              open={conflictPrompt !== null}
+              conflict={conflictPrompt?.conflict ?? null}
+              submitting={approveMutation.isPending}
+              onCancel={() => setConflictPrompt(null)}
+              onConfirm={(reason) =>
+                proceedApprove(conflictPrompt?.fn20Reason ?? null, reason)
+              }
             />
 
             {approveSuccess && (

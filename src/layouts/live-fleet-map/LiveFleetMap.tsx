@@ -53,6 +53,9 @@ const C = {
   textFaint: "#65718c",
 };
 
+// NL genel bakış — sayfa ilk yüklendiğindeki sabit kadraj (auto-fit yalnız burada)
+const INITIAL_CENTER: [number, number] = [52.1326, 5.2913];
+
 // Weight class display: 32_plus_t -> "32+ t", 12_18t -> "12-18t"
 const fmtWeight = (w: string): string => w.replace("_plus_t", "+ t").replace(/_/g, "-");
 
@@ -87,22 +90,34 @@ const destFlagIcon = L.divIcon({
   iconAnchor: [3, 23],
 });
 
-function MapViewController({
-  center,
-  shouldFly,
-  selectedId,
-}: {
+/**
+ * ZOOM-LOOP FIX (2026-08-02, saha bulgusu):
+ * Eski MapViewController `center` (her render'da YENİ dizi referansı) +
+ * hiç false'a dönmeyen `triggerFly` bayrağına bağlıydı → seçili araç hareket
+ * ettikçe HER telemetri tikinde flyTo yeniden ateşleniyor, Math.max(zoom,12)
+ * kullanıcının manuel zoom-out'unu ezip haritayı ≥12'ye kilitliyordu
+ * (sonsuz auto-zoom döngüsü).
+ *
+ * Yeni sözleşme: flyTo TEK-ATIMLIK bir İSTEKTİR. Yalnız açık kullanıcı
+ * aksiyonu (listeden araç tıklama / focusPlate URL'i / "Center on map")
+ * monoton `seq` sayacını artırır; effect yalnız seq değişiminde koşar.
+ * Telemetri tiki flyTo'yu ASLA tetikleyemez → manuel drag/zoom hiçbir
+ * otomatikle yarışmaz (Leaflet, uçuş animasyonunu kullanıcı etkileşiminde
+ * zaten iptal eder). Auto-fit yalnız ilk yükleme kadrajıdır (INITIAL_CENTER).
+ */
+interface FlyRequest {
   center: [number, number];
-  shouldFly: boolean;
-  selectedId: string | null;
-}): null {
+  seq: number;
+}
+
+function MapViewController({ fly }: { fly: FlyRequest | null }): null {
   const map = useMap();
   useEffect(() => {
-    if (shouldFly && center) {
-      map.flyTo(center, Math.max(map.getZoom(), 12), { animate: true, duration: 1.0 });
+    if (fly) {
+      map.flyTo(fly.center, Math.max(map.getZoom(), 12), { animate: true, duration: 1.0 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center, shouldFly, selectedId]);
+  }, [fly?.seq]);
   return null;
 }
 
@@ -119,7 +134,10 @@ function LiveFleetMap(): JSX.Element {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [triggerFly, setTriggerFly] = useState(false);
+  // Zoom-loop fix: bool bayrak yerine tek-atımlık uçuş isteği (seq sayaçlı)
+  const [flyReq, setFlyReq] = useState<FlyRequest | null>(null);
+  const requestFly = (lat: number, lng: number): void =>
+    setFlyReq((prev) => ({ center: [lat, lng], seq: (prev?.seq ?? 0) + 1 }));
 
   const [searchParams] = useSearchParams();
   // URL'den gelen focusPlate ile listeden gelen araca otomatik odaklan
@@ -129,7 +147,7 @@ function LiveFleetMap(): JSX.Element {
     const match = vehicleList.find((v) => v.plate.toLowerCase() === focusPlate.toLowerCase());
     if (match) {
       selectVehicle(match.id);
-      setTriggerFly(true);
+      requestFly(match.latitude, match.longitude);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, vehicleList.length]);
@@ -148,15 +166,12 @@ function LiveFleetMap(): JSX.Element {
   const routeVisibleFor = (deviceId: string): boolean =>
     isRouteVisible({ showAllRoutes, selectedRouteVehicleIds }, deviceId, selectedVehicleId);
 
-  let mapCenter: [number, number] = [52.1326, 5.2913];
   const selectedVehicle = selectedVehicleId ? vehicles[selectedVehicleId] : null;
-  if (selectedVehicle) {
-    mapCenter = [selectedVehicle.latitude, selectedVehicle.longitude];
-  }
 
   const handleVehicleSelect = (id: string) => {
     selectVehicle(id);
-    setTriggerFly(true);
+    const v = vehicles[id];
+    if (v) requestFly(v.latitude, v.longitude);
   };
 
   const emissionChip = (e: string) => {
@@ -434,12 +449,8 @@ function LiveFleetMap(): JSX.Element {
                 },
               }}
             >
-              <MapContainer center={mapCenter} zoom={8} scrollWheelZoom zoomControl={false}>
-                <MapViewController
-                  center={mapCenter}
-                  shouldFly={triggerFly}
-                  selectedId={selectedVehicleId}
-                />
+              <MapContainer center={INITIAL_CENTER} zoom={8} scrollWheelZoom zoomControl={false}>
+                <MapViewController fly={flyReq} />
 
                 <TileLayer
                   url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -452,9 +463,10 @@ function LiveFleetMap(): JSX.Element {
                     position={[truck.latitude, truck.longitude]}
                     icon={createVehicleSvgIcon(truck, selectedVehicleId === truck.id)}
                     eventHandlers={{
+                      // Marker tıklaması SEÇER ama uçurmaz (kullanıcı zaten oradadır);
+                      // uçuş yalnız liste/"Center on map" isteğiyle olur.
                       click: () => {
                         selectVehicle(truck.id);
-                        setTriggerFly(false);
                       },
                       mouseover: () => setHoveredVehicle(truck.id),
                       mouseout: () => setHoveredVehicle(null),

@@ -9,6 +9,8 @@
  * Eşleme (kanıtlı, 31.07): vehicles'ta weight kolonu YOK; vehicle_category
  * truck_heavy→32_plus_t, van→12_18t, diğer/bilinmeyen→18_32t.
  * emission_class NULL→"n_a" (dürüst rozet — uydurma euro sınıfı yazılmaz).
+ * BUG-4 v2 (2026-08-02): vehicle_id (public.vehicles.id UUID) artık telemetriye
+ * taşınır — sürücü→araç rota seçimi (Olasılık C) bu alandan eşlenir.
  */
 import { useEffect } from "react";
 import { useAuthStore } from "store/useAuthStore";
@@ -45,6 +47,7 @@ function rowToTelemetry(r: SnapshotRow): VehicleTelemetry {
   return {
     id: r.device_id,
     plate: r.plate_no,
+    vehicle_id: r.vehicle_id,
     vehicle_weight_class: CATEGORY_TO_WEIGHT[r.vehicle_category || ""] || "18_32t",
     emission_class: r.emission_class || "n_a",
     latitude: Number(r.latitude),
@@ -92,6 +95,13 @@ export function useFleetSnapshot(): void {
               [r.device_id]: rowToTelemetry(r),
             });
             return;
+          }
+          if (!known.vehicle_id && r.vehicle_id) {
+            // BUG-4 v2: MQTT ile doğmuş / eski kayıtta UUID eksikse tamamla
+            useVehicleStore.getState().setVehicles({
+              ...useVehicleStore.getState().vehicles,
+              [r.device_id]: { ...known, vehicle_id: r.vehicle_id },
+            });
           }
           useVehicleStore.getState().applyLocationFrame({
             device_id: r.device_id,

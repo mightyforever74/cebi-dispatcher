@@ -19,6 +19,7 @@ import TextField from "@mui/material/TextField";
 
 // Material Dashboard 2 PRO React TS
 import GlassPanel from "components/GlassPanel";
+import MapControlWidget from "components/MapControlWidget";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import Footer from "examples/Footer";
@@ -27,6 +28,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 
 // Store
 import { useVehicleStore, VehicleStatus, VehicleTelemetry } from "store/useVehicleStore";
+import { useRouteLayerStore, isRouteVisible } from "store/useRouteLayerStore";
 
 // Leaflet CSS
 import { useMqttTelemetry } from "hooks/useMqttTelemetry";
@@ -61,11 +63,11 @@ const createVehicleSvgIcon = (truck: VehicleTelemetry, isSelected: boolean) => {
   const glow = isSelected ? "filter: drop-shadow(0 0 8px rgba(124,58,237,0.9));" : "";
 
   const html = `
-    <div style="transform: rotate(${truck.heading}deg); width:32px; height:32px; display:flex; align-items:center; justify-content:center; ${glow}">
-      <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="15" cy="15" r="13" fill="${color}" fill-opacity="0.22"/>
-        <circle cx="15" cy="15" r="8" fill="${color}" stroke="${stroke}" stroke-width="${strokeWidth}"/>
-        <path d="M15 4 L19 12 L15 10 L11 12 Z" fill="${color}" stroke="#fff" stroke-width="0.8"/>
+    <div style=\"transform: rotate(${truck.heading}deg); width:32px; height:32px; display:flex; align-items:center; justify-content:center; ${glow}\">
+      <svg width=\"30\" height=\"30\" viewBox=\"0 0 30 30\" xmlns=\"http://www.w3.org/2000/svg\">
+        <circle cx=\"15\" cy=\"15\" r=\"13\" fill=\"${color}\" fill-opacity=\"0.22\"/>
+        <circle cx=\"15\" cy=\"15\" r=\"8\" fill=\"${color}\" stroke=\"${stroke}\" stroke-width=\"${strokeWidth}\"/>
+        <path d=\"M15 4 L19 12 L15 10 L11 12 Z\" fill=\"${color}\" stroke=\"#fff\" stroke-width=\"0.8\"/>
       </svg>
     </div>`;
 
@@ -110,6 +112,9 @@ function LiveFleetMap(): JSX.Element {
   const { state: mqttState } = useMqttTelemetry();
   const activeRoutes = useActiveRoutes(); // hedef-yonu cizgileri (HERE gelince gercek geometri)
   useFleetSnapshot(); // Sıra 4.3: mock→gerçek filo bootstrap + 20sn REST tazeleme
+  // BUG-4 v2 — rota katmanı görünürlüğü + çift yönlü hover-sync (0-delay Zustand)
+  const { showAllRoutes, selectedRouteVehicleIds, hoveredVehicleId, setHoveredVehicle } =
+    useRouteLayerStore();
   const vehicleList = Object.values(vehicles);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -138,6 +143,10 @@ function LiveFleetMap(): JSX.Element {
     else if (statusFilter === "ze") matchesFilter = v.emission_class === "zero_emission";
     return matchesSearch && matchesFilter;
   });
+
+  // BUG-4 v2 tek karar noktası: bu aracın rotası (ve bayrağı) çizilecek mi?
+  const routeVisibleFor = (deviceId: string): boolean =>
+    isRouteVisible({ showAllRoutes, selectedRouteVehicleIds }, deviceId, selectedVehicleId);
 
   let mapCenter: [number, number] = [52.1326, 5.2913];
   const selectedVehicle = selectedVehicleId ? vehicles[selectedVehicleId] : null;
@@ -340,12 +349,21 @@ function LiveFleetMap(): JSX.Element {
                 <Paper
                   elevation={0}
                   key={v.id}
+                  onMouseEnter={() => setHoveredVehicle(v.id)}
+                  onMouseLeave={() => setHoveredVehicle(null)}
                   sx={{
                     mb: 1,
                     borderRadius: "10px",
                     border: "1px solid",
-                    borderColor: selectedVehicleId === v.id ? C.accent : C.border,
+                    // BUG-4 v2 hover-sync (harita→menü): haritada rotaya gelinince
+                    // bu kart da accent border + hafif glow ile vurgulanır.
+                    borderColor:
+                      selectedVehicleId === v.id || hoveredVehicleId === v.id
+                        ? C.accent
+                        : C.border,
                     backgroundColor: selectedVehicleId === v.id ? C.panelBgSel : C.panelBg,
+                    boxShadow:
+                      hoveredVehicleId === v.id ? "0 0 10px rgba(124,58,237,0.35)" : "none",
                     transition: "all 0.2s linear",
                   }}
                 >
@@ -438,14 +456,22 @@ function LiveFleetMap(): JSX.Element {
                         selectVehicle(truck.id);
                         setTriggerFly(false);
                       },
+                      mouseover: () => setHoveredVehicle(truck.id),
+                      mouseout: () => setHoveredVehicle(null),
                     }}
                   />
                 ))}
 
+                {/* BUG-4 v2 — rota katmanı: yalnız görünürlük koşulunu geçen
+                    araçlar çizilir; TEK Polyline / araç, SABİT key (Cem
+                    düzeltmesi #2 — unmount/remount YOK, hover stili dinamik
+                    pathOptions prop'uyla path-attribute seviyesinde uygulanır,
+                    titreme oluşmaz). */}
                 {filteredVehicles.map((truck) => {
                   const r = activeRoutes[truck.id];
-                  if (!r) return null;
+                  if (!r || !routeVisibleFor(truck.id)) return null;
                   const hasGeo = !!(r.geometry && r.geometry.length > 1);
+                  const isHovered = hoveredVehicleId === truck.id;
                   const line: [number, number][] = hasGeo
                     ? (r.geometry as [number, number][])
                     : [
@@ -456,18 +482,23 @@ function LiveFleetMap(): JSX.Element {
                     <Polyline
                       key={`route-${truck.id}`}
                       positions={line}
+                      eventHandlers={{
+                        // BUG-4 v2 hover-sync (harita→menü)
+                        mouseover: () => setHoveredVehicle(truck.id),
+                        mouseout: () => setHoveredVehicle(null),
+                      }}
                       pathOptions={{
-                        color: "#7C3AED",
-                        weight: hasGeo ? 4 : 3,
+                        color: isHovered ? "#9F67FF" : "#7C3AED",
+                        weight: isHovered ? 6 : hasGeo ? 4 : 3,
                         dashArray: hasGeo ? undefined : "8 10",
-                        opacity: 0.85,
+                        opacity: isHovered ? 1 : 0.85,
                       }}
                     />
                   );
                 })}
                 {filteredVehicles.map((truck) => {
                   const r = activeRoutes[truck.id];
-                  if (!r) return null;
+                  if (!r || !routeVisibleFor(truck.id)) return null;
                   return (
                     <Marker key={`dest-${truck.id}`} position={[r.dropoff.lat, r.dropoff.lng]} icon={destFlagIcon} />
                   );
@@ -613,11 +644,15 @@ function LiveFleetMap(): JSX.Element {
                 </GlassPanel>
               )}
 
+              {/* BUG-4 v2 — Floating Map Control Widget (sağ-üst) */}
+              <MapControlWidget />
+
+              {/* Durum lejantı — widget sağ-üstü aldığı için sağ-alta taşındı */}
               <Paper
                 elevation={2}
                 sx={{
                   position: "absolute",
-                  top: 16,
+                  bottom: 16,
                   right: 16,
                   zIndex: 1000,
                   p: 1.5,

@@ -24,6 +24,10 @@ export type VehicleStatus = "moving" | "idle" | "stopped";
 export interface VehicleTelemetry {
   id: string;
   plate: string;
+  /** public.vehicles.id (UUID) — BUG-4 v2: sürücü (assigned_vehicle_id) →
+   * device_id eşlemesi için snapshot'tan doldurulur. Mock tohumlarda yoktur
+   * (opsiyonel, additive — hiçbir mevcut tüketiciyi kırmaz). */
+  vehicle_id?: string;
   vehicle_weight_class: "12_18t" | "18_32t" | "32_plus_t";
   emission_class: string;
   latitude: number;

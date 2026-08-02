@@ -11,6 +11,55 @@ Aynı araca zaman aralığı çakışan ikinci görev atanamamalı.
   genellemesi; tahmini_varış = HERE süre ya da haversine/60 fallback).
 - Frontend: sert uyarı modalı ("Bu araca belirtilen aralıkta atanmış görev var").
 
+### BUG-1 Mühürlü Spec v3 (2026-08-02, Cem + NotebookLM harmanı) — UYGULAMA DURUMU
+Mimari: "Mode 1 Advisory — Nihai Karar İnsandadır". Şema düzeltmeleri kanıtla
+mühürlendi: kolon `vehicle_id` (assigned_vehicle_id drivers'ta yaşar);
+`estimated_end` ayrı kolon YOK → köprü hesapladığı tahmini varışı
+**scheduled_end**'e mühürler (Cem kararı 1 — mobil kanalla tek sözleşme);
+statüler küçük harf + `accepted` dahil; kolonlar timestamp WITHOUT tz
+(DB Etc/UTC) → **tsrange**. NULL pencereli eski görevler kontrolden MUAF
+(Cem kararı 2b — veri uydurulmaz, yeni zincir her görevi dolu doğurur).
+
+**Faz D — DB temeli ✅ (staging, migration `1782800000000_bug1-overlap-foundation`):**
+`btree_gist` extension + `idx_tasks_time_overlap` Partial GIST
+(vehicle_id, tsrange(scheduled_start, scheduled_end); WHERE aktif statüler +
+her iki pencere NOT NULL) + `exception_events` CHECK'ine 19. tip
+`rule_violation`. Nesne-varlık kanıtı 3/3. **PROD AYNASI BEKLİYOR.**
+Ek migration `1782900000000`: `dispatch_decision_log.conflict_metadata jsonb` ✅ staging.
+
+**Faz A — Veri zinciri ✅ (3 katman kapandı):** enterprise approve
+(`00c2df1`) `time_windows` kabul eder, `scheduled_start` (yoksa NOW) +
+`estimated_end` (HERE v8 truck summary / fallback 40 km/h + %15 buffer /
+koordinatsızsa dürüst 2 saat) hesaplar; köprü (`a5f7345`) payload'ı alır ve
+INSERT'e mühürler. Frontend bacağı (`eefaa0d`): formdaki VRPTW başlangıcı
+approve'a `time_windows` olarak taşınır. Kanıt: TLP-26-00020 HERE gerçek
+süresiyle doğdu (09:00→09:35:04).
+
+**Faz B — Denetim motoru (dispatcher kanalı) ✅:** köprüde tsrange && denetimi,
+numaratörden ÖNCE (409'da task_no sayacı yanmaz), `409 + conflict_metadata
+{conflicting_task_no, overlap_minutes}`; enterprise 409'u
+`pushed_before_conflict` ile frontend'e iletir. Smoke 3/3 PASS (S1 pencereli
+doğum / S2 409 / S3 override). **Faz B-mobil (server.js sert 409, override'sız)
+AÇIK.** VRP soft-warning: HERE VRP cutover'ında devreye girecek (mock'ta
+fiilen dispatcher kanalı). Cascade-delay `rule_violation` monitörü AÇIK
+(CHECK genişletmesi hazır).
+
+**Faz C — Override & ML Loglama ✅ (UI kanıtlı, 2026-08-02 gece):**
+`ConflictOverrideModal` (MD2 PRO sert modal, zorunlu ≥5 kr gerekçe) +
+`ApproveConflictError` yapılandırılmış 409 (`43371c8`) + sayfa kablolaması
+(`eefaa0d`) + FN-18 istemci alanları (`5871321`) + backend kabul (`c478bee`)
++ routing_jobs mührü (`80dc32f`). Tasarım: çakışma override'ı araç-seçimi
+override'ından (is_override GENERATED) BAĞIMSIZ — işaret conflict_metadata
+IS NOT NULL; serbest gerekçe override_comment'te (§6.4 enum korunur).
+**Canlı kanıt:** modal ekranda açıldı, Gerekçeli Onay geçti;
+dispatch_decision_log satırı {overlap_minutes:4, TLP-26-00022} +
+override_comment dolu + is_override=f (ortogonallik kanıtı);
+routing_jobs.response_payload aynı mührü + gerekçeyi taşıyor.
+
+**KALAN (BUG-1):** Faz B-mobil (server.js) · cascade-delay monitörü ·
+prod migration aynası (1782800000000 + 1782900000000) · migration dosyalarının
+sunucu kopya klasörlerine yazımı.
+
 ## BUG-2 — Çoklu Araç Seçiminde Toplu Görev Onayı (Bulk Guard) [ORTA]
 1'den fazla araç seçiliyken Kaydet: konfirmasyon dialogu
 ("Seçtiğiniz N araç için aynı detaylarda AYRI görevler oluşturulacak — onay?").
@@ -74,6 +123,9 @@ pathOptions hover stili — unmount/remount yok, titreme yok, Cem düzeltmesi #2
 Marker+Polyline+kart çift yönlü hover-sync; durum lejantı sağ-alta taşındı).
 Eşleme zinciri: drivers.assigned_vehicle_id (UUID) → VehicleTelemetry.vehicle_id
 (snapshot) → device_id. Sıfır backend dokunuşu; esbuild sözdizimi kapısı PASS.
+**EK (aynı gün): Infinite auto-zoom loop fix'i `75036d5`** — flyTo tek-atımlık
+FlyRequest'e (seq) bağlandı; telemetri tiki kadrajı ezemez; 4 UI testi Cem
+tarafından geçirildi.
 
 ## BUG-5 — ARCHITECTURE_DECISION_task-management doc revizyonu [DOKÜMAN]
 §4 anlatısı 18 Tem'da donmuş; 31 Tem revizyon bloğu eklendi (dedup kör noktası
@@ -108,6 +160,8 @@ v3.1: iki bacaklı sürüş (konum→pickup→dropoff). Demo anlatısında şimd
 ## ÖNCELİK SIRASI (mühürlü öneri)
 1) BUG-3 (demo-kritik) → 2) BUG-6 (karar logu ML verisini kirletiyor) →
 3) BUG-1 (veri bütünlüğü) → 4) BUG-2 + BUG-4 (UX) → GÖZLEM-7/8 doğrulama/cila.
-GÜNCEL DURUM (2026-08-02): BUG-9 ✅ (3947d54) · BUG-6 ✅ (c6dc3c6) ·
-BUG-3a fix hazır (EAS build bekler) · **BUG-4 v2 ✅ (d958729 + 5f6539c)** ·
-KALAN: BUG-1 → BUG-2 → BUG-3b → GÖZLEM-7/8 doğrulama.
+GÜNCEL DURUM (2026-08-02 gece): BUG-9 ✅ (3947d54) · BUG-6 ✅ (c6dc3c6) ·
+BUG-3a fix hazır (EAS build bekler) · BUG-4 v2 ✅ (d958729+5f6539c) + zoom-loop
+✅ (75036d5) · **BUG-1 ✅ Faz A/B-dispatcher/C/D-staging (UI kanıtlı)** ·
+KALAN: BUG-1 Faz B-mobil + cascade monitörü + prod ayna → BUG-2 → BUG-3b →
+GÖZLEM-7/8 doğrulama.

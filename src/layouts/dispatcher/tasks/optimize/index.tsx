@@ -114,6 +114,8 @@ import useDispatchLocationSnapshot, {
 import useComplianceAssessment from "hooks/useComplianceAssessment";
 // UX turu (04.08) - mikro mesafe rozeti icin
 import { haversineKm } from "services/dispatch/scoring/geo";
+// KPI kartlari — analytics ile ayni MD2 PRO bileseni (el yapimi kart yasak)
+import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatisticsCard";
 import { deriveStatus } from "store/useVehicleStore";
 
 // Decision Support Engine (Phase 1)
@@ -249,62 +251,6 @@ function buildBoard(
   });
 
   return { columns };
-}
-
-/** UX turu (04.08): ust panel KPI mini karti — flat B2B, MD2 uyumlu. */
-function JobStatCard({
-  icon,
-  label,
-  value,
-  darkMode,
-}: {
-  icon: string;
-  label: string;
-  value: string;
-  darkMode: boolean;
-}): JSX.Element {
-  return (
-    <MDBox
-      display="flex"
-      alignItems="center"
-      gap={1.5}
-      px={2}
-      py={1.5}
-      sx={{
-        borderRadius: "10px",
-        border: darkMode ? "1px solid rgba(255,255,255,0.15)" : "1px solid #d2d6da",
-        minWidth: 180,
-      }}
-    >
-      <MDBox
-        sx={{
-          width: 36,
-          height: 36,
-          borderRadius: "10px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          bgcolor: "rgba(124,58,237,0.12)",
-          border: "1px solid #7C3AED",
-        }}
-      >
-        <Icon sx={{ color: "#7C3AED" }}>{icon}</Icon>
-      </MDBox>
-      <MDBox>
-        <MDTypography variant="caption" color="text" display="block">
-          {label}
-        </MDTypography>
-        <MDTypography
-          variant="h6"
-          fontWeight="bold"
-          color={darkMode ? "white" : "dark"}
-          sx={{ lineHeight: 1.1 }}
-        >
-          {value}
-        </MDTypography>
-      </MDBox>
-    </MDBox>
-  );
 }
 
 /** Dakika -> "X sa Y dk" (60 altinda: "Y dk"). */
@@ -1352,20 +1298,27 @@ function OptimizeTask(): JSX.Element {
 
             {status === "completed" && result && !approveSuccess && (
               <MDBox mb={2}>
-                {/* UX (04.08): duz metin yerine KPI mini kartlari */}
-                <MDBox display="flex" gap={2} mb={2} flexWrap="wrap">
-                  <JobStatCard
-                    icon="route"
-                    label="Toplam Mesafe"
-                    value={`${(result.summary.total_distance_meters / 1000).toFixed(1)} km`}
-                    darkMode={darkMode}
-                  />
-                  <JobStatCard
-                    icon="schedule"
-                    label="Tahmini Süre"
-                    value={fmtDurationMin(Math.round(result.summary.total_duration_seconds / 60))}
-                    darkMode={darkMode}
-                  />
+                {/* UX (04.08): tema-standardi KPI kartlari (analytics ile ayni bilesen).
+                    percentage'a sahte +% uydurulmaz — notr etiket. */}
+                <MDBox display="flex" gap={3} mt={4} mb={2} flexWrap="wrap">
+                  <MDBox sx={{ width: 240 }}>
+                    <ComplexStatisticsCard
+                      color="info"
+                      icon="route"
+                      title="Toplam Mesafe"
+                      count={`${(result.summary.total_distance_meters / 1000).toFixed(1)} km`}
+                      percentage={{ color: "secondary", amount: "", label: "rota özeti" }}
+                    />
+                  </MDBox>
+                  <MDBox sx={{ width: 240 }}>
+                    <ComplexStatisticsCard
+                      color="primary"
+                      icon="schedule"
+                      title="Tahmini Süre"
+                      count={fmtDurationMin(Math.round(result.summary.total_duration_seconds / 60))}
+                      percentage={{ color: "secondary", amount: "", label: "optimizasyon çıktısı" }}
+                    />
+                  </MDBox>
                 </MDBox>
                 <Divider sx={{ my: 2 }} />
 

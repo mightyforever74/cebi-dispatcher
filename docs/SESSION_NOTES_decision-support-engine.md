@@ -668,3 +668,25 @@ karsilastirilmadan commit YOK); emulator/dev-build konusu ertelenmis kume;
 BUG-1 prod migration aynasi; dispatcher production cutover.
 **SIRA:** ertelenmis mobil oturumu (3a/3b cihaz teyidi + emulator) - Pencere
 (backlog prod inisi + prod ayna + HERE cutover).
+
+
+## REGULASYON SCORER'IN UYANISI + MODAL UI TURU (04.08)
+**Compliance zinciri CANLI:** staging ayna 21=21 (COPY 5: A'dam/R'dam/Utrecht/
+Eindhoven/Maastricht) · migration 1783000000000 vehicle_weight_class (staging
+uygulandi+pgmigrations kayitli, PROD AYNASI BEKLIYOR) · POST /api/compliance/
+assess (63d621a: ST_Contains zone + evaluateAssignment + calculateHeffing +
+NL-bbox disi eu_hint) · demo seed: NL-92-VB zero_emission/electric, 3 dizel
+euro_6, hepsi 18_32t + DET tarihleri (STAGING'de — prod aynasi bekliyor) ·
+smoke: Leiden compliant vs needs_exemption(0/12), heffing 5.10 vs 1.04 EUR ·
+frontend b20e828: useComplianceAssessment + snapshot.compliance + skor matrisi
+(1.0/0.9/0.7/0.4/0.3/0.05, veri-yok 0.5 durust) + eu_hint serit. JWT dersi:
+enterprise=PROD secret (staging degil) — dispatcher token'i api.tulipfleet.com'dan.
+ACIK: Leiden UI canli sahne (REGULASYON modu ekrani) + spec damgasi.
+LinkedIn postu hazir (durust ifade), yayin Cem'de.
+**MODAL UI TURU (96f5fb6):** ConfirmDialogShell ortak govde (severity halkasi,
+DetailRow, CopyChip, gradyan aksiyonlar) — Conflict (HTTP 409 kaldirildi, K1
+<15dk turuncu/>=15 kirmizi, kopyalanabilir rozet, shrink label+placeholder,
+"Riski Onayla ve Gorevi Ata"), Bulk (pill plakalar), OverrideReason (tema
+hizasi, label cakismasi fix, K4 secim-vs-oneri chip'leri; dosya
+components/OverrideReasonDialog.tsx — dizinsiz). Sozlesmeler birebir korundu.
+UI kaniti: 3 modal ekran goruntusuyle onaylandi (K1 iki renk canli).

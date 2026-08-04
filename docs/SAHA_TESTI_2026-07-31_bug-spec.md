@@ -187,6 +187,14 @@ v3 aracı son konumundan DOĞRUDAN dropoff'a sürer; gerçekte önce pickup'a gi
 v3.1: iki bacaklı sürüş (konum→pickup→dropoff). Demo anlatısında şimdilik
 "araç yükünü almış, teslimata gidiyor" çerçevesi kullanılır.
 
+### GÖZLEM-8 KAPANDI ✅ (04.08, `9f8a21f` — v3.1 canlı kanıtlı)
+İki bacaklı sürüş: konum→pickup (DWELL yükleme molası, `--dwell` vars. 60s)
+→dropoff; 200m bacak-1 atlama eşiği; görev-değişiminde doğrudan dropoff
+(bilinçli basitleştirme); haversine sınırında (HERE kapsam dışı — D3).
+CANLI ZİNCİR (BX-TR-42, 00016): HAREKET bacak=1/2 21.8km → varış yavaşlaması
+(55→21→1.7 km/h) → PICKUP VARIS yukleme=60s → DB'de hız-0 dwell tiki →
+TESLIMATA CIKIS → rampa 12 km/h bacak-2. Demo anlatısı artık gerçek akış.
+
 ## ÖNCELİK SIRASI (mühürlü öneri)
 1) BUG-3 (demo-kritik) → 2) BUG-6 (karar logu ML verisini kirletiyor) →
 3) BUG-1 (veri bütünlüğü) → 4) BUG-2 + BUG-4 (UX) → GÖZLEM-7/8 doğrulama/cila.
@@ -196,4 +204,4 @@ BUG-3a fix hazır (EAS build bekler) · BUG-4 v2 ✅ (d958729+5f6539c) + zoom-lo
 GÜNCEL DURUM (2026-08-04): BUG-1 Faz B-mobil ✅ (bab199b) + cascade monitörü ✅
 (a0695a0) · **BUG-2 ✅ (808dff2 backend + c22419b frontend, saha kanıtlı
 00026/00027)** · KALAN: BUG-1 prod ayna (migration 1782800000000 +
-1782900000000) → GÖZLEM-8 (cila, karar bekliyor). BUG-3b kod ✅ (6f12394, cihaz teyidi ertelendi) · GÖZLEM-7 ✅ (davranış, bug değil).
+1782900000000). BUG-3b kod ✅ (6f12394, cihaz teyidi ertelendi) · GÖZLEM-7 ✅ (davranış, bug değil) · GÖZLEM-8 ✅ (9f8a21f, v3.1 canlı zincir kanıtlı). Spec'teki TÜM bug/gözlem kalemleri kapandı — kalan tek iş BUG-1 prod ayna + ertelenmiş cihaz teyitleri.

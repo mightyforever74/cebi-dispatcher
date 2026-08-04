@@ -251,6 +251,69 @@ function buildBoard(
   return { columns };
 }
 
+/** UX turu (04.08): ust panel KPI mini karti — flat B2B, MD2 uyumlu. */
+function JobStatCard({
+  icon,
+  label,
+  value,
+  darkMode,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  darkMode: boolean;
+}): JSX.Element {
+  return (
+    <MDBox
+      display="flex"
+      alignItems="center"
+      gap={1.5}
+      px={2}
+      py={1.5}
+      sx={{
+        borderRadius: "10px",
+        border: darkMode ? "1px solid rgba(255,255,255,0.15)" : "1px solid #d2d6da",
+        minWidth: 180,
+      }}
+    >
+      <MDBox
+        sx={{
+          width: 36,
+          height: 36,
+          borderRadius: "10px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          bgcolor: "rgba(124,58,237,0.12)",
+          border: "1px solid #7C3AED",
+        }}
+      >
+        <Icon sx={{ color: "#7C3AED" }}>{icon}</Icon>
+      </MDBox>
+      <MDBox>
+        <MDTypography variant="caption" color="text" display="block">
+          {label}
+        </MDTypography>
+        <MDTypography
+          variant="h6"
+          fontWeight="bold"
+          color={darkMode ? "white" : "dark"}
+          sx={{ lineHeight: 1.1 }}
+        >
+          {value}
+        </MDTypography>
+      </MDBox>
+    </MDBox>
+  );
+}
+
+/** Dakika -> "X sa Y dk" (60 altinda: "Y dk"). */
+function fmtDurationMin(totalMin: number): string {
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h} sa ${m} dk` : `${m} dk`;
+}
+
 // Gorev kisitlarinin kompakt ozeti (board ustunde, bilgi-yogun B2B satiri).
 function ConstraintsSummary({
   c,
@@ -265,17 +328,33 @@ function ConstraintsSummary({
     DIRECTION_OPTIONS.find((o) => o.value === ext.direction)?.label ?? ext.direction;
   const locLabel =
     LOCATION_TYPE_OPTIONS.find((o) => o.value === ext.location_type)?.label ?? ext.location_type;
+  // UX (04.08): okunur tr-TR tarih (04 Agu 12:48); bos deger null doner.
   const fmt = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
+    iso
+      ? new Date(iso).toLocaleString("tr-TR", {
+          day: "2-digit",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : null;
+  const wStart = fmt(ext.time_window_start);
+  const wEnd = fmt(ext.time_window_end);
+  const windowChip =
+    wStart || wEnd
+      ? `Zaman Araligi: ${wStart ?? "…"} → ${wEnd ?? "…"}`
+      : null;
 
+  // UX (04.08): BOS kisitlar gizlenir (hacim/agirlik/yetkinlik "—" cipleri
+  // kalabalik yapiyordu); "Hazmat yok" AKTIF yokluk bilgisi olarak KALIR.
   const chips: string[] = [
     dirLabel,
     locLabel,
-    cap.volume_m3 != null ? `${cap.volume_m3} m³` : "hacim —",
-    cap.weight_kg != null ? `${cap.weight_kg} kg` : "agirlik —",
+    ...(cap.volume_m3 != null ? [`${cap.volume_m3} m³`] : []),
+    ...(cap.weight_kg != null ? [`${cap.weight_kg} kg`] : []),
     cap.hazmat_classes.length ? `Hazmat: ${cap.hazmat_classes.join(", ")}` : "Hazmat yok",
-    c.skill_required.length ? `Yetkinlik: ${c.skill_required.join(", ")}` : "Yetkinlik —",
-    `Pencere: ${fmt(ext.time_window_start)} → ${fmt(ext.time_window_end)}`,
+    ...(c.skill_required.length ? [`Yetkinlik: ${c.skill_required.join(", ")}`] : []),
+    ...(windowChip ? [windowChip] : []),
   ];
 
   return (
@@ -293,7 +372,7 @@ function ConstraintsSummary({
       </MDTypography>
       <MDBox display="flex" flexWrap="wrap" gap={0.75}>
         {chips.map((label) => (
-          <Chip key={label} label={label} size="small" variant="outlined" />
+          <Chip key={label} label={label} size="small" variant="outlined" color="info" />
         ))}
       </MDBox>
     </MDBox>
@@ -1240,12 +1319,27 @@ function OptimizeTask(): JSX.Element {
 
         {jobId && (
           <Card sx={{ p: 3 }}>
-            <MDTypography variant="h6" mb={2}>
-              Optimization Job
-            </MDTypography>
-            <MDTypography variant="caption" color="text" display="block" mb={2}>
-              Job ID: {jobId}
-            </MDTypography>
+            <MDBox display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+              <MDTypography variant="h6">Optimization Job</MDTypography>
+              {/* UX (04.08): Job ID odak disina — silik, tikla-kopyala (tam ID panoya) */}
+              <MDTypography
+                variant="caption"
+                title={jobId ? `Panoya kopyala: ${jobId}` : ""}
+                onClick={() => {
+                  if (jobId && navigator.clipboard) {
+                    navigator.clipboard.writeText(jobId).catch(() => {});
+                  }
+                }}
+                sx={{
+                  opacity: 0.45,
+                  fontFamily: "monospace",
+                  cursor: "pointer",
+                  "&:hover": { opacity: 0.85 },
+                }}
+              >
+                #{jobId ? jobId.slice(0, 8) : ""}
+              </MDTypography>
+            </MDBox>
 
             {isPolling && (
               <MDBox display="flex" alignItems="center" gap={2} mb={2}>
@@ -1258,12 +1352,21 @@ function OptimizeTask(): JSX.Element {
 
             {status === "completed" && result && !approveSuccess && (
               <MDBox mb={2}>
-                <MDTypography variant="body2" mb={1}>
-                  Total distance: {(result.summary.total_distance_meters / 1000).toFixed(1)} km
-                </MDTypography>
-                <MDTypography variant="body2" mb={2}>
-                  Total duration: {Math.round(result.summary.total_duration_seconds / 60)} min
-                </MDTypography>
+                {/* UX (04.08): duz metin yerine KPI mini kartlari */}
+                <MDBox display="flex" gap={2} mb={2} flexWrap="wrap">
+                  <JobStatCard
+                    icon="route"
+                    label="Toplam Mesafe"
+                    value={`${(result.summary.total_distance_meters / 1000).toFixed(1)} km`}
+                    darkMode={darkMode}
+                  />
+                  <JobStatCard
+                    icon="schedule"
+                    label="Tahmini Süre"
+                    value={fmtDurationMin(Math.round(result.summary.total_duration_seconds / 60))}
+                    darkMode={darkMode}
+                  />
+                </MDBox>
                 <Divider sx={{ my: 2 }} />
 
                 {summaryConstraints && (

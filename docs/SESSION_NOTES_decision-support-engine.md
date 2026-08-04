@@ -1,4 +1,4 @@
-# SESSION NOTES — Decision Support Engine (Kanban Karar Destek Asistanı) — Phase 1
+﻿# SESSION NOTES — Decision Support Engine (Kanban Karar Destek Asistanı) — Phase 1
 
 **Tarih:** 2026-07-20
 **İş kolu:** `/dispatcher/tasks/optimize` (Seçenek B / Kanban) → Decision Support Engine
@@ -636,3 +636,35 @@ Mobil focus-fix (5f7120b) EAS build bekliyor (BUG-3a dogrulamasi build sonrasi).
 KALAN: BUG-1 409 -> BUG-2 bulk -> BUG-4 secici katman -> BUG-3b -> GOZLEM-8.
 SIRA: Demo Ucus Karti 6 sahne hazir (canli filo, gorev zinciri, 3 organik acik
 Ikaz, HERE rotasi, 3PL, temiz karar logu). Prova ya da kalan buglar - kahvalti karari.
+
+## BUG SPRINT 2 KAPANDI (04.08) - BUG-2 + 3b + GOZLEM-7/8 OZET
+(02.08 BUG-1 oturumu bu dosyaya islenmedi - tam kayit spec dosyasinda:
+SAHA_TESTI_2026-07-31_bug-spec.md, BUG-1 UYGULAMA DURUMU bolumu.)
+**BUG-2 BULK GUARD CANLI:** backend 808dff2 (approve draft-basina trx, kismi
+basari {pushed,conflicts}, pushed=0=>sert 409, D1/D2/D3 Cem onayli; numarator
+atomik ON CONFLICT yeterli - dokunulmadi) + frontend c22419b (N>1
+BulkConfirmDialog, fan-out draft[i]->arac[i], kismi ozet + Gerekceli Onayla
+retry, F1 pushedSet karar-log filtresi). SAHA KANITI: 00026 temiz + 00027
+override; BridgeOverlapBlocked+BridgeOverlapOverride loglari; routing_jobs
+muhru; N=1 akisi bit-bit ayni (dialog acilmadi). Anchor-assert Node patch
+deseni Windows'ta ilk kez kullanildi (bug2-frontend-patch.js, fail-closed).
+**SPEC DAMGALARI:** 77145ed (BUG-2 + Faz B-mobil bab199b + cascade a0695a0)
++ 5bc2646 (3b) + 8bf1690 (GOZLEM-7).
+**BUG-3b KOD TAMAM (6f12394):** WaypointsPanel.taskNo tek satir kablolama
+(panel destegi + getShortTaskNo zaten vardi). CIHAZ TEYIDI ERTELENDI - 3a
+(5f7120b) ile SONRAKI mobil/EAS oturumunda (telefon Build 32 ikisini de
+icermiyor). GOZLEM-7 KAPANDI: arka-plan banner testi hipotezi dogruladi
+(davranis, bug degil).
+**GOZLEM-8 v3.1 CANLI (9f8a21f):** iki bacakli surus konum->pickup(DWELL
+--dwell vars.60s)->dropoff; 200m bacak-1 atlama; gorev-degisiminde dogrudan
+dropoff (bilincli); haversine sinirinda (HERE kapsam disi). Canli: 4 arac
+bacak=1/2 (00016-19); DB'de 30sn tik + stil-bandi hiz teyitli.
+**YAN MUHURLER:** pieter@tulipfleet.com = staging driver, Dobbe (psql);
+staging-api.tulipfleet.com /health=200 GERCEK; 0000-01 = Tulip Lojistik
+("Demo Fleet" DEGIL - NotebookLM kaynak hatasi); SYSTEM_TOPOLOGY guncellendi
+(HERE artik enterprise'da da canli + ADR-0014 kod-tamam/prod-degil).
+**ACIK/WIP:** C:\argon .env.example ANDROID_ onek WIP (android-build.yml ile
+karsilastirilmadan commit YOK); emulator/dev-build konusu ertelenmis kume;
+BUG-1 prod migration aynasi; dispatcher production cutover.
+**SIRA:** ertelenmis mobil oturumu (3a/3b cihaz teyidi + emulator) - Pencere
+(backlog prod inisi + prod ayna + HERE cutover).

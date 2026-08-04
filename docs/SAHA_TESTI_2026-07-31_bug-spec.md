@@ -1,4 +1,4 @@
-# Saha Testi Bulguları — 31 Temmuz 2026 (Demo Kuru Koşusu)
+﻿# Saha Testi Bulguları — 31 Temmuz 2026 (Demo Kuru Koşusu)
 > Kaynak: Cem saha testi + kanıt oturumu. UI işlerinin TAMAMI mevcut tema
 > bütünlüğünde yapılır: **Material Dashboard 2 PRO React TS (Creative Tim) +
 > MD3 PRO React referans** — yeni bileşen deseni icat edilmez.
@@ -112,7 +112,7 @@ route_json boslugu engel DEGIL). Yeniden siniflandirma:
   loadActiveTask yalniz mount'ta kosuyordu, focus-yenileme yoktu; gorev baska
   ekrandan baslatilinca RouteMap bayat task ile rotayi bloke ediyordu.
   Fix: navigation focus listener. Sonraki EAS build'e biner.
-- **3b ACIK [KUCUK]:** navigasyon ekraninda gorev adi/task_no hicbir yerde yok.
+- **3b KOD ✅ (`6f12394`, 04.08):** WaypointsPanel.taskNo prop'u kablolandi (panel destegi + getShortTaskNo zaten vardi, 1 satir). CIHAZ TEYIDI ERTELENDI — 3a (`5f7120b`) ile birlikte bir SONRAKI mobil gelistirme/EAS build oturumunda dogrulanacak (telefondaki Build 32 iki fix'i de icermiyor).
 - **3c TASARIM (bug degil):** cizim telefonun GERCEK konumundan baslar (surucu
   navigasyonu icin dogru); listedeki "Baslangic" metni gorevin pickup'i.
   Demo notu: simulasyonda telefon kamyonda degil.

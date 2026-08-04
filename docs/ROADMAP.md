@@ -1,6 +1,32 @@
 # TulipFleet Enterprise — Roadmap
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
+
+**Status as of 2026-08-05 (B Paketi — Prod Senkronu + Compliance Engine + DSE UX):**
+Prod deploy: `fleet-prod-01` backend `f4536a7` → `9010e3c` (9 commit: BUG-1
+Faz A/B/B-mobil sert 409, bridge derivedTitle, driver-start 409 sözleşmesi,
+fleet-sim v2/v3.1, migration paketi). Tek-servis recreate (`--no-deps backend`);
+dual-bind (`127.0.0.1:3000` + `10.0.0.2:3000`) korundu; EMQX/postgres/redis
+DOKUNULMADI. Smoke: health/login/profil 200, bozuk JWT 401. Ölçüm:
+`api.tulipfleet.com` Cloudflare arkasında. DB defter eşitlemesi: sunucu-lokal
+kalmış `17823–27` beşlisi idempotent koşuldu (nesneler zaten canlıydı,
+NOTICE-skip; `17824` title=255 fiilen uygulanmış ispatlı) + `pgmigrations`
+5 kayıt + beşli repoya alındı (`acf724d` — sunucu-lokal migration borcu
+kökten kapandı). `public.vehicles` += `vehicle_weight_class`
+(12_18t/18_32t/32_plus_t, nullable+CHECK; `1783000000000`, prod+staging).
+Compliance Engine: `POST /api/compliance/assess` canlı (`63d621a`) —
+`ST_Contains` ile 21 ZE-zone çözümü + checkCompliance (needs_exemption /
+dagontheffing kotası, CVDR) + calculateHeffing (Leiden smoke 28 km: euro_6
+€5.10 vs zero_emission €1.04) + NL-bbox dışı `eu_hint` (advisory). Not:
+enterprise veri düzlemi Milestone 0 gereği staging DB okur — production
+cutover bilinçli beklemede; staging zone aynası 21=21. DSE (dispatcher
+`b20e828`+`0620d73`+`a5502bc`): REGÜLASYON scorer AKTİF (compliant 1.0 →
+blocked 0.05, veri yoksa 0.5 dürüst memo); Karar Notu satır-altı akordeon,
+skor bandı ≥80/50–79/<50, mikro rozetler (mesafe·ZE·heffing — yalnız gerçek
+veri varsa), ComplexStatisticsCard KPI'ları, DefaultItem kısıt listesi +
+TimelineList zaman aralığı, renkli rank butonları, ConfirmDialogShell modal
+standardı. Heffing şimdilik karar-notu/rozet bilgisidir — VRP maliyet
+fonksiyonuna (soft constraint) entegrasyon GELECEK kalemdir.
 > **Status as of 2026-06-28 (Demo Tahkimi):**
 > Demo sunumu öncesinde production backend dondurulmuştur (Code Freeze)...
 > [senin 4 maddelik yeni blok]

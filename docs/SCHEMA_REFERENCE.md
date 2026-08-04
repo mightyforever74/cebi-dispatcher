@@ -2,7 +2,7 @@ SCHEMA_REFERENCE.md
 
 Amaç: public.* ve enterprise.* canlı şema otoritesi. ADR/ROADMAP bir kolon
 adı, enum değeri ya da kolon varlığı konusunda çeliştiğinde BU doküman kazanır.
-Son doğrulama: 2026-06-18, fleet_tracking_staging, `\d <tablo>` ile.
+Son doğrulama: 2026-08-05, fleet_tracking_staging + fleet_tracking (prod ayna), `\d <tablo>` ile.
 
 ## public.drivers (13 kolon)
 id uuid PK, user_id uuid FK→users, license_no varchar(50) NOT NULL UNIQUE,
@@ -21,9 +21,10 @@ FK→vehicles, updated_at, company_id uuid FK→companies.
 id, plate_no varchar(20) NOT NULL UNIQUE, esp32_device_id varchar(50) NOT NULL
 UNIQUE, model, brand, year, fuel_type, fuel_capacity, current_fuel_level,
 total_km numeric(10,2), last_maintenance_date date, next_maintenance_km,
-status, ... emission_class, date_first_admission, carrosserie_code, +NL/geofence.
+status, ... emission_class, date_first_admission, carrosserie_code, vehicle_weight_class, +NL/geofence.
 - status CHECK (4): available, in_use, maintenance, retired
 - emission_class CHECK: euro_0..euro_6, euro_vi, euro_7, zero_emission
+- vehicle_weight_class CHECK: 12_18t, 18_32t, 32_plus_t (nullable; migration 1783000000000, prod+staging 08.2026 — Vrachtwagenheffing tarife eşlemesi)
 - safety_score / total_km_driven YOK (bunlar driver kolonları). Araçta total_km.
 - bakım kolonu adı last_maintenance_date (last_maintenance_at DEĞİL).
 

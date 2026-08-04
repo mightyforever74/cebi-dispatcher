@@ -1349,6 +1349,17 @@ function OptimizeTask(): JSX.Element {
 
             <OverrideReasonDialog
               open={overrideDialogOpen}
+              /* K4 (04.08): secim vs oneri chip'leri — render aninda turetilir */
+              chosenPlate={(() => {
+                const rec = getRecommendedVehicleId();
+                const vals = Array.from(assignments.values());
+                const chosen = vals.find((v) => v !== rec) ?? vals[0];
+                return chosen ? vehicleLabels[chosen] || chosen.slice(0, 8) : undefined;
+              })()}
+              recommendedPlate={(() => {
+                const rec = getRecommendedVehicleId();
+                return rec ? vehicleLabels[rec] || rec.slice(0, 8) : undefined;
+              })()}
               onCancel={() => setOverrideDialogOpen(false)}
               onConfirm={(reason) => proceedApprove(reason)}
             />

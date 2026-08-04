@@ -1,39 +1,34 @@
 /**
- * ConflictOverrideModal — BUG-1 Spec v3 Faz C (2026-08-02, Cem onaylı).
+ * ConflictOverrideModal — BUG-1 Faz C çekirdeği + UI Modernizasyonu
+ * (04.08.2026, Cem onaylı plan: jargonsuz microcopy, KV kartı, K1 severity).
  *
- * Zaman penceresi çakışmasında (approve → HTTP 409 + conflict_metadata) açılan
- * MD2 PRO SERT MODAL. İki çıkış yolu:
- *   1. "Vazgeç" — atama yapılmaz, draft'lar draft kalır (backend rollback zaten yaptı).
- *   2. "Çakışmayı Kabul Et ve Ata" — ZORUNLU serbest-metin gerekçe ile Mode 1
- *      "Gerekçeli Onay": çağıran approve'u override:true + override_reason ile
- *      yeniden fırlatır; dönen overridden_conflicts FN-18 karar loguna
- *      conflict_metadata olarak, gerekçe override_comment olarak mühürlenir.
- *
- * Tema: dispatcher dark paleti (LiveFleetMap C sabitleriyle aynı aile),
- * 1px border, flat B2B — MD2 PRO Dialog deseni, yeni bileşen icat edilmedi.
+ * Davranış sözleşmesi DEĞİŞMEDİ: zorunlu ≥5 karakter gerekçe, Vazgeç /
+ * Gerekçeli Onay yolları, çağıran approve'u override:true ile yeniden fırlatır.
+ * Yenilikler:
+ *  - HTTP 409 kullanıcıya gösterilmez — altbaşlık operasyonel dilde.
+ *  - Çakışma detayı Structured KV kartı: kopyalanabilir görev rozeti + süre.
+ *  - K1 (Cem onaylı): overlap < 15 dk → turuncu (warning), ≥ 15 dk → kırmızı
+ *    (danger); modal çerçevesi, halka ve rozet birlikte döner.
+ *  - K2: onay butonu "Riski Onayla ve Görevi Ata".
+ *  - Gövde ortak ConfirmDialogShell'den gelir (tek standart, tüm ikaz kutuları).
  */
 import { useEffect, useState } from "react";
 
-import Dialog from "@mui/material/Dialog";
-import Divider from "@mui/material/Divider";
-import Icon from "@mui/material/Icon";
 import TextField from "@mui/material/TextField";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import ConfirmDialogShell, {
+  CopyChip,
+  DetailRow,
+  SHELL_C,
+  ShellSeverity,
+} from "components/ConfirmDialogShell";
 
 import { ConflictMetadata } from "hooks/useTaskOptimization";
 
-const C = {
-  panelBg: "#1a2035",
-  border: "#2c3454",
-  danger: "#f44336",
-  warnBg: "rgba(244,67,54,0.08)",
-  accent: "#7C3AED",
-  inputBg: "#131826",
-  textMuted: "#8f9bb3",
-  textFaint: "#65718c",
-};
+/** K1 eşiği: bu dakikanın altı "dikkat" (turuncu), üstü "kritik" (kırmızı). */
+const SEVERITY_THRESHOLD_MIN = 15;
 
 interface Props {
   open: boolean;
@@ -62,158 +57,80 @@ function ConflictOverrideModal({
 
   const reasonOk = reason.trim().length >= 5;
 
+  // K1: metadata yoksa temkinli davran — kritik (danger) varsay.
+  const severity: ShellSeverity =
+    conflict && conflict.overlap_minutes < SEVERITY_THRESHOLD_MIN ? "warning" : "danger";
+
   return (
-    <Dialog
+    <ConfirmDialogShell
       open={open}
-      onClose={submitting ? undefined : onCancel}
-      maxWidth="xs"
-      fullWidth
-      PaperProps={{
-        sx: {
-          bgcolor: C.panelBg,
-          border: `1px solid ${C.danger}`,
-          borderRadius: "12px",
-          backgroundImage: "none",
-        },
-      }}
+      severity={severity}
+      icon="warning_amber"
+      title="Zaman Penceresi Çakışması"
+      subtitle="Zaman pencereleri birbiriyle çakışıyor."
+      submitting={submitting}
+      confirmLabel="Riski Onayla ve Görevi Ata"
+      submittingLabel="Atanıyor..."
+      confirmDisabled={!reasonOk}
+      onCancel={onCancel}
+      onConfirm={() => reasonOk && onConfirm(reason.trim())}
     >
-      {/* Başlık */}
-      <MDBox display="flex" alignItems="center" gap={1} px={2.5} pt={2.5} pb={1}>
-        <MDBox
-          sx={{
-            width: 36,
-            height: 36,
-            borderRadius: "10px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            bgcolor: C.warnBg,
-            border: `1px solid ${C.danger}`,
-          }}
-        >
-          <Icon sx={{ color: C.danger }}>warning_amber</Icon>
-        </MDBox>
-        <MDBox>
-          <MDTypography variant="h6" fontWeight="bold" color="white" sx={{ lineHeight: 1.2 }}>
-            Zaman Penceresi Çakışması
+      {/* Structured KV kartı — taranabilir çakışma detayı */}
+      <MDBox
+        sx={{
+          bgcolor: "rgba(255,255,255,0.03)",
+          border: `1px solid ${SHELL_C.border}`,
+          borderRadius: "12px",
+          p: 1.5,
+          mb: 1.5,
+        }}
+      >
+        {conflict ? (
+          <>
+            <DetailRow
+              label="Çakışan Görev"
+              value={<CopyChip text={conflict.conflicting_task_no} color={severity} />}
+            />
+            <DetailRow label="Çakışma Süresi" value={`~${conflict.overlap_minutes} dakika`} />
+          </>
+        ) : (
+          <MDTypography variant="caption" color="white">
+            Bu araca belirtilen aralıkta atanmış görev var.
           </MDTypography>
-          <MDTypography variant="caption" sx={{ color: C.textMuted }}>
-            Atama engellendi — HTTP 409
-          </MDTypography>
-        </MDBox>
+        )}
       </MDBox>
 
-      <MDBox px={2.5} pb={2.5}>
-        {/* Çakışma detayı */}
-        <MDBox
-          sx={{
-            bgcolor: C.warnBg,
-            border: `1px solid ${C.border}`,
-            borderRadius: "10px",
-            p: 1.5,
-            mb: 1.5,
-          }}
-        >
-          <MDTypography variant="button" color="white" sx={{ display: "block" }}>
-            Bu araca belirtilen aralıkta atanmış görev var
-            {conflict ? (
-              <>
-                {": "}
-                <b style={{ fontFamily: "monospace" }}>{conflict.conflicting_task_no}</b>
-              </>
-            ) : (
-              "."
-            )}
-          </MDTypography>
-          {conflict && (
-            <MDTypography variant="caption" sx={{ color: C.textMuted, display: "block", mt: 0.5 }}>
-              Çakışma süresi: ~{conflict.overlap_minutes} dakika
-            </MDTypography>
-          )}
-        </MDBox>
-
-        {/* Zorunlu gerekçe (Mode 1 Advisory — Gerekçeli Onay) */}
-        <MDTypography variant="caption" fontWeight="bold" color="white" sx={{ display: "block", mb: 0.5 }}>
-          Override gerekçesi <span style={{ color: C.danger }}>*</span>
-        </MDTypography>
-        <TextField
-          fullWidth
-          multiline
-          minRows={2}
-          size="small"
-          placeholder="Neden çakışmaya rağmen atıyorsunuz? (zorunlu, min. 5 karakter)"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          disabled={submitting}
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              color: "white",
-              fontSize: "13px",
-              bgcolor: C.inputBg,
-              "& fieldset": { borderColor: C.border },
-              "&:hover fieldset": { borderColor: C.accent },
-              "&.Mui-focused fieldset": { borderColor: C.accent },
-            },
-            "& .MuiInputBase-input::placeholder": { color: C.textFaint, opacity: 1 },
-          }}
-        />
-        <MDTypography variant="caption" sx={{ color: C.textFaint, display: "block", mt: 0.5 }}>
-          Gerekçe ve çakışma detayı karar loguna (audit trail / ML) mühürlenir.
-        </MDTypography>
-
-        <Divider sx={{ my: 1.5, borderColor: C.border }} />
-
-        {/* Aksiyonlar */}
-        <MDBox display="flex" gap={1}>
-          <MDBox
-            component="button"
-            type="button"
-            onClick={onCancel}
-            disabled={submitting}
-            sx={{
-              flex: 1,
-              border: `1px solid ${C.border}`,
-              background: "transparent",
-              color: C.textMuted,
-              cursor: "pointer",
-              borderRadius: "10px",
-              py: 1,
-              fontSize: "13px",
-              fontWeight: 600,
-              "&:hover": { color: "#fff", borderColor: C.accent },
-              "&:disabled": { opacity: 0.5, cursor: "not-allowed" },
-            }}
-          >
-            Vazgeç
-          </MDBox>
-          <MDBox
-            component="button"
-            type="button"
-            onClick={() => reasonOk && onConfirm(reason.trim())}
-            disabled={!reasonOk || submitting}
-            sx={{
-              flex: 2,
-              border: "none",
-              cursor: "pointer",
-              borderRadius: "10px",
-              py: 1,
-              color: "#fff",
-              fontWeight: 600,
-              fontSize: "13px",
-              background: `linear-gradient(135deg, ${C.danger}, #b71c1c)`,
-              "&:hover": { filter: "brightness(1.08)" },
-              "&:disabled": {
-                opacity: 0.45,
-                cursor: "not-allowed",
-                filter: "none",
-              },
-            }}
-          >
-            {submitting ? "Atanıyor..." : "Çakışmayı Kabul Et ve Ata"}
-          </MDBox>
-        </MDBox>
-      </MDBox>
-    </Dialog>
+      {/* Zorunlu gerekçe (Mode 1 Advisory — Gerekçeli Onay) */}
+      <TextField
+        fullWidth
+        multiline
+        minRows={2}
+        size="small"
+        label="Manuel Onay Gerekçesi *"
+        InputLabelProps={{ shrink: true }}
+        placeholder="Örn: Operasyonel aciliyet / Müşteri zaman esnekliği sağladı..."
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        disabled={submitting}
+        sx={{
+          mt: 0.5,
+          "& .MuiInputLabel-root": { color: SHELL_C.textMuted, fontSize: "13px" },
+          "& .MuiInputLabel-root.Mui-focused": { color: SHELL_C.accent },
+          "& .MuiOutlinedInput-root": {
+            color: "white",
+            fontSize: "13px",
+            bgcolor: SHELL_C.inputBg,
+            "& fieldset": { borderColor: SHELL_C.border },
+            "&:hover fieldset": { borderColor: SHELL_C.accent },
+            "&.Mui-focused fieldset": { borderColor: SHELL_C.accent },
+          },
+          "& .MuiInputBase-input::placeholder": { color: SHELL_C.textFaint, opacity: 1 },
+        }}
+      />
+      <MDTypography variant="caption" sx={{ color: SHELL_C.textFaint, display: "block", mt: 0.5 }}>
+        ℹ️ Bu işlem sistem denetim kaydına (Audit Log) kaydedilecektir.
+      </MDTypography>
+    </ConfirmDialogShell>
   );
 }
 

@@ -39,10 +39,14 @@ süresiyle doğdu (09:00→09:35:04).
 numaratörden ÖNCE (409'da task_no sayacı yanmaz), `409 + conflict_metadata
 {conflicting_task_no, overlap_minutes}`; enterprise 409'u
 `pushed_before_conflict` ile frontend'e iletir. Smoke 3/3 PASS (S1 pencereli
-doğum / S2 409 / S3 override). **Faz B-mobil (server.js sert 409, override'sız)
-AÇIK.** VRP soft-warning: HERE VRP cutover'ında devreye girecek (mock'ta
-fiilen dispatcher kanalı). Cascade-delay `rule_violation` monitörü AÇIK
-(CHECK genişletmesi hazır).
+doğum / S2 409 / S3 override). **Faz B-mobil ✅
+(`bab199b`, staging server.js):** POST/PUT /api/tasks sert 409 overlap
+denetimi — numaratör-öncesi, efektif-değer + self-exclusion, smoke 4/4 PASS.
+VRP soft-warning: HERE VRP cutover'ında devreye girecek (mock'ta fiilen
+dispatcher kanalı). **Cascade-delay `rule_violation` monitörü ✅
+(`a0695a0`, enterprise):** in_progress pencere taşması + 30dk ufkunda
+sıkışan ardışık görev → rule_violation (medium), 409 üretmez (Mode 1);
+FN-06 durum-bazlı dedup; sentetik tetik kanıtlı (00017→00022, 22dk).
 
 **Faz C — Override & ML Loglama ✅ (UI kanıtlı, 2026-08-02 gece):**
 `ConflictOverrideModal` (MD2 PRO sert modal, zorunlu ≥5 kr gerekçe) +
@@ -56,14 +60,39 @@ dispatch_decision_log satırı {overlap_minutes:4, TLP-26-00022} +
 override_comment dolu + is_override=f (ortogonallik kanıtı);
 routing_jobs.response_payload aynı mührü + gerekçeyi taşıyor.
 
-**KALAN (BUG-1):** Faz B-mobil (server.js) · cascade-delay monitörü ·
-prod migration aynası (1782800000000 + 1782900000000) · migration dosyalarının
-sunucu kopya klasörlerine yazımı.
+**KALAN (BUG-1):** prod migration aynası (1782800000000 + 1782900000000) ·
+migration dosyalarının sunucu kopya klasörlerine yazımı.
 
 ## BUG-2 — Çoklu Araç Seçiminde Toplu Görev Onayı (Bulk Guard) [ORTA]
 1'den fazla araç seçiliyken Kaydet: konfirmasyon dialogu
 ("Seçtiğiniz N araç için aynı detaylarda AYRI görevler oluşturulacak — onay?").
 Evet → araç adedince bağımsız task (benzersiz task_no'lar). Hayır → geri dön.
+
+### BUG-2 UYGULAMA ✅ (2026-08-04, Cem onaylı D1/D2/D3 + F1)
+**Backend (`808dff2`, enterprise routes/tasks.js):** approve orkestratörü
+draft-başına transaction — assigned işareti + köprü push birlikte commit;
+köprü 409'da yalnız o draft ROLLBACK (draft kalır), döngü sürer. Yanıt:
+`200 {pushed:M, conflicts:[{draft_id, vehicle_id, conflict_metadata}]}` (D2);
+`pushed=0 && conflicts>0` → sert 409 (tekil görev modal sözleşmesi birebir
+korundu: conflict_metadata + conflicting_draft_id + pushed_before_conflict).
+D1: 409 dışı köprü hatası catch-all 500 (commit olanlar durur). D3: "Plan
+partially approved: M pushed, K conflicts." mesajı. Retry: aynı routing_job_id
++ override:true → status='draft' filtresi yalnız kalanları yakalar (ek
+mekanizma yok). Numaratör: mevcut atomik ON CONFLICT satır kilidi yeterli
+bulundu, DOKUNULMADI. Faz C mühürleme UPDATE'i autocommit'e taşındı.
+**Frontend (`c22419b`, dispatcher 3 dosya):** N>1'de BulkConfirmDialog
+(MD2 PRO accent, plaka listeli, ConflictOverrideModal desen ikizi); N=1 akışı
+bit-bit aynı (saha kanıtlı — dialog açılmadı). Fan-out: araç başına 1 görev
+kopyası, draft[i]→araç[i] indeks eşlemesi (kopyalar özdeş → backend
+sırasından bağımsız; Kanban sürükleme açık). Kısmi başarı özeti (plaka ·
+task_no · dk) + "Çakışanları Gerekçeli Onayla" → mevcut ConflictOverrideModal,
+birikimli pushed sayacı. F1 (Cem onaylı): FN-18 karar logu YALNIZ push
+edilenlere (pushedSet filtresi — draft kalanlara sahte log, retry'da mükerrer
+log yok).
+**Saha kanıtı (staging, 04.08):** TLP-26-00026 (NL-92-VB, temiz commit) +
+TLP-26-00027 (RD-NL-78, override) — `[BridgeOverlapBlocked]` +
+`[BridgeOverlapOverride]` köprü logları; routing_jobs mührü {TLP-26-00020,
+30dk, gerekçe}; 409'da numaratör yanmadı (00026→00027 ardışık).
 
 ## BUG-3 — Mobil: Aktif Görevde Rota/Özet Çizilmiyor [DEMO-KRİTİK #1]
 TLP-26-00013 in_progress; "Haritada Göster" → rota ve özet YOK.
@@ -162,6 +191,8 @@ v3.1: iki bacaklı sürüş (konum→pickup→dropoff). Demo anlatısında şimd
 3) BUG-1 (veri bütünlüğü) → 4) BUG-2 + BUG-4 (UX) → GÖZLEM-7/8 doğrulama/cila.
 GÜNCEL DURUM (2026-08-02 gece): BUG-9 ✅ (3947d54) · BUG-6 ✅ (c6dc3c6) ·
 BUG-3a fix hazır (EAS build bekler) · BUG-4 v2 ✅ (d958729+5f6539c) + zoom-loop
-✅ (75036d5) · **BUG-1 ✅ Faz A/B-dispatcher/C/D-staging (UI kanıtlı)** ·
-KALAN: BUG-1 Faz B-mobil + cascade monitörü + prod ayna → BUG-2 → BUG-3b →
-GÖZLEM-7/8 doğrulama.
+✅ (75036d5) · **BUG-1 ✅ Faz A/B-dispatcher/C/D-staging (UI kanıtlı)**.
+GÜNCEL DURUM (2026-08-04): BUG-1 Faz B-mobil ✅ (bab199b) + cascade monitörü ✅
+(a0695a0) · **BUG-2 ✅ (808dff2 backend + c22419b frontend, saha kanıtlı
+00026/00027)** · KALAN: BUG-1 prod ayna (migration 1782800000000 +
+1782900000000) → BUG-3b (nav ekranı görev adı) → GÖZLEM-7/8 doğrulama.

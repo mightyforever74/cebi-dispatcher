@@ -1,22 +1,54 @@
 /**
- * REGULASYON (Compliance Priority) scorer — INACTIVE (Phase 1.1).
+ * REGULASYON (Compliance Priority) scorer — AKTIF (04.08.2026,
+ * "Regulasyon Scorer'in Uyanisi", Cem onayli skor matrisi).
  *
- * Onayli karar (2026-07-20): nl_compliance_zones (enterprise semasi, 21 satir/
- * 20 sehir prod'da mevcut) verisini frontend'e aciga cikaran genel bir
- * endpoint henuz yok — FEAT-001 §7 Standalone API kurgusu geregi uyumluluk
- * katmani bagimsiz modul olarak gelecek. Veri akisi kurulana kadar bu scorer
- * available:false kalir ve UI'da kilitli filtre olarak gorunur. Sahte ZE-zone
- * karari URETILMEZ.
+ * Veri kaynagi: POST /api/compliance/assess (enterprise `63d621a`) —
+ * ST_Contains zone cozumu + checkCompliance + dagontheffing sayaci +
+ * calculateHeffing. Sayfa katmani (useComplianceAssessment) sonucu
+ * ScoringVehicleSnapshot.compliance alanina besler; scorer SENKRON kalir.
+ * Veri gelmemisse 0.5 + durust memo — sahte ZE-zone karari URETILMEZ
+ * (Graceful Degradation ilkesi aynen korunur).
  */
 
-import { InactiveScorer } from "../types";
+import { ActiveScorer, ScoreDetail } from "../types";
 
-export const complianceScorer: InactiveScorer = {
+/** Cem onayli skor matrisi (04.08). */
+const STATUS_SCORE: Record<string, number> = {
+  compliant: 1.0,
+  exempt_auto: 0.9,
+  exempt_granted: 0.9,
+  no_zone: 0.7,
+  needs_exemption: 0.4,
+  unknown: 0.3,
+  blocked: 0.05,
+};
+
+export const complianceScorer: ActiveScorer = {
   id: "compliance",
   label: "Regulasyon",
-  available: false,
-  reason:
-    "Vehicle capacity and compliance layers are scheduled for Phase 1.1 database migration. " +
-    "ZE-zone (nl_compliance_zones) verisi frontend'e Standalone Compliance API uzerinden " +
-    "aciga cikinca bu filtre aktiflesecek.",
+  available: true,
+  score: (vehicle): ScoreDetail => {
+    const c = vehicle.compliance;
+    if (!c) {
+      return {
+        value: 0.5,
+        memo:
+          "Regulasyon verisi yok/yuklenemedi — siralama notr (0.5). " +
+          "Sahte ZE-zone karari uretilmez.",
+      };
+    }
+    const value = STATUS_SCORE[c.status] ?? 0.3;
+    const parts: string[] = [c.reason];
+    if (c.needs_dagontheffing && c.dagontheffing) {
+      parts.push(
+        `Dagontheffing kalan ${c.dagontheffing.remaining}/${c.dagontheffing.limit} (${c.dagontheffing.year})`
+      );
+    }
+    if (c.heffing && c.heffing.matched) {
+      parts.push(
+        `Heffing ~€${c.heffing.total_charge.toFixed(2)} (${c.heffing.rate_per_km.toFixed(3)} €/km)`
+      );
+    }
+    return { value, memo: parts.join(" · ") };
+  },
 };

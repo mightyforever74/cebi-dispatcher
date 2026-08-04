@@ -43,6 +43,18 @@ export interface ScoringTask {
  * Telemetri alanlari REST snapshot'tan (useDispatchLocationSnapshot)
  * vehicle_id (UUID) ile BIREBIR eslesir. Telemetri yoksa null kalir.
  */
+/**
+ * Regulasyon scorer'in bekledigi assess satiri — POST /api/compliance/assess
+ * (enterprise 63d621a) yanit sozlesmesi birebir. Sayfa katmani doldurur.
+ */
+export interface ComplianceAssessRow {
+  status: string; // compliant | exempt_auto | exempt_granted | needs_exemption | blocked | unknown | no_zone
+  reason: string;
+  needs_dagontheffing?: boolean;
+  dagontheffing?: { used: number; limit: number; remaining: number; year: number };
+  heffing?: { rate_per_km: number; total_charge: number; matched: boolean };
+}
+
 export interface ScoringVehicleSnapshot {
   id: string;
   plate: string;
@@ -51,6 +63,11 @@ export interface ScoringVehicleSnapshot {
   speedKmh: number | null;
   movementStatus: string | null; // deriveStatus ciktisi: moving | idle | stopped
   lastUpdate: string | null;
+  /**
+   * Regulasyon Scorer'in Uyanisi (04.08): assess sonucu. undefined/null =
+   * veri yok — scorer 0.5 notr + durust memo doner, sahte karar uretmez.
+   */
+  compliance?: ComplianceAssessRow | null;
 }
 
 export interface ScoreDetail {

@@ -110,6 +110,8 @@ import {
 import useDispatchLocationSnapshot, {
   DispatchLocationFrame,
 } from "hooks/useDispatchLocationSnapshot";
+// Regulasyon Scorer'in Uyanisi (04.08) - assess veri kaynagi
+import useComplianceAssessment from "hooks/useComplianceAssessment";
 import { deriveStatus } from "store/useVehicleStore";
 
 // Decision Support Engine (Phase 1)
@@ -537,6 +539,22 @@ function OptimizeTask(): JSX.Element {
   const isPolling = !!jobId && status !== "completed" && status !== "failed";
   const result = pollQuery.data?.result;
 
+  // Regulasyon Scorer'in Uyanisi (04.08): dropoff noktasi + toplam mesafe ile
+  // TEK assess cagrisi (form tek-task, kanitli). Sonuc buildSnapshots'ta
+  // snapshot.compliance'a beslenir — scorer senkron kalir.
+  const assessPoint =
+    status === "completed" && result?.tasks && result.tasks.length > 0
+      ? {
+          lat: result.tasks[0].dropoff_location.lat,
+          lng: result.tasks[0].dropoff_location.lng,
+        }
+      : null;
+  const assessQuery = useComplianceAssessment(
+    assessPoint,
+    result?.available_vehicles ?? [],
+    result ? result.summary.total_distance_meters / 1000 : null
+  );
+
   const vehicleLabels = useMemo(() => {
     const map: Record<string, string> = {};
     vehicles.forEach((v: Vehicle) => {
@@ -575,10 +593,12 @@ function OptimizeTask(): JSX.Element {
           speedKmh: frame ? frame.speed : null,
           movementStatus: frame ? deriveStatus(frame.speed) : null,
           lastUpdate: frame ? frame.timestamp : null,
+          // Regulasyon (04.08): assess satiri; yoksa null -> scorer 0.5 notr
+          compliance: assessQuery.data?.byVehicle.get(vehicleId) ?? null,
         };
       });
     },
-    [vehicleLabels]
+    [vehicleLabels, assessQuery.data]
   );
 
   const rebuildBoard = useCallback(
@@ -608,6 +628,17 @@ function OptimizeTask(): JSX.Element {
     },
     [result, scoringTasks, vehicleLabels, buildSnapshots, locationsQuery.data]
   );
+
+  // Regulasyon (04.08): assess sonucu board kurulumundan SONRA gelirse
+  // skor/memolar tazelensin — ref-gate ile yalniz veri degisiminde bir kez
+  // (surukleme/epoch davranisina dokunulmaz).
+  const lastAssessRef = useRef<unknown>(null);
+  useEffect(() => {
+    if (!assessQuery.data || assessQuery.data === lastAssessRef.current) return;
+    lastAssessRef.current = assessQuery.data;
+    if (initialBoard) rebuildBoard(rankingMode, assignments);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assessQuery.data]);
 
   useEffect(() => {
     if (
@@ -1163,6 +1194,24 @@ function OptimizeTask(): JSX.Element {
 
                 {summaryConstraints && (
                   <ConstraintsSummary c={summaryConstraints} darkMode={darkMode} />
+                )}
+
+                {/* Avrupa Ipucu Katmani (hedef 4): NL-bbox disi advisory —
+                    Mode 1 ruhu, blok yok, yalniz akilli uyari seridi. */}
+                {assessQuery.data?.eu_hint && (
+                  <MDBox
+                    sx={{
+                      border: "1px solid #7C3AED",
+                      bgcolor: "rgba(124,58,237,0.08)",
+                      borderRadius: "10px",
+                      p: 1.5,
+                      mb: 2,
+                    }}
+                  >
+                    <MDTypography variant="caption" fontWeight="bold">
+                      🇪🇺 {assessQuery.data.eu_hint}
+                    </MDTypography>
+                  </MDBox>
                 )}
 
                 {initialBoard ? (

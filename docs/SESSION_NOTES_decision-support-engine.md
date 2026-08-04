@@ -721,7 +721,20 @@ vehicle_weight_class kolonu (ayni DDL) + pgmigrations kaydi
 (1783000000000) + Dobbe 4 arac seed'i staging ile BIREBIR (NL-92-VB
 zero_emission/electric, 3x euro_6, hepsi 18_32t + DET tarihleri) — son-ispat
 tablo esitligi teyitli. Zone tarafi zaten prod-kaynakliydi (21), kapali.
-**KALAN:** B paketi = 21+ commit backlog inisi + ADR-0014 cutover +
+**B PAKETI ✅ (05.08 penceresi, ~25 dk, kesinti ~saniyeler):** prod backend
+f4536a7 -> 9010e3c (gercek fark 9 commit — "21+" bayat sayiymis). Zincir:
+backup.sh -> untracked karantina (mv+md5 7/7 OK) -> git pull -> ara besli
+17823-27 idempotent kosum (nesneler ZATEN vardi, NOTICE-skip; 17824 fiilen
+uygulanmis ispatli title=255) + pgmigrations 5 kayit (toplam 45) + besli
+GITHUB'A alindi (acf724d — sunucu-lokal migration borcu KOKTEN kapandi) ->
+docker compose up -d --force-recreate --no-deps backend (dual-bind korundu,
+EMQX/postgres/redis DOKUNULMADI) -> smoke: health 200 + login/profil 200 +
+bozuk JWT 401 + 409 sozlesmesi container'da + staging PM2 eski uptime.
+NOT: api.tulipfleet.com GERCEKTEN Cloudflare arkasinda (server: cloudflare
+olculdu — NotebookLM haklıymis). Prod'a giren davranislar: B-mobil sert 409,
+assigned-gorunurluk, derivedTitle, driver-start 409, sim v2/v3.1 scriptleri.
+ADR-0014 HERE cutover'i AYRI bilinçli bekleyen kalem olarak surer.
+ESKI-KALAN (gecersiz):** B paketi = 21+ commit backlog inisi + ADR-0014 cutover +
 FEAT-007-EXT untracked tasima + prod staging-klasorundeki 5 untracked
 migration dosyasi duzeni — BAKIM PENCERESI ister, ayri oturum. Ertelenmis
 mobil kumesi + LinkedIn yayini onceki bloklardaki gibi.

@@ -116,6 +116,10 @@ import useComplianceAssessment from "hooks/useComplianceAssessment";
 import { haversineKm } from "services/dispatch/scoring/geo";
 // KPI kartlari — analytics ile ayni MD2 PRO bileseni (el yapimi kart yasak)
 import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatisticsCard";
+// Kisit listesi + Zaman Araligi — widgets sayfasiyla ayni tema bilesenleri
+import DefaultItem from "examples/Items/DefaultItem";
+import TimelineList from "examples/Timeline/TimelineList";
+import TimelineItem from "examples/Timeline/TimelineItem";
 import { deriveStatus } from "store/useVehicleStore";
 
 // Decision Support Engine (Phase 1)
@@ -260,7 +264,12 @@ function fmtDurationMin(totalMin: number): string {
   return h > 0 ? `${h} sa ${m} dk` : `${m} dk`;
 }
 
-// Gorev kisitlarinin kompakt ozeti (board ustunde, bilgi-yogun B2B satiri).
+// Gorev kisitlari + Zaman Araligi — tema bilesenleriyle (04.08 UX turu):
+// sol kart: DefaultItem satirlari (widgets/UpcomingEvents deseni),
+// sag kart: TimelineList/TimelineItem (widgets/OrdersOverview deseni).
+// Bos kisitlar GIZLI kalir; "Hazmat yok" aktif yokluk bilgisi olarak durur.
+// Pencere girilmemisse "Belirtilmedi" yazilir (backend NOW() fallback
+// kontrati — uydurma tarih basilmaz).
 function ConstraintsSummary({
   c,
   darkMode,
@@ -274,7 +283,6 @@ function ConstraintsSummary({
     DIRECTION_OPTIONS.find((o) => o.value === ext.direction)?.label ?? ext.direction;
   const locLabel =
     LOCATION_TYPE_OPTIONS.find((o) => o.value === ext.location_type)?.label ?? ext.location_type;
-  // UX (04.08): okunur tr-TR tarih (04 Agu 12:48); bos deger null doner.
   const fmt = (iso: string | null) =>
     iso
       ? new Date(iso).toLocaleString("tr-TR", {
@@ -286,42 +294,87 @@ function ConstraintsSummary({
       : null;
   const wStart = fmt(ext.time_window_start);
   const wEnd = fmt(ext.time_window_end);
-  const windowChip =
-    wStart || wEnd
-      ? `Zaman Araligi: ${wStart ?? "…"} → ${wEnd ?? "…"}`
-      : null;
 
-  // UX (04.08): BOS kisitlar gizlenir (hacim/agirlik/yetkinlik "—" cipleri
-  // kalabalik yapiyordu); "Hazmat yok" AKTIF yokluk bilgisi olarak KALIR.
-  const chips: string[] = [
-    dirLabel,
-    locLabel,
-    ...(cap.volume_m3 != null ? [`${cap.volume_m3} m³`] : []),
-    ...(cap.weight_kg != null ? [`${cap.weight_kg} kg`] : []),
-    cap.hazmat_classes.length ? `Hazmat: ${cap.hazmat_classes.join(", ")}` : "Hazmat yok",
-    ...(c.skill_required.length ? [`Yetkinlik: ${c.skill_required.join(", ")}`] : []),
-    ...(windowChip ? [windowChip] : []),
+  const rows: { icon: string; title: string; desc: string }[] = [
+    { icon: "local_shipping", title: dirLabel, desc: "Görev yönü" },
+    { icon: "location_on", title: locLabel, desc: "Konum tipi" },
+    ...(cap.volume_m3 != null
+      ? [{ icon: "view_in_ar", title: `${cap.volume_m3} m³`, desc: "Hacim" }]
+      : []),
+    ...(cap.weight_kg != null
+      ? [{ icon: "scale", title: `${cap.weight_kg} kg`, desc: "Ağırlık" }]
+      : []),
+    cap.hazmat_classes.length
+      ? {
+          icon: "science",
+          title: `ADR: ${cap.hazmat_classes.join(", ")}`,
+          desc: "Tehlikeli madde",
+        }
+      : { icon: "science", title: "Hazmat yok", desc: "Tehlikeli madde beyanı" },
+    ...(c.skill_required.length
+      ? [
+          {
+            icon: "engineering",
+            title: c.skill_required.join(", "),
+            desc: "Sürücü yetkinliği",
+          },
+        ]
+      : []),
   ];
 
   return (
-    <MDBox
-      mb={2}
-      p={1.5}
-      sx={{
-        borderRadius: "8px",
-        border: darkMode ? "1px solid rgba(255,255,255,0.15)" : "1px solid #d2d6da",
-        boxShadow: "none",
-      }}
-    >
-      <MDTypography variant="caption" fontWeight="bold" display="block" mb={1}>
-        Gorev kisitlari (Karar Destek Asistanina beslenen)
-      </MDTypography>
-      <MDBox display="flex" flexWrap="wrap" gap={0.75}>
-        {chips.map((label) => (
-          <Chip key={label} label={label} size="small" variant="outlined" color="info" />
-        ))}
-      </MDBox>
-    </MDBox>
+    <Grid container spacing={3} sx={{ mb: 2 }}>
+      <Grid item xs={12} md={7}>
+        <Card sx={{ height: "100%" }}>
+          <MDBox pt={2} px={2} lineHeight={1}>
+            <MDTypography variant="h6" fontWeight="medium">
+              Görev Kısıtları
+            </MDTypography>
+            <MDTypography variant="button" color="text" fontWeight="regular">
+              Karar Destek Asistanı&apos;na beslenen
+            </MDTypography>
+          </MDBox>
+          <MDBox p={2}>
+            {rows.map((r, i) => (
+              <MDBox key={r.desc + r.title} mt={i === 0 ? 0 : 2.5}>
+                <DefaultItem color="dark" icon={r.icon} title={r.title} description={r.desc} />
+              </MDBox>
+            ))}
+          </MDBox>
+        </Card>
+      </Grid>
+      <Grid item xs={12} md={5}>
+        {/* UX (04.08): tarih rakamlari KPI boyutunda — bilesen forklanmadi,
+            kapsamli stil override (yalniz bu kartin caption'lari). */}
+        <MDBox
+          sx={{
+            height: "100%",
+            "& .MuiTypography-caption": {
+              fontSize: "1.25rem",
+              fontWeight: 700,
+              color: "#fff",
+              lineHeight: 1.3,
+            },
+          }}
+        >
+          <TimelineList title="Zaman Aralığı" dark={darkMode}>
+            <TimelineItem
+              color="success"
+              icon="play_arrow"
+              title="Başlangıç"
+              dateTime={wStart ?? "Belirtilmedi"}
+            />
+            <TimelineItem
+              color="error"
+              icon="flag"
+              title="Bitiş"
+              dateTime={wEnd ?? "Belirtilmedi"}
+              lastItem
+            />
+          </TimelineList>
+        </MDBox>
+      </Grid>
+    </Grid>
   );
 }
 
@@ -1350,18 +1403,33 @@ function OptimizeTask(): JSX.Element {
                       <MDTypography variant="button" fontWeight="bold">
                         Rank vehicles by
                       </MDTypography>
-                      <ToggleButtonGroup
-                        value={rankingMode}
-                        exclusive
-                        size="small"
-                        onChange={handleModeChange}
-                      >
-                        {SCORERS.map((s) => (
-                          <ToggleButton key={s.id} value={s.id} disabled={!s.available}>
-                            {s.available ? s.label : `${s.label} 🔒 Yakinda`}
-                          </ToggleButton>
-                        ))}
-                      </ToggleButtonGroup>
+                      {/* UX (04.08): notifications sayfasi deseni — renkli
+                          gradyan butonlar; secili=dolu, digerleri=outlined,
+                          kilitli scorer=secondary disabled. */}
+                      <MDBox display="flex" gap={1} flexWrap="wrap">
+                        {SCORERS.map((s) => {
+                          const btnColor = (
+                            {
+                              spatial: "info",
+                              temporal: "success",
+                              compliance: "warning",
+                              cargo: "secondary",
+                            } as Record<string, "info" | "success" | "warning" | "secondary">
+                          )[s.id] ?? "info";
+                          return (
+                            <MDButton
+                              key={s.id}
+                              size="small"
+                              color={btnColor}
+                              variant={rankingMode === s.id ? "gradient" : "outlined"}
+                              disabled={!s.available}
+                              onClick={() => handleModeChange(null, s.id as RankingMode)}
+                            >
+                              {s.available ? s.label : s.label + " 🔒 Yakinda"}
+                            </MDButton>
+                          );
+                        })}
+                      </MDBox>
                       <MDButton
                         variant="outlined"
                         color="info"

@@ -690,3 +690,26 @@ DetailRow, CopyChip, gradyan aksiyonlar) — Conflict (HTTP 409 kaldirildi, K1
 hizasi, label cakismasi fix, K4 secim-vs-oneri chip'leri; dosya
 components/OverrideReasonDialog.tsx — dizinsiz). Sozlesmeler birebir korundu.
 UI kaniti: 3 modal ekran goruntusuyle onaylandi (K1 iki renk canli).
+
+
+## DSE KARARGAH UX MARATONU (04.08 devam) — REGULASYON CANLI + 3 TUR
+**REGULASYON CANLI SAHNE ✅:** NL-92-VB #1 100/100 yesil (ZE Uyumlu €5.36),
+3 dizel 40/100 (Muafiyet Gerekli €26.39) — mesafede sonuncu, regulasyonda
+birinci; devir kalemi (1) kapandi. Rotterdam dropoff, assess gercek veriden.
+**TUR 1 (0620d73):** Karar Notu Popover -> satir-alti Collapse akordeon (R2,
+ortme bitti, coklu acik); K-A skor bandi >=80 yesil/50-79 amber/<50 gri
+(N/100); mikro rozetler: mesafe(telemetri) + ZE durumu + heffing(assess) —
+veri yoksa BASILMAZ; scorer memolarindan ADR/Phase jargonu temizlendi (R1,
+yalniz mevcut gercek: "Kus ucusu X km · Son sinyal Y dk"); KARGO 🔒 Yakinda,
+inactive aciklama paragrafi silindi.
+**TUR 2+3 (a5502bc):** Job ID silik tikla-kopyala (#8 hane); KPI kartlari
+ComplexStatisticsCard (analytics ile ayni bilesen — EL YAPIMI KART YASAK
+dersi: ilk denemedeki flat JobStatCard Cem tespitiyle sokuldu); Gorev
+Kisitlari DefaultItem ikonlu liste (bos kisitlar gizli, Hazmat-yok kaldi);
+Zaman Araligi TimelineList mini-timeline (KPI boyutunda tarih — caption
+override, fork yok); Rank vehicles by notifications-deseni renkli gradyan
+butonlar (secili dolu / outlined / KARGO kilitli). Anchor'lar artik DOSYADAN
+otomatik uretiliyor (transkripsiyon riski sifir deseni).
+ACIK: spec/ROADMAP'e Regulasyon-uyanisi resmi damgasi gerekmiyor (SESSION
+NOTES yeterli karari); prod ayna paketi ve LinkedIn yayini onceki bloktaki
+gibi bekliyor.

@@ -710,6 +710,22 @@ Zaman Araligi TimelineList mini-timeline (KPI boyutunda tarih — caption
 override, fork yok); Rank vehicles by notifications-deseni renkli gradyan
 butonlar (secili dolu / outlined / KARGO kilitli). Anchor'lar artik DOSYADAN
 otomatik uretiliyor (transkripsiyon riski sifir deseni).
+## DEVIR KAPANISLARI (05.08 vardiyasi)
+**.env.example ✅ (504f5ba, argon):** android-build.yml KANITLA oneksiz
+okuyor (secrets.KEYSTORE_BASE64/KEYSTORE_PASSWORD, KEY_ALIAS=upload
+hardcoded) — WIP dogru yondeymis, commit'lendi + gercek keystore sifresi
+ornekten temizlendi. NOT: sifre git tarihcesinde durur (6cfbe16'dan beri,
+repo private) — ileride upload-key rotasyonu gerekceleri listesine eklendi.
+**A PAKETI ✅ (prod ayna, kod degisikliksiz):** fleet_tracking'e
+vehicle_weight_class kolonu (ayni DDL) + pgmigrations kaydi
+(1783000000000) + Dobbe 4 arac seed'i staging ile BIREBIR (NL-92-VB
+zero_emission/electric, 3x euro_6, hepsi 18_32t + DET tarihleri) — son-ispat
+tablo esitligi teyitli. Zone tarafi zaten prod-kaynakliydi (21), kapali.
+**KALAN:** B paketi = 21+ commit backlog inisi + ADR-0014 cutover +
+FEAT-007-EXT untracked tasima + prod staging-klasorundeki 5 untracked
+migration dosyasi duzeni — BAKIM PENCERESI ister, ayri oturum. Ertelenmis
+mobil kumesi + LinkedIn yayini onceki bloklardaki gibi.
+
 ACIK: spec/ROADMAP'e Regulasyon-uyanisi resmi damgasi gerekmiyor (SESSION
 NOTES yeterli karari); prod ayna paketi ve LinkedIn yayini onceki bloktaki
 gibi bekliyor.

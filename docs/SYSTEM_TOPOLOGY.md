@@ -1,9 +1,9 @@
-# SYSTEM_TOPOLOGY.md
+﻿# SYSTEM_TOPOLOGY.md
 
 Amaç: TulipFleet'in fiziksel sistem haritası. Hangi backend hangi sunucuda,
 hangi dış servis (HERE, Google, OWM) nerede ve hangi üründe çalışıyor, ne
 henüz YOK. Bir bilgi ADR/ROADMAP ile çeliştiğinde, çalışan kod + bu doküman
-kazanır. Son doğrulama: 2026-06-18 (server.js + canlı grep ile).
+kazanır. Son doğrulama: 2026-08-04 (enterprise container logları + canlı curl/psql ile; staging-api.tulipfleet.com /health=200 teyitli).
 
 ## Backend'ler (üç ayrı çalışma yeri)
 
@@ -21,7 +21,7 @@ fleet API), `tulipfleet-dispatcher` (dispatcher frontend), `tulipfleet-enterpris
 
 | Servis / Ürün | Durum | Nerede | Kanıt |
 |---------------|-------|--------|-------|
-| **HERE Routing API v8** (`router.hereapi.com/v8/routes`) | ✅ CANLI | Ana fleet backend, `/api/driver/route-traffic` (server.js:6457), `/api/driver/drive-conditions` (server.js:6674) | tek-rota trafik/ETA, transportMode=truck, summary+incidents |
+| **HERE Routing API v8** (`router.hereapi.com/v8/routes`) | ✅ CANLI | Ana fleet backend, `/api/driver/route-traffic` (server.js:6457), `/api/driver/drive-conditions` (server.js:6674) **+ Enterprise backend**: `/api/dispatcher/routes/active` rota geometri cache'i ve approve `estimateDriveSeconds` (v8 truck, `00c2df1`) | tek-rota trafik/ETA, transportMode=truck, summary+incidents; enterprise kanıtı 04.08 container logları: "HERE geometri cache'lendi" (TLP-26-00016..19) |
 | **HERE Tour Planning** (VRP solver, `tourplanning.hereapi.com`) | ❌ YOK | hiçbir backend'de | grep boş: server.js + enterprise container; ADR-0002 kararı, henüz implement edilmedi |
 | **Google Maps API'leri** (Directions, Geocoding, Distance Matrix, Maps SDK) | ✅ CANLI | Mobil app (sürücü rota haritası) + billing aktif | INFRASTRUCTURE.md:130 |
 | **OpenWeatherMap** | ✅ CANLI | Ana fleet backend, `/api/driver/drive-conditions` weather bloğu | server.js, OPENWEATHER_API_KEY |
@@ -44,6 +44,9 @@ Mevcut iki HERE Routing çağrısı route handler'a `fetch(url)` ile gömülü,
 HERE bloğu server.js:6485 ve 6696'da tekrar). ADR-0002 §4.2'nin uyardığı
 lock-in zaten başlamış ve dağınık. IRoutingProvider boundary'si gelecekteki
 Tour Planning'i değil, mevcut bu Routing çağrılarını da kapsamalı.
+**Durum güncellemesi (04.08):** ADR-0014 IRoutingProvider boundary'si Faz 1-3
+olarak kodda/GitHub'ta tamam — ancak fleet-prod-01'e DEPLOY EDİLMEDİ (21+
+commit backlog'unun parçası); prod'daki server.js hâlâ gömülü fetch'lerle çalışır.
 
 ## Güncelleme kuralı
 Yeni dış servis eklenince ya da bir backend taşınınca burayı güncelle, "Son

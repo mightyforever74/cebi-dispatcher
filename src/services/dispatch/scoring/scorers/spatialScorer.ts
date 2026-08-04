@@ -6,10 +6,10 @@
  * koordinati HERE Discover secimiyle (LocationSearchInput) geldigi icin
  * her zaman gercek lat/lng'dir.
  *
- * DURUSTLUK NOTU: mesafe su an KUS UCUSU (haversine). HERE Matrix Routing
- * (ADR-0014) frontend'e baglandiginda gercek surus mesafesine gecilecek;
- * memo bunu kullaniciya acikca soyler. Telemetrisi olmayan arac 0 skor alir
- * ve memo'da nedeni yazar — sahte konum uretilmez.
+ * DURUSTLUK NOTU: mesafe su an KUS UCUSU (haversine); memo yalnizca bu
+ * gercegi soyler. Yol haritasi notlari (HERE Matrix / ADR-0014) UI'in degil
+ * dokumantasyonun isidir (UX turu 04.08, Cem R1 karari). Telemetrisi olmayan
+ * arac 0 skor alir ve memo'da nedeni yazar — sahte konum uretilmez.
  */
 
 import { ActiveScorer, ScoreDetail, ScoringTask, ScoringVehicleSnapshot } from "../types";
@@ -22,7 +22,7 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
   if (vehicle.latitude === null || vehicle.longitude === null) {
     return {
       value: 0,
-      memo: `${vehicle.plate}: canli konum verisi yok — arac telemetri akisinda gorunmuyor, mesafe hesaplanamadi.`,
+      memo: `${vehicle.plate}: 📡 Canli konum verisi yok — mesafe hesaplanamadi.`,
     };
   }
 
@@ -35,10 +35,7 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
 
   return {
     value: 1 / (1 + km / HALF_SCORE_KM),
-    memo:
-      `${vehicle.plate}: pickup noktasina ${km.toFixed(1)} km (kus ucusu, canli telemetri — ` +
-      `son sinyal ${frameAgeLabel(vehicle.lastUpdate)}). ` +
-      `HERE Matrix Routing (ADR-0014) devreye girince gercek surus mesafesi kullanilacak.`,
+    memo: `${vehicle.plate}: 📍 Kus ucusu ${km.toFixed(1)} km · 📡 Son sinyal ${frameAgeLabel(vehicle.lastUpdate)}`,
   };
 }
 

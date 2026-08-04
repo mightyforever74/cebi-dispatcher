@@ -8,15 +8,13 @@
  *    memo'da ACIKCA yazilir.
  *
  * 2) VRPTW PENCERESI (task.constraints.extended.time_window_end varsa):
- *    Bu veri artik formdan geliyor (frontend-state; mock solver poll'da
- *    DONMUYOR). Tahmini varis, teslim penceresi bitisine gore degerlendirilir:
- *      - Pencereye yetisiyorsa: skor korunur, memo pay (slack) suresini yazar.
- *      - Pencereyi kaciriyorsa: skor 0.2 ile carpilir (feasibility cezasi) ve
- *        memo UYARI olarak ne kadar geciktigini yazar.
- *    Boylece Zaman filtresi, gercek teslim penceresine gore CANLI siralar.
+ *    Tahmini varis teslim penceresi bitisine gore degerlendirilir:
+ *      - Yetisiyorsa: skor korunur, memo pay (slack) suresini yazar.
+ *      - Kaciriyorsa: skor 0.2 ile carpilir ve memo UYARI yazar.
  *
- * HERE Matrix (ADR-0014) baglandiginda kus ucusu ETA gercek surus suresine
- * yukseltilecek — arayuz sozlesmesi (ScoreDetail) degismeden.
+ * UX turu 04.08 (Cem R1): memo'lardan yol-haritasi cumleleri (HERE Matrix /
+ * ADR-0014) cikarildi — UI yalnizca o anki gercegi soyler; gelecek notlari
+ * dokumantasyonda yasar. Arayuz sozlesmesi (ScoreDetail) degismedi.
  */
 
 import { ActiveScorer, ScoreDetail, ScoringTask, ScoringVehicleSnapshot } from "../types";
@@ -40,7 +38,7 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
   if (vehicle.latitude === null || vehicle.longitude === null) {
     return {
       value: 0,
-      memo: `${vehicle.plate}: canli konum verisi yok — ETA hesaplanamadi.`,
+      memo: `${vehicle.plate}: 📡 Canli konum verisi yok — ETA hesaplanamadi.`,
     };
   }
 
@@ -53,9 +51,9 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
       : `su an ${vehicle.movementStatus ?? "durum bilinmiyor"}`;
 
   const baseMemo =
-    `${vehicle.plate}: pickup'a tahmini ${Math.round(etaMin)} dk ` +
-    `(${ASSUMED_AVG_SPEED_KMH} km/h ortalama varsayimi, kus ucusu ${km.toFixed(1)} km; ` +
-    `${statusNote}, son sinyal ${frameAgeLabel(vehicle.lastUpdate)})`;
+    `${vehicle.plate}: ⏱ Pickup'a tahmini ${Math.round(etaMin)} dk ` +
+    `(60 km/h ortalama varsayimi, kus ucusu ${km.toFixed(1)} km) · ` +
+    `${statusNote} · 📡 son sinyal ${frameAgeLabel(vehicle.lastUpdate)}`;
 
   const windowEnd = task.constraints?.extended.time_window_end ?? null;
   const minsToEnd = minutesUntil(windowEnd);
@@ -64,9 +62,7 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
   if (minsToEnd === null) {
     return {
       value: baseValue,
-      memo:
-        `${baseMemo}. Teslim penceresi belirtilmemis — salt ETA'ya gore siralandi. ` +
-        `Gercek surus suresi HERE Matrix (ADR-0014) ile gelecek.`,
+      memo: `${baseMemo}. Teslim penceresi belirtilmemis — salt ETA'ya gore siralandi.`,
     };
   }
 

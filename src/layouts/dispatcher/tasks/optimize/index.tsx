@@ -70,7 +70,7 @@ import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import Chip from "@mui/material/Chip";
-import Popover from "@mui/material/Popover";
+import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import Icon from "@mui/material/Icon";
 import ToggleButton from "@mui/material/ToggleButton";
@@ -112,6 +112,8 @@ import useDispatchLocationSnapshot, {
 } from "hooks/useDispatchLocationSnapshot";
 // Regulasyon Scorer'in Uyanisi (04.08) - assess veri kaynagi
 import useComplianceAssessment from "hooks/useComplianceAssessment";
+// UX turu (04.08) - mikro mesafe rozeti icin
+import { haversineKm } from "services/dispatch/scoring/geo";
 import { deriveStatus } from "store/useVehicleStore";
 
 // Decision Support Engine (Phase 1)
@@ -149,6 +151,13 @@ interface KanbanCard {
   id: string;
   template: string;
 }
+/** UX turu (04.08): kolon basligi mikro rozeti — yalniz GERCEK veri varsa basilir. */
+interface ColumnBadge {
+  icon: string;
+  text: string;
+  tone: "good" | "warn" | "neutral";
+}
+
 interface KanbanColumn {
   id: string;
   title: string;
@@ -156,6 +165,7 @@ interface KanbanColumn {
   scoreChip?: string;
   scoreMemo?: string;
   rank?: number;
+  badges?: ColumnBadge[];
 }
 interface KanbanBoardData {
   columns: KanbanColumn[];
@@ -211,7 +221,7 @@ function buildBoard(
   orderedVehicleIds: string[],
   vehicleLabels: Record<string, string>,
   assignments: Map<string, string>,
-  scoreById: Map<string, { chip: string; memo: string }> | null
+  scoreById: Map<string, { chip: string; memo: string; badges?: ColumnBadge[] }> | null
 ): KanbanBoardData {
   const columns: KanbanColumn[] = orderedVehicleIds.map((vehicleId, index) => {
     const score = scoreById?.get(vehicleId);
@@ -222,6 +232,7 @@ function buildBoard(
       scoreChip: score?.chip,
       scoreMemo: score?.memo,
       rank: score ? index + 1 : undefined,
+      badges: score?.badges,
     };
   });
   const columnById = new Map(columns.map((c) => [c.id, c]));
@@ -296,70 +307,96 @@ function VehicleRowHeader({
   column: KanbanColumn;
   darkMode: boolean;
 }): JSX.Element {
-  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const { title, scoreChip, scoreMemo, rank, cards } = column;
+  // UX turu (04.08, Cem R2): Popover yerine satir-alti akordeon — z-index
+  // savasi biter, alt siradaki araclar ASLA ortulmez.
+  const [expanded, setExpanded] = useState(false);
+  const { title, scoreChip, scoreMemo, rank, cards, badges } = column;
+  const scoreNum = scoreChip ? Number(scoreChip) : null;
+  // K-A (Cem onayli): >=80 yesil, 50-79 amber, <50 gri.
+  const chipColor: "success" | "warning" | "default" =
+    scoreNum !== null && scoreNum >= 80
+      ? "success"
+      : scoreNum !== null && scoreNum >= 50
+      ? "warning"
+      : "default";
+  const toneColor = (tone: "good" | "warn" | "neutral"): "success" | "warning" | "default" =>
+    tone === "good" ? "success" : tone === "warn" ? "warning" : "default";
 
   return (
-    <MDBox
-      display="flex"
-      alignItems="center"
-      justifyContent="space-between"
-      pb={1}
-      sx={{
-        borderBottom: darkMode ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid #d2d6da",
-      }}
-    >
-      <MDBox display="flex" alignItems="center" gap={1.5}>
-        {rank !== undefined && (
-          <MDTypography variant="button" fontWeight="bold" color="info">
-            #{rank}
+    <>
+      <MDBox
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        pb={1}
+        sx={{
+          borderBottom: darkMode ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid #d2d6da",
+        }}
+      >
+        <MDBox display="flex" alignItems="center" gap={1.5}>
+          {rank !== undefined && (
+            <MDTypography variant="button" fontWeight="bold" color="info">
+              #{rank}
+            </MDTypography>
+          )}
+          <MDTypography variant="h6" fontWeight="bold" color={darkMode ? "white" : "dark"}>
+            {title}
           </MDTypography>
-        )}
-        <MDTypography variant="h6" fontWeight="bold" color={darkMode ? "white" : "dark"}>
-          {title}
-        </MDTypography>
-        <MDTypography variant="caption" color="text">
-          {cards.length} gorev
-        </MDTypography>
-      </MDBox>
-      <MDBox display="flex" alignItems="center" gap={1}>
-        {scoreChip && (
-          <Chip
-            label={scoreChip}
-            size="small"
-            color={Number(scoreChip) >= 50 ? "success" : "default"}
-            sx={{ fontWeight: "bold" }}
-          />
-        )}
-        {scoreMemo && (
-          <>
+          <MDTypography variant="caption" color="text">
+            {cards.length} gorev
+          </MDTypography>
+        </MDBox>
+        <MDBox display="flex" alignItems="center" gap={1} flexWrap="wrap" justifyContent="flex-end">
+          {badges?.map((b) => (
+            <Chip
+              key={b.icon + b.text}
+              icon={<Icon fontSize="small">{b.icon}</Icon>}
+              label={b.text}
+              size="small"
+              variant="outlined"
+              color={toneColor(b.tone)}
+            />
+          ))}
+          {scoreChip && (
+            <Chip
+              label={`${scoreChip} / 100`}
+              size="small"
+              color={chipColor}
+              sx={{ fontWeight: "bold" }}
+            />
+          )}
+          {scoreMemo && (
             <IconButton
               size="small"
-              onClick={(e) => setAnchorEl(e.currentTarget)}
+              onClick={() => setExpanded((v) => !v)}
               sx={{ color: darkMode ? "rgba(255,255,255,0.7)" : "inherit" }}
             >
-              <Icon fontSize="small">info_outlined</Icon>
+              <Icon fontSize="small">{expanded ? "expand_less" : "info_outlined"}</Icon>
             </IconButton>
-            <Popover
-              open={Boolean(anchorEl)}
-              anchorEl={anchorEl}
-              onClose={() => setAnchorEl(null)}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-            >
-              <MDBox p={2} maxWidth={380}>
-                <MDTypography variant="button" fontWeight="bold" display="block" mb={1}>
-                  Akilli Karar Notu — {title}
-                </MDTypography>
-                <MDTypography variant="caption" color="text">
-                  {scoreMemo}
-                </MDTypography>
-              </MDBox>
-            </Popover>
-          </>
-        )}
+          )}
+        </MDBox>
       </MDBox>
-    </MDBox>
+      {scoreMemo && (
+        <Collapse in={expanded}>
+          <MDBox
+            mt={1}
+            p={1.5}
+            sx={{
+              borderRadius: "10px",
+              border: darkMode ? "1px solid rgba(255,255,255,0.15)" : "1px solid #d2d6da",
+              bgcolor: darkMode ? "rgba(255,255,255,0.03)" : "#f8f9fa",
+            }}
+          >
+            <MDTypography variant="button" fontWeight="bold" display="block" mb={0.5}>
+              Akilli Karar Notu
+            </MDTypography>
+            <MDTypography variant="caption" color="text">
+              {scoreMemo}
+            </MDTypography>
+          </MDBox>
+        </Collapse>
+      )}
+    </>
   );
 }
 
@@ -614,13 +651,51 @@ function OptimizeTask(): JSX.Element {
       lastRankedRef.current = { mode, ranked }; // FN-18: approve aninda snapshot icin
       const orderedIds =
         ranked.length > 0 ? ranked.map((r) => r.vehicleId) : result.available_vehicles;
+      // UX turu (04.08): mikro rozetler — mesafe yalniz telemetri varsa,
+      // ZE durumu + heffing yalniz assess verisi geldiyse. Veri yoksa rozet
+      // BASILMAZ (durustluk: uydurma metrik yok).
+      const snapById = new Map(snapshots.map((s) => [s.id, s] as const));
       const scoreById =
         ranked.length > 0
           ? new Map(
-              ranked.map((r) => [
-                r.vehicleId,
-                { chip: `${Math.round(r.detail.value * 100)}`, memo: r.detail.memo },
-              ])
+              ranked.map((r) => {
+                const s = snapById.get(r.vehicleId);
+                const badges: ColumnBadge[] = [];
+                if (s && s.latitude !== null && s.longitude !== null && scoringTasks[0]) {
+                  const km = haversineKm(
+                    s.latitude,
+                    s.longitude,
+                    scoringTasks[0].pickup.lat,
+                    scoringTasks[0].pickup.lng
+                  );
+                  badges.push({ icon: "place", text: `${km.toFixed(1)} km`, tone: "neutral" });
+                }
+                const cRow = s?.compliance;
+                if (cRow) {
+                  if (
+                    cRow.status === "compliant" ||
+                    cRow.status === "exempt_auto" ||
+                    cRow.status === "exempt_granted"
+                  ) {
+                    badges.push({ icon: "eco", text: "ZE Uyumlu", tone: "good" });
+                  } else if (cRow.status === "needs_exemption") {
+                    badges.push({ icon: "report_problem", text: "Muafiyet Gerekli", tone: "warn" });
+                  } else if (cRow.status === "blocked") {
+                    badges.push({ icon: "block", text: "Giris Engelli", tone: "warn" });
+                  }
+                  if (cRow.heffing && cRow.heffing.matched) {
+                    badges.push({
+                      icon: "euro",
+                      text: `€${cRow.heffing.total_charge.toFixed(2)}`,
+                      tone: "neutral",
+                    });
+                  }
+                }
+                return [
+                  r.vehicleId,
+                  { chip: `${Math.round(r.detail.value * 100)}`, memo: r.detail.memo, badges },
+                ] as [string, { chip: string; memo: string; badges: ColumnBadge[] }];
+              })
             )
           : null;
       setInitialBoard(buildBoard(result.tasks, orderedIds, vehicleLabels, currentAssignments, scoreById));
@@ -857,7 +932,6 @@ function OptimizeTask(): JSX.Element {
     submittedFanoutRef.current = null;
   };
 
-  const inactiveScorers = SCORERS.filter((s) => !s.available);
   const summaryConstraints =
     submittedConstraints ??
     (taskConstraintsMap.size > 0 ? Array.from(taskConstraintsMap.values())[0] : null);
@@ -1228,7 +1302,7 @@ function OptimizeTask(): JSX.Element {
                       >
                         {SCORERS.map((s) => (
                           <ToggleButton key={s.id} value={s.id} disabled={!s.available}>
-                            {s.available ? s.label : `${s.label} (Phase 1.1 — Inactive)`}
+                            {s.available ? s.label : `${s.label} 🔒 Yakinda`}
                           </ToggleButton>
                         ))}
                       </ToggleButtonGroup>
@@ -1241,18 +1315,6 @@ function OptimizeTask(): JSX.Element {
                         Siralamayi Guncelle
                       </MDButton>
                     </MDBox>
-                    {inactiveScorers.map((s) => (
-                      <MDTypography
-                        key={s.id}
-                        variant="caption"
-                        color="text"
-                        display="block"
-                        mb={0.5}
-                      >
-                        {s.label}: {s.available === false ? s.reason : ""}
-                      </MDTypography>
-                    ))}
-
                     <MDTypography variant="button" fontWeight="bold" display="block" mt={1.5} mb={2}>
                       Vehicles are listed top to bottom, best match first for the selected
                       criterion. Drag a task onto another vehicle row to reassign it — ranking

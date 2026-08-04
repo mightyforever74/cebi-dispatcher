@@ -95,11 +95,20 @@ export interface OverriddenConflict extends ConflictMetadata {
   vehicle_id: string;
 }
 
+// BUG-2 (2026-08-03): kismi basarida cakismaya takilan draft kaydi.
+// Backend D2 sekli birebir: { draft_id, vehicle_id, conflict_metadata }.
+export interface ApproveConflict {
+  draft_id: string;
+  vehicle_id: string;
+  conflict_metadata: ConflictMetadata | null;
+}
+
 export interface ApproveResponse {
   success: boolean;
   message: string;
   pushed: number;
   tasks?: string[];
+  conflicts?: ApproveConflict[]; // BUG-2: kismi basari — draft kalan gorevler
   overridden_conflicts?: OverriddenConflict[]; // BUG-1 Faz C: FN-18 muhurleme malzemesi
 }
 
@@ -134,17 +143,22 @@ export class ApproveConflictError extends Error {
 
   readonly pushed_before_conflict?: number;
 
+  // BUG-2: sert 409 (pushed=0) artik tum cakisma listesini de tasir.
+  readonly conflicts?: ApproveConflict[];
+
   constructor(
     message: string,
     meta: ConflictMetadata | null,
     conflictingDraftId?: string,
-    pushedBeforeConflict?: number
+    pushedBeforeConflict?: number,
+    conflicts?: ApproveConflict[]
   ) {
     super(message);
     this.name = "ApproveConflictError";
     this.conflict_metadata = meta;
     this.conflicting_draft_id = conflictingDraftId;
     this.pushed_before_conflict = pushedBeforeConflict;
+    this.conflicts = conflicts;
   }
 }
 
@@ -219,6 +233,7 @@ export function useApproveOptimization() {
           conflict_metadata?: ConflictMetadata | null;
           conflicting_draft_id?: string;
           pushed_before_conflict?: number;
+          conflicts?: ApproveConflict[]; // BUG-2
         } = {};
         try {
           body = await res.json();
@@ -229,7 +244,8 @@ export function useApproveOptimization() {
           body.message || "Bu araca belirtilen aralıkta atanmış görev var.",
           body.conflict_metadata || null,
           body.conflicting_draft_id,
-          body.pushed_before_conflict
+          body.pushed_before_conflict,
+          body.conflicts // BUG-2
         );
       }
       if (!res.ok) {

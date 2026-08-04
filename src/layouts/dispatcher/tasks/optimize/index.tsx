@@ -101,6 +101,7 @@ import {
   OptimizeResultTask,
   VehicleAssignment,
   ApproveConflictError,
+  ApproveConflict,
   ConflictMetadata,
   TimeWindow,
 } from "hooks/useTaskOptimization";
@@ -137,6 +138,8 @@ import { postDecisionLog } from "services/dispatch/decisionLog";
 import OverrideReasonDialog from "components/OverrideReasonDialog";
 // BUG-1 Faz C - zaman penceresi cakismasi sert modali (Gerekceli Onay)
 import ConflictOverrideModal from "components/ConflictOverrideModal";
+// BUG-2 - bulk fan-out onay kapisi (yalniz N>1 arac seciminde acilir)
+import BulkConfirmDialog from "components/BulkConfirmDialog";
 
 const emptyLocation: LocationValue = { address: "", latitude: null, longitude: null };
 
@@ -371,7 +374,15 @@ function OptimizeTask(): JSX.Element {
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
   const [formError, setFormError] = useState("");
   const [jobId, setJobId] = useState<string | null>(null);
-  const [approveSuccess, setApproveSuccess] = useState<{ pushed: number } | null>(null);
+  // BUG-2: conflicts alani eklendi — kismi basari ozeti bu state'ten beslenir.
+  const [approveSuccess, setApproveSuccess] = useState<{
+    pushed: number;
+    conflicts: ApproveConflict[];
+  } | null>(null);
+  // BUG-2: bulk onay kapisi + submit aninda muhurlenen fan-out arac listesi
+  // (indeks eslemesi draft[i] -> arac[i] bu listeden okunur).
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const submittedFanoutRef = useRef<string[] | null>(null);
 
   // --- Logistics & Constraints form state (Strateji 3 + Form UX v2) ---
   const [direction, setDirection] = useState<TaskDirection>("outbound");
@@ -460,6 +471,47 @@ function OptimizeTask(): JSX.Element {
     },
   });
 
+  // BUG-2: gercek submit — fan-out ile arac basina 1 gorev kopyasi.
+  // N=1'de fanout.map tek elemanli dizi uretir: eski payload BIT-BIT ayni.
+  const doSubmit = () => {
+    const constraints = collectConstraints();
+    // Scorer bunu okur (Grup A + Grup B). Grup B backend'e GITMEZ.
+    setSubmittedConstraints(constraints);
+
+    const fanout = [...selectedVehicleIds];
+    submittedFanoutRef.current = fanout;
+    setBulkConfirmOpen(false);
+
+    const taskInput = {
+      pickup_location: {
+        lat: pickup.latitude as number,
+        lng: pickup.longitude as number,
+        address: pickup.address,
+      },
+      dropoff_location: {
+        lat: dropoff.latitude as number,
+        lng: dropoff.longitude as number,
+        address: dropoff.address,
+      },
+      // GRUP A - backend GERCEK kolonlara yazar (routes/tasks.js kanitli):
+      // capacity_required jsonb'ye stringify, skill_required text[]'e array.
+      capacity_required: constraints.capacity_required,
+      skill_required: constraints.skill_required,
+    };
+
+    submitMutation.mutate(
+      {
+        tasks: fanout.map(() => taskInput),
+        vehicles: selectedVehicleIds,
+      },
+      {
+        onSuccess: (data) => {
+          setJobId(data.jobId);
+        },
+      }
+    );
+  };
+
   const handleSubmit = () => {
     setFormError("");
     setApproveSuccess(null);
@@ -473,38 +525,12 @@ function OptimizeTask(): JSX.Element {
       return;
     }
 
-    const constraints = collectConstraints();
-    // Scorer bunu okur (Grup A + Grup B). Grup B backend'e GITMEZ.
-    setSubmittedConstraints(constraints);
-
-    submitMutation.mutate(
-      {
-        tasks: [
-          {
-            pickup_location: {
-              lat: pickup.latitude as number,
-              lng: pickup.longitude as number,
-              address: pickup.address,
-            },
-            dropoff_location: {
-              lat: dropoff.latitude as number,
-              lng: dropoff.longitude as number,
-              address: dropoff.address,
-            },
-            // GRUP A - backend GERCEK kolonlara yazar (routes/tasks.js kanitli):
-            // capacity_required jsonb'ye stringify, skill_required text[]'e array.
-            capacity_required: constraints.capacity_required,
-            skill_required: constraints.skill_required,
-          },
-        ],
-        vehicles: selectedVehicleIds,
-      },
-      {
-        onSuccess: (data) => {
-          setJobId(data.jobId);
-        },
-      }
-    );
+    // BUG-2 Bulk Guard: N>1 secimde onay kapisi. N=1 akisi degismeden devam.
+    if (selectedVehicleIds.length > 1) {
+      setBulkConfirmOpen(true);
+      return;
+    }
+    doSubmit();
   };
 
   const status = pollQuery.data?.status;
@@ -601,8 +627,22 @@ function OptimizeTask(): JSX.Element {
       let initialAssignments: Map<string, string>;
       const initSnapshots = buildSnapshots(result.available_vehicles, locationsQuery.data);
       const initRanked = rankVehicles(rankingMode, initSnapshots, scoringTasks);
+      // BUG-2: fan-out varsa indeks eslemesi draft[i] -> arac[i] sabitlenir
+      // (kopyalar birebir ozdes oldugu icin esleme backend sirasindan bagimsiz
+      // gecerlidir). Kanban'da surukleme aynen acik kalir. Fanout araci
+      // available_vehicles'ta yoksa o indeks round-robin'e duser (backend
+      // approve tarafindaki ayni guvenlik agiyla parite).
+      const fanout = submittedFanoutRef.current;
       if (result.tasks.length === 1 && initRanked.length > 0) {
         initialAssignments = new Map([[result.tasks[0].id, initRanked[0].vehicleId]]);
+      } else if (fanout && result.tasks.length === fanout.length) {
+        initialAssignments = new Map();
+        result.tasks.forEach((t: OptimizeResultTask, idx: number) => {
+          const vid = result.available_vehicles.includes(fanout[idx])
+            ? fanout[idx]
+            : result.available_vehicles[idx % result.available_vehicles.length];
+          initialAssignments.set(t.id, vid);
+        });
       } else {
         initialAssignments = buildRoundRobinAssignments(
           result.tasks,
@@ -678,7 +718,13 @@ function OptimizeTask(): JSX.Element {
       {
         onSuccess: (data) => {
           setConflictPrompt(null);
-          setApproveSuccess({ pushed: data.pushed });
+          // BUG-2: birikimli sayac — kismi basari sonrasi "Gerekceli Onay"
+          // retry'inda pushed toplanir; conflicts her zaman SON yanittan gelir
+          // (override retry'inda backend bos doner -> ozet blok kapanir).
+          setApproveSuccess((prev) => ({
+            pushed: (prev?.pushed ?? 0) + data.pushed,
+            conflicts: data.conflicts ?? [],
+          }));
           // FEAT-010:FN-18 - karar logu, approve BASARISINDAN sonra, best-effort
           // (no-throw sozlesmesi postDecisionLog icinde; approve asla bloke olmaz).
           const lr = lastRankedRef.current;
@@ -697,7 +743,12 @@ function OptimizeTask(): JSX.Element {
           const conflictByTask = new Map(
             (data.overridden_conflicts ?? []).map((oc) => [oc.draft_id, oc])
           );
+          // BUG-2 F1 (Cem onayli): karar logu YALNIZ push edilen gorevlere.
+          // Draft kalanlara sahte "karar verildi" logu atilmaz; retry'da
+          // onceden push edilenlere mukerrer log olusmaz.
+          const pushedSet = new Set(data.tasks ?? []);
           vehicle_assignments.forEach(({ taskId, vehicleId }) => {
+            if (!pushedSet.has(taskId)) return;
             const sealed = conflictByTask.get(taskId);
             postDecisionLog(token, {
               routing_job_id: jobId,
@@ -770,6 +821,9 @@ function OptimizeTask(): JSX.Element {
     setTaskConstraintsMap(new Map());
     setOverrideDialogOpen(false);
     setConflictPrompt(null);
+    // BUG-2 temizligi
+    setBulkConfirmOpen(false);
+    submittedFanoutRef.current = null;
   };
 
   const inactiveScorers = SCORERS.filter((s) => !s.available);
@@ -1268,6 +1322,56 @@ function OptimizeTask(): JSX.Element {
                 <MDTypography variant="body2" color="success" fontWeight="bold" mb={2}>
                   Plan approved — {approveSuccess.pushed} task(s) pushed to the fleet system.
                 </MDTypography>
+                {/* BUG-2: kismi basari — cakismaya takilip draft kalanlarin ozeti
+                    + ayni routing_job_id ile override:true retry kapisi. */}
+                {approveSuccess.conflicts.length > 0 && (
+                  <MDBox mb={2}>
+                    <MDTypography
+                      variant="body2"
+                      color="error"
+                      fontWeight="bold"
+                      mb={1}
+                    >
+                      {approveSuccess.conflicts.length} task(s) blocked by
+                      time-window conflicts:
+                    </MDTypography>
+                    {approveSuccess.conflicts.map((c) => (
+                      <MDTypography
+                        key={c.draft_id}
+                        variant="caption"
+                        color="text"
+                        display="block"
+                      >
+                        {vehicleLabels[c.vehicle_id] || c.vehicle_id.slice(0, 8)}
+                        {c.conflict_metadata
+                          ? " · " +
+                            c.conflict_metadata.conflicting_task_no +
+                            " · ~" +
+                            c.conflict_metadata.overlap_minutes +
+                            " dk"
+                          : ""}
+                      </MDTypography>
+                    ))}
+                    <MDBox mt={1.5}>
+                      <MDButton
+                        variant="gradient"
+                        color="error"
+                        size="small"
+                        disabled={approveMutation.isPending}
+                        onClick={() =>
+                          setConflictPrompt({
+                            conflict:
+                              approveSuccess.conflicts[0]?.conflict_metadata ??
+                              null,
+                            fn20Reason: null,
+                          })
+                        }
+                      >
+                        Çakışanları Gerekçeli Onayla
+                      </MDButton>
+                    </MDBox>
+                  </MDBox>
+                )}
                 <MDButton variant="gradient" color="info" onClick={handleReset}>
                   Create Another Task
                 </MDButton>
@@ -1281,6 +1385,19 @@ function OptimizeTask(): JSX.Element {
             )}
           </Card>
         )}
+
+        {/* BUG-2: bulk fan-out onay kapisi. MUI Dialog portal'da render olur;
+            form karti (!jobId) kapali/acik farketmez, her zaman erisilebilir. */}
+        <BulkConfirmDialog
+          open={bulkConfirmOpen}
+          vehicles={selectedVehicleIds.map((id) => ({
+            id,
+            plate: vehicleLabels[id] || id.slice(0, 8),
+          }))}
+          submitting={submitMutation.isPending}
+          onCancel={() => setBulkConfirmOpen(false)}
+          onConfirm={doSubmit}
+        />
       </MDBox>
     </DashboardLayout>
   );

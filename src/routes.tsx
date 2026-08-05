@@ -40,6 +40,8 @@ import OrderDetails from "layouts/ecommerce/orders/order-details";
 import OrderList from "layouts/ecommerce/orders/order-list";
 import EditProduct from "layouts/ecommerce/products/edit-product";
 import NewProduct from "layouts/ecommerce/products/new-product";
+// FEAT-SaaS S3 (05.08) — Sayfa 1
+import SubscriptionPage from "layouts/subscription";
 import ProductPage from "layouts/ecommerce/products/product-page";
 import Billing from "layouts/pages/account/billing";
 import Invoice from "layouts/pages/account/invoice";
@@ -282,6 +284,18 @@ const routes = [
             key: "calendar",
             route: "/applications/calendar",
             component: <Calendar />,
+          },
+        ],
+      },
+      {
+        name: "Abonelik",
+        key: "subscription",
+        collapse: [
+          {
+            name: "Araç Kotası & Talep",
+            key: "subscription-quota",
+            route: "/subscription",
+            component: <SubscriptionPage />,
           },
         ],
       },

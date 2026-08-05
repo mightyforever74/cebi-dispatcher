@@ -42,6 +42,7 @@ import EditProduct from "layouts/ecommerce/products/edit-product";
 import NewProduct from "layouts/ecommerce/products/new-product";
 // FEAT-SaaS S3 (05.08) — Sayfa 1
 import SubscriptionPage from "layouts/subscription";
+import B2bApiPage from "layouts/subscription/b2bApi";
 import ProductPage from "layouts/ecommerce/products/product-page";
 import Billing from "layouts/pages/account/billing";
 import Invoice from "layouts/pages/account/invoice";
@@ -296,6 +297,12 @@ const routes = [
             key: "subscription-quota",
             route: "/subscription",
             component: <SubscriptionPage />,
+          },
+          {
+            name: "TulipFleet Connect (B2B API)",
+            key: "subscription-b2b-api",
+            route: "/subscription/b2b-api",
+            component: <B2bApiPage />,
           },
         ],
       },

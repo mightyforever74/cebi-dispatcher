@@ -74,7 +74,7 @@ Durum kaynagi: bu dosya. Her faz kapanisi buraya islenmeden sonraki faza GECILME
 | Faz | Icerik | Durum |
 |---|---|---|
 | S1 | Sema: enterprise.subscription_requests (migration 1783100000000) | ✅ 617fccc — staging'de tablo+pgmigrations kaydi; PROD AYNASI bakim penceresine |
-| S2-E1 | Enterprise endpointleri: POST/GET /api/subscription/requests + GET /api/subscription/quota | ✅ kod 0e21557 deploy'lu; SMOKE BEKLIYOR |
+| S2-E1 | Enterprise endpointleri: POST/GET /api/subscription/requests + GET /api/subscription/quota | ✅ 0e21557 + smoke 3/3 (05.08: Dobbe 4/10 professional; talep 2af1d893 PENDING) |
 | S2-E2 | Ana backend: routes/superadmin.subscriptions.js (bekleyen liste / approve+audit+mail / reject) — STAGING-ONCE | ⬜ |
 | S3 | Sayfa 1 + 2 klon/uyarlama (musteri tarafi) | ⬜ |
 | S4 | Sayfa 3 + 4 klon/uyarlama (Supervizor) + D-S2 kapisi | ⬜ |

@@ -77,7 +77,7 @@ Durum kaynagi: bu dosya. Her faz kapanisi buraya islenmeden sonraki faza GECILME
 | S2-E1 | Enterprise endpointleri: POST/GET /api/subscription/requests + GET /api/subscription/quota | ✅ 0e21557 + smoke 3/3 (05.08: Dobbe 4/10 professional; talep 2af1d893 PENDING) |
 | S2-E2 | Ana backend: routes/superadmin.subscriptions.js (bekleyen liste / approve+audit+mail / reject) — STAGING-ONCE | ⬜ |
 | S3 | Sayfa 1 + 2 klon/uyarlama (musteri tarafi) | Sayfa 1 ✅ c9381a9 (kota 4/10 canli, PENDING kalici, tier dinamik; UI karesi sonraki oturumda) · Sayfa 2 ✅ (Yakinda lansmani + gercek api_package on-talebi; UI karesi sonraki oturumda) |
-| S4 | Sayfa 3 + 4 klon/uyarlama (Supervizor) + D-S2 kapisi | ⬜ |
+| S4 | Sayfa 3 + 4 klon/uyarlama (Supervizor) + D-S2 kapisi | ✅ 05.08 — gate gercek re-auth (negatif 401/403 canli), manuel kota endpoint'i 6cb4cfb (audit quota_manual_update), api_package durust rozet; UI kareleri sonraki oturumda |
 | S5 | Uctan uca smoke (talep->onay->kota->mail) + test verisi temizligi + prod aynasi | ⬜ |
 
 ## 5. Kanit Envanteri (mevcut altyapi — mukerrer insa YASAK)

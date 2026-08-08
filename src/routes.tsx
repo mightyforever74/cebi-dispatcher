@@ -43,6 +43,9 @@ import NewProduct from "layouts/ecommerce/products/new-product";
 // FEAT-SaaS S3 (05.08) — Sayfa 1
 import SubscriptionPage from "layouts/subscription";
 import B2bApiPage from "layouts/subscription/b2bApi";
+// FEAT-SaaS S4 (05.08) — Supervizor ikilisi (D-S2 gate ile korunur)
+import SupervisorPage from "layouts/supervisor";
+import CustomerDetailPage from "layouts/supervisor/customerDetail";
 import ProductPage from "layouts/ecommerce/products/product-page";
 import Billing from "layouts/pages/account/billing";
 import Invoice from "layouts/pages/account/invoice";
@@ -303,6 +306,24 @@ const routes = [
             key: "subscription-b2b-api",
             route: "/subscription/b2b-api",
             component: <B2bApiPage />,
+          },
+        ],
+      },
+      {
+        name: "Supervizör",
+        key: "supervisor",
+        collapse: [
+          {
+            name: "Komuta Merkezi",
+            key: "supervisor-command",
+            route: "/admin/supervisor",
+            component: <SupervisorPage />,
+          },
+          {
+            name: "Müşteri Detay",
+            key: "supervisor-customer-detail",
+            route: "/admin/supervisor/customer-detail",
+            component: <CustomerDetailPage />,
           },
         ],
       },

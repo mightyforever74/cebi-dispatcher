@@ -78,7 +78,8 @@ Durum kaynagi: bu dosya. Her faz kapanisi buraya islenmeden sonraki faza GECILME
 | S2-E2 | Ana backend: routes/superadmin.subscriptions.js (bekleyen liste / approve+audit+mail / reject) — STAGING-ONCE | ⬜ |
 | S3 | Sayfa 1 + 2 klon/uyarlama (musteri tarafi) | Sayfa 1 ✅ c9381a9 (kota 4/10 canli, PENDING kalici, tier dinamik; UI karesi sonraki oturumda) · Sayfa 2 ✅ (Yakinda lansmani + gercek api_package on-talebi; UI karesi sonraki oturumda) |
 | S4 | Sayfa 3 + 4 klon/uyarlama (Supervizor) + D-S2 kapisi | ✅ 05.08 — gate gercek re-auth (negatif 401/403 canli), manuel kota endpoint'i 6cb4cfb (audit quota_manual_update), api_package durust rozet; UI kareleri sonraki oturumda |
-| S5 | Uctan uca smoke (talep->onay->kota->mail) + test verisi temizligi + prod aynasi | ⬜ |
+| S5a | Uctan uca smoke: talep -> gate 403 negatif + re-auth -> approve (10→13 UI + 10→11 curl) -> manuel muhur -> MAIL TESLIM (info@ kutusunda kanitli, 09.08) | ✅ ekran+psql+kutu kanitli. Notlar: (1) Gmail From'u SMTP hesabiyla eziyor — info@ alias dogrulamasi ROADMAP'e; (2) 2x no-op 13→13 muhru: UI alan tazeleme puruzu, no-op'a 400 iyilestirmesi S5b'ye; (3) billing_email=info@ duzeltildi; (4) JWT ders tazelendi: talep=PROD token→enterprise, onay=STAGING token→staging |
+| S5b | Prod aynasi (bakim penceresi): migration 1783100000000 prod DB + backend 9010e3c→6cb4cfb inisi + smoke; api_package PENDING staging'de FEAT-Connect tohumu | ⬜ |
 
 ## 5. Kanit Envanteri (mevcut altyapi — mukerrer insa YASAK)
 - `public.companies`: max_vehicles / max_drivers / max_admins / per_vehicle_fee /

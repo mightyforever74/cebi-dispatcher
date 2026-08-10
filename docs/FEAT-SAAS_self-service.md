@@ -107,4 +107,4 @@ users -> role='company_admin', guvenli gecici parola (v1; sifre-belirleme token 
 Mail: mevcut fastify.transporter best-effort (COMMIT sonrasi) — hosgeldin + gecici parola.
 Tek transaction: company + user; unique email cakismasi -> 409.
 
-**Faz durumu:** S-O1 endpoint ⬜ · S-O2 landing baglantisi (Cursor) ⬜ · 2.1 token-link iyilestirme ⬜
+**Faz durumu:** S-O1 ✅ fca4089 (10.08 staging; smoke 4/4: 201+trial muhru DB-kanitli, 409 mukerrer, honeypot yutma Bot=0; D-O3-SADE uygulandi: parola/OTP gonderilmez, kullanilamaz-hash + forgot-password yonlendirmesi — mevcut OTP zinciri yeniden kullanilir) · S-O2 landing (Cursor) ⬜ · 2.1 token-link: D-O3-sade ile BUYUK OLCUDE GEREKSIZLESTI (landing'e 'sifre belirle' UX'i S-O2'de) · prod inisi: sonraki bakim penceresi (63d45c4+fca4089 birlikte)

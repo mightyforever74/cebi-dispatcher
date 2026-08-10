@@ -92,3 +92,19 @@ Durum kaynagi: bu dosya. Her faz kapanisi buraya islenmeden sonraki faza GECILME
 - Register desenleri: enterprise `server.js` ~satir 39-51; ana backend ~535/544
   (`routes/superadmin.*.js` ailesi).
 - Kaynak sayfalar + bilesen agaclari: `src/layouts/ecommerce/...` (30 dosya envanteri 05.08).
+
+## 6. FEAT-SAAS-2: Public Onboarding (muhur 10.08.2026)
+
+**D-L1:** Landing = AYRI hafif site (tulipfleet.com); dispatcher operasyon paneli ayri kalir (decoupling/SEO).
+**D-O1:** Trial kaydi subscription_requests'e YAZILMAZ (o tablo onay defteri); gorunurluk Komuta Merkezi'nde subscription_status='trial' filtresi/TRIAL rozeti.
+**D-O2:** Anti-bot v1: honeypot alan (doluysa sessiz 200) + endpoint-ici in-memory IP rate-limit 3/saat (restart'ta sifirlanir — kabul edilen v1 siniri).
+
+### POST /api/auth/public-signup (auth'suz)
+Payload: { company_name, admin_email, admin_name, phone, estimated_vehicles?, hp_field }
+Muhur (KANITLI check'lerle): companies -> status='active', subscription_status='trial',
+subscription_tier='starter', max_vehicles=5, is_trial=true, trial_ends_at=NOW()+interval '14 days'.
+users -> role='company_admin', guvenli gecici parola (v1; sifre-belirleme token linki = FEAT-SAAS-2.1).
+Mail: mevcut fastify.transporter best-effort (COMMIT sonrasi) — hosgeldin + gecici parola.
+Tek transaction: company + user; unique email cakismasi -> 409.
+
+**Faz durumu:** S-O1 endpoint ⬜ · S-O2 landing baglantisi (Cursor) ⬜ · 2.1 token-link iyilestirme ⬜

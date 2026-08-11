@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
 export interface Driver {
@@ -24,7 +25,7 @@ export function useDrivers() {
   return useQuery<Driver[], Error>({
     queryKey: ["drivers"],
     queryFn: async () => {
-      const res = await fetch("https://enterprise-api.tulipfleet.com/api/dispatcher/drivers", {
+      const res = await fetch(`${ENTERPRISE_API_URL}/api/dispatcher/drivers`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : "",
           "Content-Type": "application/json",

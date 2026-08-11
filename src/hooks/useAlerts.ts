@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AUTH_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
 // Desen: src/hooks/useTasks.ts'ten kanitli (fetch + Authorization header).
@@ -14,10 +15,6 @@ import { useAuthStore } from "store/useAuthStore";
 // Response sekli mobil AdminAlerts.js'ten kanitli (defensive):
 //   res.alerts || (Array.isArray(res) ? res : [])
 
-const AUTH_API_URL = (process.env.REACT_APP_AUTH_API_URL || "https://api.tulipfleet.com").replace(
-  /\/+$/,
-  ""
-);
 
 export interface Alert {
   id: string;

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
 // Desen: src/hooks/useTasks.ts'ten kanıtlı (fetch + Authorization header +
@@ -14,7 +15,7 @@ export interface NotificationPreferences {
   alert_device_offline: boolean;
 }
 
-const BASE_URL = "https://enterprise-api.tulipfleet.com/api/dispatcher/notification-preferences";
+const BASE_URL = `${ENTERPRISE_API_URL}/api/dispatcher/notification-preferences`;
 
 export function useNotificationPreferences() {
   const token = useAuthStore((s) => s.token);

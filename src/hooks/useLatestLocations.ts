@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 import { LocationFrame, useVehicleStore } from "store/useVehicleStore";
 
@@ -18,7 +19,7 @@ export function useLatestLocations(): void {
     }
 
     let active = true;
-    const url = "https://enterprise-api.tulipfleet.com/api/dispatcher/locations/latest";
+    const url = `${ENTERPRISE_API_URL}/api/dispatcher/locations/latest`;
 
     async function fetchLatestLocations() {
       try {

@@ -6,9 +6,9 @@
  * yoksa kesikli hedef-yönü fallback (Graceful Degradation).
  */
 import { useEffect, useState } from "react";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 const POLL_MS = 30 * 1000;
 
 interface LatLng {

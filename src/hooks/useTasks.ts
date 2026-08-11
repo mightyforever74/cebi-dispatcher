@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
 export type TaskFilter = "all" | "pending_review" | "today" | "planned";
@@ -27,7 +28,7 @@ export function useTasks(filter: TaskFilter = "all") {
     queryKey: ["tasks", filter],
     queryFn: async () => {
       const qs = filter && filter !== "all" ? `?filter=${filter}` : "";
-      const res = await fetch(`https://enterprise-api.tulipfleet.com/api/dispatcher/tasks${qs}`, {
+      const res = await fetch(`${ENTERPRISE_API_URL}/api/dispatcher/tasks${qs}`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : "",
           "Content-Type": "application/json",

@@ -4,8 +4,8 @@
  * Pattern: decisionLog.ts kardesi (sabit enterprise base + useAuthStore token'i cagirandan).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ENTERPRISE_API_URL } from "config/api";
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 const POLL_MS = 20 * 1000;
 
 export type ExceptionSeverity = "low" | "medium" | "high" | "critical";

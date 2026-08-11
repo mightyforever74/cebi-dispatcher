@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
 /**
@@ -22,7 +23,6 @@ import { useAuthStore } from "store/useAuthStore";
  * NaN uretirdi).
  */
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 
 export interface DispatchLocationFrame {
   device_id: string;

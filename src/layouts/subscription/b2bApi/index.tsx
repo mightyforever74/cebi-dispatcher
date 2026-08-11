@@ -22,9 +22,9 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 
 interface SubRequest {
   id: string;

@@ -17,9 +17,9 @@
  * çakışma override'ının işareti conflict_metadata IS NOT NULL'dur (backend
  * routes/decisionLog.js c478bee + migration 1782900000000 kanıtlı).
  */
+import { ENTERPRISE_API_URL } from "config/api";
 import { StrictTaskConstraints } from "types/metadata";
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 
 // §6.4 / UNCERTAINTIES #20 ONAYLI enum — opsiyonel; boş override da sinyaldir.
 export const OVERRIDE_REASON_OPTIONS = [

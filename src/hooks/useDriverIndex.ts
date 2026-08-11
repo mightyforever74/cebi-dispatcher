@@ -16,10 +16,10 @@
  *   → store anahtarı device_id (rota/marker evreni).
  */
 import { useEffect, useMemo, useState } from "react";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 import { useVehicleStore } from "store/useVehicleStore";
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 
 interface ApiDriverRow {
   id: string;

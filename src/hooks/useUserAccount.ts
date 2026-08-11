@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AUTH_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
 // Desen: src/hooks/useTasks.ts'ten kanitli (fetch + Authorization header).
@@ -13,10 +14,6 @@ import { useAuthStore } from "store/useAuthStore";
 //   PUT    /api/user/change-password   -> userAPI.changePassword({currentPassword,newPassword})
 //   DELETE /api/users/me               -> userAPI.deleteAccount(password) body:{password}
 
-const AUTH_API_URL = (process.env.REACT_APP_AUTH_API_URL || "https://api.tulipfleet.com").replace(
-  /\/+$/,
-  ""
-);
 
 export interface UserProfile {
   firstName?: string;

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { AUTH_API_URL } from "config/api";
 
 export interface AuthUser {
   [key: string]: unknown;
@@ -18,10 +19,6 @@ interface AuthStore {
   refreshAuthState: () => void;
 }
 
-const AUTH_API_URL = (process.env.REACT_APP_AUTH_API_URL || "https://api.tulipfleet.com").replace(
-  /\/+$/,
-  ""
-);
 const STORAGE_KEY = "dispatcher-auth";
 
 const isTokenValid = (expiresAt: string | null) => {

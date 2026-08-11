@@ -13,6 +13,7 @@
  * taşınır — sürücü→araç rota seçimi (Olasılık C) bu alandan eşlenir.
  */
 import { useEffect } from "react";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 import {
   useVehicleStore,
@@ -20,7 +21,6 @@ import {
   deriveStatus,
 } from "store/useVehicleStore";
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 const POLL_MS = 20 * 1000;
 
 interface SnapshotRow {

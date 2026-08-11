@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 // Kisit sozlesmesi (types/metadata): capacity_required/skill_required'in GERCEK
 // sekli. Onceden Record<string, unknown> (gevsek jsonb passthrough) idi; strict
@@ -36,7 +37,6 @@ import { CapacityRequired, SkillRequired } from "types/metadata";
 // gelen manuel atama varsa onu) sabit 4 test araci (Dobbe Transport filosu)
 // arasinda uygular. Bu davranis kullaniciya UI'da acikca gosterilmeli.
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 
 export interface OptimizeTaskInput {
   pickup_location: { lat: number; lng: number; address?: string };

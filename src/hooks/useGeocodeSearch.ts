@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
 // FIX (2026-07-18): HERE Discover proxy'sine (routes/geocode.js,
 // tulipfleet-enterprise-backend) debounce'lu istek atan hook. Spec geregi:
 // 300ms debounce, minimum 3 karakter, gereksiz HERE API cagrisi onlenir.
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 
 export interface GeocodeResult {
   title: string;

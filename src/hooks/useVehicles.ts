@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
 export interface Vehicle {
@@ -16,7 +17,7 @@ export function useVehicles() {
   return useQuery<Vehicle[], Error>({
     queryKey: ["vehicles"],
     queryFn: async () => {
-      const res = await fetch("https://enterprise-api.tulipfleet.com/api/dispatcher/vehicles", {
+      const res = await fetch(`${ENTERPRISE_API_URL}/api/dispatcher/vehicles`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : "",
           "Content-Type": "application/json",

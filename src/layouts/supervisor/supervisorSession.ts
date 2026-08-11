@@ -4,7 +4,7 @@
  * re-auth ister (spec D-S2). Superadmin endpoint'leri su an STAGING
  * backend'de (S2-E2) — production cutover'da tek sabit degisir (bilinçli).
  */
-export const SUPERVISOR_API_URL = "https://staging-api.tulipfleet.com";
+export { SUPERVISOR_API_URL } from "config/api";
 
 let saToken: string | null = null;
 

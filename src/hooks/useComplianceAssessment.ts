@@ -9,10 +9,10 @@
  * eu_hint: NL-bbox disi advisory (Avrupa Ipucu Katmani, Mode 1 — blok yok).
  */
 import { useQuery } from "@tanstack/react-query";
+import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 import { ComplianceAssessRow } from "services/dispatch/scoring/types";
 
-const ENTERPRISE_API_URL = "https://enterprise-api.tulipfleet.com";
 
 export interface AssessZone {
   zone_id: string;

@@ -115,3 +115,11 @@ Tek transaction: company + user; unique email cakismasi -> 409.
 - Polish v1 ✅ (7 commit): kontrast/semantik/i18n duzeltmeleri + hero ticker (gercek Leiden rakamlari) + stats band (21/148.8/6 kanitli) + NL kontur haritasi (canli 6 sehir) + dil secici (en/tr aktif, 7 yakinda, src/config/i18n.ts) + reduced-motion/klavye erisimi.
 - .cursorrules/.cursorignore kuruldu (repo disi); PROTECTED FEATURES + THREE BACKENDS kurallari gomulu.
 - TODO (landing): logo, screenshots/, early-access backend POST, 7 dil icerigi (Sira-4).
+
+## 7. Cursor Cagi Ilk Teslimler (11.08.2026)
+- API-Config refactor ✅ b9d0523: src/config/api.ts uc-backend ayrimiyla; tsc-0, literal-grep temiz, smoke 4/4.
+- tulipfleet-landing repo DOGDU ✅ (GitHub, 978950b+): Astro 16 sayfa; /en+/tr canli; Giris = PUBLIC_APP_URL || /early-access (D-L4=a).
+- Polish v1 ✅ (7 commit): kontrast/semantik/i18n duzeltmeleri + hero ticker (gercek Leiden rakamlari) + stats band (21/148.8/6) + NL kontur haritasi (canli 6 sehir) + dil secici (en/tr aktif, 7 yakinda; src/config/i18n.ts) + reduced-motion.
+- UCTAN UCA ZINCIR KANITLI ✅: landing /signup formu -> public-signup -> Komuta Merkezi'nde 'cursor test firmasi · 0/5 · starter · trial' satiri. Ilk gercek musteri yolculugu provasi TAMAM.
+- .cursorrules/.cursorignore kuruldu; PROTECTED FEATURES + THREE BACKENDS gomulu.
+- TODO (landing): logo, screenshots/, early-access backend POST, 7 dil icerigi (Sira-4). Diger acik: Sepet-2 disable patch, Sepet-3 Gmail alias, prod inisi (63d45c4+fca4089).

@@ -108,3 +108,10 @@ Mail: mevcut fastify.transporter best-effort (COMMIT sonrasi) — hosgeldin + ge
 Tek transaction: company + user; unique email cakismasi -> 409.
 
 **Faz durumu:** S-O1 ✅ fca4089 (10.08 staging; smoke 4/4: 201+trial muhru DB-kanitli, 409 mukerrer, honeypot yutma Bot=0; D-O3-SADE uygulandi: parola/OTP gonderilmez, kullanilamaz-hash + forgot-password yonlendirmesi — mevcut OTP zinciri yeniden kullanilir) · S-O2 landing (Cursor) ⬜ · 2.1 token-link: D-O3-sade ile BUYUK OLCUDE GEREKSIZLESTI (landing'e 'sifre belirle' UX'i S-O2'de) · prod inisi: sonraki bakim penceresi (63d45c4+fca4089 birlikte)
+
+## 7. Cursor Cagi Ilk Teslimler (11.08.2026)
+- API-Config refactor ✅ b9d0523: src/config/api.ts uc-backend ayrimiyla; tsc-0, literal-grep temiz, smoke 4/4.
+- tulipfleet-landing repo DOGDU ✅ (GitHub 978950b'ye kadar): Astro 16 sayfa; /en+/tr canli, 7 dil placeholder; signup staging public-signup'a CANLI bagli (%100 test); Giris = PUBLIC_APP_URL || /early-access (D-L4=a).
+- Polish v1 ✅ (7 commit): kontrast/semantik/i18n duzeltmeleri + hero ticker (gercek Leiden rakamlari) + stats band (21/148.8/6 kanitli) + NL kontur haritasi (canli 6 sehir) + dil secici (en/tr aktif, 7 yakinda, src/config/i18n.ts) + reduced-motion/klavye erisimi.
+- .cursorrules/.cursorignore kuruldu (repo disi); PROTECTED FEATURES + THREE BACKENDS kurallari gomulu.
+- TODO (landing): logo, screenshots/, early-access backend POST, 7 dil icerigi (Sira-4).

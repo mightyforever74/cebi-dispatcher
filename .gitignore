@@ -55,3 +55,7 @@ apply_doc_edits_sira6.py
 task.md
 apply_*.py
 
+
+# Cursor kisisel ortam dosyalari (repo disi - GIT DISCIPLINE kurali)
+.cursorrules
+.cursorignore

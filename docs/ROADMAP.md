@@ -2,6 +2,36 @@
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 
+**Status as of 2026-08-13 (Go-to-Market Hatti + SIRA-4 Tetik Kriteri):**
+Landing (tulipfleet-landing, Astro): v4 insa + Polish v1 + C-0 yasal kalkan
+(privacy/terms/imprint/dpa-bilgi/subprocessors + esit-secim consent banner +
+consent-gated analytics cift kilit, ikisi de kapali) TAMAM ve test edilmis
+(reddet->sifir ag istegi; cerez-tercihleri geri-cekme canli). Uctan uca zincir
+KANITLI: landing /signup -> POST /api/auth/public-signup (staging) -> Komuta
+Merkezi'nde trial satiri ("cursor test firmasi 0/5 starter·trial"). C-04 Mobil
+Ekosistem bolumu (Ofisten Sahaya koprusu + screenshot ticker + store rozet
+altyapisi) + /connect sayfasi ([YOL HARITASI-YAKINDA], temsili ornek etiketli)
+eklendi; C-04b koridor vizyonu DURUST versiyonla girdi (BE LEZ + DE Umweltzone
+bolge-denetimi yol haritasi; Viapass/LKW-Maut km-ucretleri OBU-tabanli oldugundan
+yalniz "maliyet gorunurlugu" denir, "sifir ceza/tam uyum/garanti" YASAK; hero ve
+CANLI NL metinleri dokunulmadi).
+MUHURLU KURALLAR: (R1) L-2 dispatcher yayini tamamlanip trial akisi uctan uca
+canlida calismadan TEK CENT reklam harcanmaz. (R2) NL/AB'ye acilan her canli
+sayfa once yasal zemin kalkanini takar. (R3) SIRA-4 TETIK KRITERI: /connect
+erken-erisim formundan >=5 gercek B2B/ERP ilgi kaydi gelmeden B2B API altyapisi
+KODLANMAZ (over-engineering freni). Tetik cekildiginde SIRA-4 kapsami (5 kalem,
+enterprise-backend/Fastify): (1) API Key auth middleware, (2) kota sayaci
+(Redis varligi enterprise-01'de ISPATSIZ — once kanit, yoksa PG/in-memory),
+(3) Mollie/iDEAL oncelikli metered billing, (4) public /v1/* API yuzu (ic
+/api/compliance/assess dispatcher-JWT'lidir; disa plaka->uuid lookup'li ayri
+facade), (5) OpenAPI spec + quickstart. EU-genisleme semasi (be_/de_ vs tek
+eu_compliance_zones) SIRA-4+ ADR konusudur, simdi acilmaz. Teknik zemin HAZIR:
+calculateHeffing pure fonksiyonu (63d621a, Leiden smoke €5.10/€1.04) +
+tariffs(9)/zones(21)/ontheffings/dagontheffing tablolari prod+staging.
+Siralama: C-0 ✅ -> C-04/C-04b ✅ -> C-1 yayin (Cloudflare kesif + Pages +
+Search Console) -> sinyal toplama -> tetikli SIRA-4. Dispatcher paralel:
+api-config refactor (b9d0523) L-2 on kosulu kapatildi.
+
 **Status as of 2026-08-05 (B Paketi — Prod Senkronu + Compliance Engine + DSE UX):**
 Prod deploy: `fleet-prod-01` backend `f4536a7` → `9010e3c` (9 commit: BUG-1
 Faz A/B/B-mobil sert 409, bridge derivedTitle, driver-start 409 sözleşmesi,

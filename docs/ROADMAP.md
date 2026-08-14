@@ -2,6 +2,24 @@
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 
+**Status as of 2026-08-14 — C-1 TAMAM: tulipfleet.com CANLI 🌷**
+14.08.2026 19:26 UTC: kok domain 200 (uc aylik 403 bitti — eski kayit A@46.224.1.192
+imis, kokte vhost yoktu); www 200; api/mqtt/staging-api/enterprise-api kayitlarina
+DOKUNULMADI (api /health 200 kanitli). Yayin: Cloudflare Pages (proje
+tulipfleet-landing, main, Astro npm run build -> dist, env PUBLIC_API_URL=staging-api;
+PUBLIC_APP_URL bilerek bos -> Giris=/early-access, L-2'de tek env). 5'li canli tur
+5/5: hero Amsterdam sahnesi+ticker, consent Reddet->sifir istek, signup render,
+bento, dil+yasal linkler. Google Search Console: domain-mulku dogrulandi
+(Google<->Cloudflare otomatik TXT); sitemap ilk denemede "HTML'dir" hatasi verdi
+(dosya yoktu — kok redirect sayfasi 200 donuyordu, yarim kanit dersi: -sI status
+yetmez, Content-Type/govde bakilir) -> dd2e707 ile @astrojs/sitemap: 20 URL
+(en+tr x10), hreflang en-US<->tr-TR, placeholder diller noindex+filtreli,
+robots.txt sitemap isaretli, /sitemap.xml 301; canli teyit <?xml. SANDBOX SAATI
+ISLIYOR. Devam: C-08 uc-sahne bento + telemetry strip + kuratorluk (fec8dc6'ya
+kadar) yayinda. ACIK: stores.ts magaza linkleri + KvK/imprint doldurma +
+privacy@ alias (reklam oncesi sart, R1 zaten L-2'ye kilitli); Sepet-2/3;
+L-2 dispatcher yayini; prod inisi.
+
 **Status as of 2026-08-13 (Go-to-Market Hatti + SIRA-4 Tetik Kriteri):**
 Landing (tulipfleet-landing, Astro): v4 insa + Polish v1 + C-0 yasal kalkan
 (privacy/terms/imprint/dpa-bilgi/subprocessors + esit-secim consent banner +

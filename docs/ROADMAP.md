@@ -2,6 +2,27 @@
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 
+**Status as of 2026-08-16 — L-2 TAMAM: app.tulipfleet.com CANLI, R1 KILIDI ACILDI 🔓**
+Dispatcher web paneli yayinda: Cloudflare Pages (tulipfleet-dispatcher, CRA,
+output=build, CI=false + NODE_VERSION=20 + GENERATE_SOURCEMAP=false + MQTT
+REACT_APP_* dortlusu build-time gomulu). On kosul zinciri: CORS patch 3024f9a
+(enterprise server.js prod whitelist'ine https://app.tulipfleet.com eklendi;
+kanit: allow-origin app'e donuyor, evil.example.com'a donmuyor; deploy
+docker compose --build 1.3sn cache'li) + Windows klonu 27-commit rebase dersi
+(uzun sure dokunulmamis klonda ise baslamadan git pull). Saha kaniti: login
+(admin@fleet.com) + LOCATIONS 200 + MQTT env tamam (missing-config gitti) +
+canli harita + /subscription kota karti. Landing kapisi: PUBLIC_APP_URL env
+eklendi + retry -> "Giris Yap" ve signup basari modali artik app.tulipfleet.com'a
+gidiyor (D-L4 tek-satir plani gerceklesti; PUBLIC_API_URL=staging KALIYOR —
+prod inisinde bilinclli cutover). TRIAL AKISI UCTAN UCA CANLI:
+tulipfleet.com/signup -> public-signup(staging) -> hosgeldin maili ->
+forgot-password OTP -> app.tulipfleet.com girisi. R1 MUHURLU KURALI SAGLANDI:
+"L-2 + trial uctan uca canli" kosulu TAMAM — reklam harcamasi artik ANAYASAL
+OLARAK SERBEST (karar/butce ayri konu; C-2 Clarity ve C-3 mikro-butce plani
+gecerli). ACIK: Search Console'a app. icin ayar GEREKMIYOR (panel login'li,
+indekslenmesi istenmez — robots degerlendirmesi sonraki tur); KvK/imprint +
+privacy@ + stores.ts; prod inisi (63d45c4+fca4089+S4-quota); Sepet-2/3.
+
 **Status as of 2026-08-14 — C-1 TAMAM: tulipfleet.com CANLI 🌷**
 14.08.2026 19:26 UTC: kok domain 200 (uc aylik 403 bitti — eski kayit A@46.224.1.192
 imis, kokte vhost yoktu); www 200; api/mqtt/staging-api/enterprise-api kayitlarina

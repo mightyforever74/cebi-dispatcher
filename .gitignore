@@ -59,3 +59,6 @@ apply_*.py
 # Cursor kisisel ortam dosyalari (repo disi - GIT DISCIPLINE kurali)
 .cursorrules
 .cursorignore
+
+# Pazarlama malzemesi - repo disi
+public/screenshots/

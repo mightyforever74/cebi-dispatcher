@@ -129,9 +129,9 @@ const routes = [
     noCollapse: true,
   },
 
-  // ═══════════ GRUP 4 — SİSTEM & GELİŞTİRİCİ ARAÇLARI ═══════════
+  // ═══════════ GRUP 4 — SİSTEM ═══════════
   { type: "divider", key: "divider-system" },
-  { type: "title", title: "Sistem & Geliştirici Araçları", key: "title-system" },
+  { type: "title", title: "Sistem", key: "title-system" },
   {
     type: "collapse",
     name: "Tenant & Sistem Ayarları",
@@ -141,73 +141,49 @@ const routes = [
     component: <Settings />,
     noCollapse: true,
   },
+
+  // ═══════════ GRUP 5 — YÖNETİM ═══════════
+  { type: "title", title: "Yönetim", key: "title-management" },
   {
     type: "collapse",
-    name: "Geliştirici & Demo Araçları (Demo)",
-    key: "developer-preview-drawer",
-    icon: (
-      <Icon fontSize="medium" sx={{ opacity: 0.5 }}>
-        view_in_ar
-      </Icon>
-    ),
-    collapse: [
-      {
-        name: "Profil Çekmecesi (Demo)",
-        key: "demo-profile",
-        collapse: [
-          {
-            name: "Logout",
-            key: "logout",
-            route: "/authentication/sign-in/basic",
-            component: <SignInBasic />,
-          },
-        ],
-      },
-      {
-        name: "Abonelik",
-        key: "subscription",
-        collapse: [
-          {
-            name: "Araç Kotası & Talep",
-            key: "subscription-quota",
-            route: "/subscription",
-            component: <SubscriptionPage />,
-          },
-          {
-            name: "TulipFleet Connect (B2B API)",
-            key: "subscription-b2b-api",
-            route: "/subscription/b2b-api",
-            component: <B2bApiPage />,
-          },
-        ],
-      },
-      {
-        name: "Supervizör",
-        key: "supervisor",
-        collapse: [
-          {
-            name: "Komuta Merkezi",
-            key: "supervisor-command",
-            route: "/admin/supervisor",
-            component: <SupervisorPage />,
-          },
-          {
-            name: "Müşteri Detay",
-            key: "supervisor-customer-detail",
-            route: "/admin/supervisor/customer-detail",
-            component: <CustomerDetailPage />,
-          },
-        ],
-      },
-    ],
+    name: "Abonelik",
+    key: "subscription",
+    icon: <Icon fontSize="medium">card_membership</Icon>,
+    route: "/subscription",
+    component: <SubscriptionPage />,
+    noCollapse: true,
   },
-  // Sidenav'da GORUNMEZ (type collapse/title/divider degil) — login "Sifremi unuttum"
-  // linkinden ve AuthGate uzerinden erisilir. App.tsx getRoutes() route+component bakar.
+  {
+    key: "subscription-b2b-api",
+    route: "/subscription/b2b-api",
+    component: <B2bApiPage />,
+  },
+  {
+    type: "collapse",
+    name: "Supervizör",
+    key: "supervisor",
+    icon: <Icon fontSize="medium">admin_panel_settings</Icon>,
+    route: "/admin/supervisor",
+    component: <SupervisorPage />,
+    noCollapse: true,
+  },
+  {
+    key: "supervisor-customer-detail",
+    route: "/admin/supervisor/customer-detail",
+    component: <CustomerDetailPage />,
+  },
+  // Sidenav'da GORUNMEZ — login "Şifremi unuttum" / AuthGate.
   {
     type: "route",
     key: "forgot-password",
     route: "/authentication/forgot-password",
     component: <ForgotPassword />,
+  },
+  {
+    type: "route",
+    key: "sign-in-basic",
+    route: "/authentication/sign-in/basic",
+    component: <SignInBasic />,
   },
 ];
 

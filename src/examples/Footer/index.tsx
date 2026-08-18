@@ -1,30 +1,15 @@
 /**
 =========================================================
-* Material Dashboard 2 PRO React TS - v1.0.2
+* TulipFleet Dispatcher — Dashboard Footer
 =========================================================
-
-* Product Page: https://www.creative-tim.com/product/material-dashboard-2-pro-react-ts
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-// @mui material components
 import Link from "@mui/material/Link";
-import Icon from "@mui/material/Icon";
 
-// Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-
-// Material Dashboard 2 PRO React TS Base Styles
 import typography from "assets/theme/base/typography";
 
-// Declaring props types for Footer
 interface Props {
   company?: {
     href: string;
@@ -34,7 +19,7 @@ interface Props {
     href: string;
     name: string;
   }[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 function Footer({ company, links }: Props): JSX.Element {
@@ -44,7 +29,11 @@ function Footer({ company, links }: Props): JSX.Element {
   const renderLinks = () =>
     links.map((link) => (
       <MDBox key={link.name} component="li" px={2} lineHeight={1}>
-        <Link href={link.href} target="_blank">
+        <Link
+          href={link.href}
+          target={link.href.startsWith("http") ? "_blank" : undefined}
+          rel={link.href.startsWith("http") ? "noreferrer" : undefined}
+        >
           <MDTypography variant="button" fontWeight="regular" color="text">
             {link.name}
           </MDTypography>
@@ -70,19 +59,11 @@ function Footer({ company, links }: Props): JSX.Element {
         fontSize={size.sm}
         px={1.5}
       >
-        &copy; {new Date().getFullYear()}, made with
-        <MDBox fontSize={size.md} color="text" mb={-0.5} mx={0.25}>
-          <Icon color="inherit" fontSize="inherit">
-            favorite
-          </Icon>
-        </MDBox>
-        by
-        <Link href={href} target="_blank">
+        <Link href={href} target="_blank" rel="noreferrer">
           <MDTypography variant="button" fontWeight="medium">
-            &nbsp;{name}&nbsp;
+            © 2026 {name}
           </MDTypography>
         </Link>
-        for a better web.
       </MDBox>
       <MDBox
         component="ul"
@@ -107,14 +88,12 @@ function Footer({ company, links }: Props): JSX.Element {
   );
 }
 
-// Declaring default props for Footer
 Footer.defaultProps = {
-  company: { href: "https://www.creative-tim.com/", name: "Creative Tim" },
+  company: { href: "https://tulipfleet.com", name: "TulipFleet" },
   links: [
-    { href: "https://www.creative-tim.com/", name: "Creative Tim" },
-    { href: "https://www.creative-tim.com/presentation", name: "About Us" },
-    { href: "https://www.creative-tim.com/blog", name: "Blog" },
-    { href: "https://www.creative-tim.com/license", name: "License" },
+    { href: "https://tulipfleet.com", name: "Site" },
+    { href: "/subscription", name: "Abonelik" },
+    { href: "mailto:info@tulipfleet.com", name: "İletişim" },
   ],
 };
 

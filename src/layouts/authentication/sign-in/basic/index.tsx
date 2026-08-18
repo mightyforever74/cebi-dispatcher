@@ -41,7 +41,7 @@ function Basic(): JSX.Element {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      navigate("/dashboards/analytics");
+      navigate("/dashboards/live-fleet-map");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Giriş başarısız");
       setLoading(false);

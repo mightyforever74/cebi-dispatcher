@@ -24,11 +24,6 @@ import TourPlanningPlaceholder from "layouts/optimization/TourPlanningPlaceholde
 // ── Sistem ──
 import Settings from "layouts/pages/account/settings";
 
-// ── Demo / şablon layout'ları (Geliştirici çekmecesi altında korunur) ──
-import Calendar from "layouts/applications/calendar";
-import DataTables from "layouts/applications/data-tables";
-import Kanban from "layouts/applications/kanban";
-import Wizard from "layouts/applications/wizard";
 import ForgotPassword from "layouts/authentication/forgot-password";
 import ResetCover from "layouts/authentication/reset-password/cover";
 import SignInBasic from "layouts/authentication/sign-in/basic";
@@ -36,29 +31,12 @@ import SignInCover from "layouts/authentication/sign-in/cover";
 import SignInIllustration from "layouts/authentication/sign-in/illustration";
 import SignUpCover from "layouts/authentication/sign-up/cover";
 import Analytics from "layouts/dashboards/analytics";
-import Sales from "layouts/dashboards/sales";
-import OrderDetails from "layouts/ecommerce/orders/order-details";
-import OrderList from "layouts/ecommerce/orders/order-list";
-import EditProduct from "layouts/ecommerce/products/edit-product";
-import NewProduct from "layouts/ecommerce/products/new-product";
 // FEAT-SaaS S3 (05.08) — Sayfa 1
 import SubscriptionPage from "layouts/subscription";
 import B2bApiPage from "layouts/subscription/b2bApi";
 // FEAT-SaaS S4 (05.08) — Supervizor ikilisi (D-S2 gate ile korunur)
 import SupervisorPage from "layouts/supervisor";
 import CustomerDetailPage from "layouts/supervisor/customerDetail";
-import ProductPage from "layouts/ecommerce/products/product-page";
-import Billing from "layouts/pages/account/billing";
-import Invoice from "layouts/pages/account/invoice";
-import Charts from "layouts/pages/charts";
-import Notifications from "layouts/pages/notifications";
-import PricingPage from "layouts/pages/pricing-page";
-import AllProjects from "layouts/pages/profile/all-projects";
-import ProfileOverview from "layouts/pages/profile/profile-overview";
-import Timeline from "layouts/pages/projects/timeline";
-import RTL from "layouts/pages/rtl";
-import NewUser from "layouts/pages/users/new-user";
-import Widgets from "layouts/pages/widgets";
 
 // ── icons ──
 import Icon from "@mui/material/Icon";
@@ -183,18 +161,6 @@ const routes = [
         key: "demo-profile",
         collapse: [
           {
-            name: "My Profile",
-            key: "my-profile",
-            route: "/pages/profile/profile-overview",
-            component: <ProfileOverview />,
-          },
-          {
-            name: "All Projects",
-            key: "all-projects",
-            route: "/pages/profile/all-projects",
-            component: <AllProjects />,
-          },
-          {
             name: "Settings",
             key: "demo-settings",
             route: "/pages/account/settings",
@@ -217,78 +183,6 @@ const routes = [
             key: "analytics",
             route: "/dashboards/analytics",
             component: <Analytics />,
-          },
-          { name: "Sales", key: "sales", route: "/dashboards/sales", component: <Sales /> },
-        ],
-      },
-      {
-        name: "Pages (Demo)",
-        key: "demo-pages",
-        collapse: [
-          {
-            name: "Profile Overview",
-            key: "profile-overview",
-            route: "/pages/profile/profile-overview",
-            component: <ProfileOverview />,
-          },
-          {
-            name: "New User",
-            key: "new-user",
-            route: "/pages/users/new-user",
-            component: <NewUser />,
-          },
-          {
-            name: "Billing",
-            key: "billing",
-            route: "/pages/account/billing",
-            component: <Billing />,
-          },
-          {
-            name: "Invoice",
-            key: "invoice",
-            route: "/pages/account/invoice",
-            component: <Invoice />,
-          },
-          {
-            name: "Timeline",
-            key: "timeline",
-            route: "/pages/projects/timeline",
-            component: <Timeline />,
-          },
-          {
-            name: "Pricing Page",
-            key: "pricing-page",
-            route: "/pages/pricing-page",
-            component: <PricingPage />,
-          },
-          { name: "RTL", key: "rtl", route: "/pages/rtl", component: <RTL /> },
-          { name: "Widgets", key: "widgets", route: "/pages/widgets", component: <Widgets /> },
-          { name: "Charts", key: "charts", route: "/pages/charts", component: <Charts /> },
-          {
-            name: "Notifications",
-            key: "notifications",
-            route: "/pages/notifications",
-            component: <Notifications />,
-          },
-        ],
-      },
-      {
-        name: "Applications (Demo)",
-        key: "demo-applications",
-        collapse: [
-          { name: "Kanban", key: "kanban", route: "/applications/kanban", component: <Kanban /> },
-          { name: "Wizard", key: "wizard", route: "/applications/wizard", component: <Wizard /> },
-          {
-            name: "Data Tables",
-            key: "data-tables",
-            route: "/applications/data-tables",
-            component: <DataTables />,
-          },
-          {
-            name: "Calendar",
-            key: "calendar",
-            route: "/applications/calendar",
-            component: <Calendar />,
           },
         ],
       },
@@ -325,42 +219,6 @@ const routes = [
             key: "supervisor-customer-detail",
             route: "/admin/supervisor/customer-detail",
             component: <CustomerDetailPage />,
-          },
-        ],
-      },
-      {
-        name: "Ecommerce (Demo)",
-        key: "demo-ecommerce",
-        collapse: [
-          {
-            name: "New Product",
-            key: "new-product",
-            route: "/ecommerce/products/new-product",
-            component: <NewProduct />,
-          },
-          {
-            name: "Edit Product",
-            key: "edit-product",
-            route: "/ecommerce/products/edit-product",
-            component: <EditProduct />,
-          },
-          {
-            name: "Product Page",
-            key: "product-page",
-            route: "/ecommerce/products/product-page",
-            component: <ProductPage />,
-          },
-          {
-            name: "Order List",
-            key: "order-list",
-            route: "/ecommerce/orders/order-list",
-            component: <OrderList />,
-          },
-          {
-            name: "Order Details",
-            key: "order-details",
-            route: "/ecommerce/orders/order-details",
-            component: <OrderDetails />,
           },
         ],
       },

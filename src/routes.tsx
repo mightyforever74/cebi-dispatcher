@@ -25,12 +25,7 @@ import TourPlanningPlaceholder from "layouts/optimization/TourPlanningPlaceholde
 import Settings from "layouts/pages/account/settings";
 
 import ForgotPassword from "layouts/authentication/forgot-password";
-import ResetCover from "layouts/authentication/reset-password/cover";
 import SignInBasic from "layouts/authentication/sign-in/basic";
-import SignInCover from "layouts/authentication/sign-in/cover";
-import SignInIllustration from "layouts/authentication/sign-in/illustration";
-import SignUpCover from "layouts/authentication/sign-up/cover";
-import Analytics from "layouts/dashboards/analytics";
 // FEAT-SaaS S3 (05.08) — Sayfa 1
 import SubscriptionPage from "layouts/subscription";
 import B2bApiPage from "layouts/subscription/b2bApi";
@@ -161,28 +156,10 @@ const routes = [
         key: "demo-profile",
         collapse: [
           {
-            name: "Settings",
-            key: "demo-settings",
-            route: "/pages/account/settings",
-            component: <Settings />,
-          },
-          {
             name: "Logout",
             key: "logout",
             route: "/authentication/sign-in/basic",
             component: <SignInBasic />,
-          },
-        ],
-      },
-      {
-        name: "Dashboards (Demo)",
-        key: "demo-dashboards",
-        collapse: [
-          {
-            name: "Analytics",
-            key: "analytics",
-            route: "/dashboards/analytics",
-            component: <Analytics />,
           },
         ],
       },
@@ -219,42 +196,6 @@ const routes = [
             key: "supervisor-customer-detail",
             route: "/admin/supervisor/customer-detail",
             component: <CustomerDetailPage />,
-          },
-        ],
-      },
-      {
-        name: "Authentication (Demo)",
-        key: "demo-authentication",
-        collapse: [
-          {
-            name: "Sign In Basic",
-            key: "sign-in-basic",
-            route: "/authentication/sign-in/basic",
-            component: <SignInBasic />,
-          },
-          {
-            name: "Sign In Cover",
-            key: "sign-in-cover",
-            route: "/authentication/sign-in/cover",
-            component: <SignInCover />,
-          },
-          {
-            name: "Sign In Illustration",
-            key: "sign-in-illustration",
-            route: "/authentication/sign-in/illustration",
-            component: <SignInIllustration />,
-          },
-          {
-            name: "Sign Up Cover",
-            key: "sign-up-cover",
-            route: "/authentication/sign-up/cover",
-            component: <SignUpCover />,
-          },
-          {
-            name: "Reset Password",
-            key: "reset-cover",
-            route: "/authentication/reset-password/cover",
-            component: <ResetCover />,
           },
         ],
       },

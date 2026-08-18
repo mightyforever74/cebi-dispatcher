@@ -549,7 +549,7 @@ function DefaultNavbar({ routes, brand, transparent, light, action }: Props): JS
           </MDTypography>
         </MDBox>
         <MDBox color="inherit" display={{ xs: "none", lg: "flex" }} m={0} p={0}>
-          {renderNavbarItems}
+          {(routes?.length ?? 0) > 0 ? renderNavbarItems : null}
         </MDBox>
         {action &&
           (action.type === "internal" ? (
@@ -589,7 +589,9 @@ function DefaultNavbar({ routes, brand, transparent, light, action }: Props): JS
           sx={{ cursor: "pointer" }}
           onClick={openMobileNavbar}
         >
-          {mobileView && <DefaultNavbarMobile routes={routes} open={mobileNavbar} />}
+          {mobileView && (routes?.length ?? 0) > 0 ? (
+            <DefaultNavbarMobile routes={routes} open={mobileNavbar} />
+          ) : null}
         </MDBox>
       </MDBox>
       {dropdownMenu}

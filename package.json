@@ -34,7 +34,6 @@
     "dropzone": "5.9.3",
     "flatpickr": "4.6.13",
     "formik": "2.2.9",
-    "html-react-parser": "3.0.16",
     "leaflet": "^1.9.4",
     "mqtt": "^5.15.1",
     "react": "18.2.0",

@@ -29,6 +29,7 @@ import Calendar from "layouts/applications/calendar";
 import DataTables from "layouts/applications/data-tables";
 import Kanban from "layouts/applications/kanban";
 import Wizard from "layouts/applications/wizard";
+import ForgotPassword from "layouts/authentication/forgot-password";
 import ResetCover from "layouts/authentication/reset-password/cover";
 import SignInBasic from "layouts/authentication/sign-in/basic";
 import SignInCover from "layouts/authentication/sign-in/cover";
@@ -400,6 +401,14 @@ const routes = [
         ],
       },
     ],
+  },
+  // Sidenav'da GORUNMEZ (type collapse/title/divider degil) — login "Sifremi unuttum"
+  // linkinden ve AuthGate uzerinden erisilir. App.tsx getRoutes() route+component bakar.
+  {
+    type: "route",
+    key: "forgot-password",
+    route: "/authentication/forgot-password",
+    component: <ForgotPassword />,
   },
 ];
 

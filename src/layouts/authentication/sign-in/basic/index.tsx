@@ -25,7 +25,7 @@ import BasicLayout from "layouts/authentication/components/BasicLayout";
 
 // Images
 import bgImage from "assets/images/bg-sign-in-basic.jpeg";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "store/useAuthStore";
 function Basic(): JSX.Element {
   const [rememberMe, setRememberMe] = useState<boolean>(false);
@@ -90,6 +90,17 @@ function Basic(): JSX.Element {
                 value={password}
                 onChange={(e: any) => setPassword(e.target.value)}
               />
+            </MDBox>
+            <MDBox mb={2} display="flex" justifyContent="flex-end">
+              <MDTypography
+                component={Link}
+                to="/authentication/forgot-password"
+                variant="button"
+                color="info"
+                fontWeight="medium"
+              >
+                Şifremi unuttum
+              </MDTypography>
             </MDBox>
             <MDBox display="flex" alignItems="center" ml={-1}>
               <Switch checked={rememberMe} onChange={handleSetRememberMe} />

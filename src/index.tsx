@@ -4,9 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "App";
 import themeDark from "assets/theme-dark";
 import { MaterialUIControllerProvider } from "context";
+import ForgotPassword from "layouts/authentication/forgot-password";
 import Basic from "layouts/authentication/sign-in/basic";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useLocation } from "react-router-dom";
 
 import { useLatestLocations } from "hooks/useLatestLocations";
 import { useAuthStore } from "store/useAuthStore";
@@ -23,13 +24,23 @@ const root = createRoot(container);
 
 function AuthGate() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { pathname } = useLocation();
   // Sıra 4.3: REST snapshot SADECE burada çağrılır. LiveFleetMap içine
   // EKLEME — çift fetch / çift mount riski. MQTT canlı akışı LiveFleetMap'te,
   // ilk-durum snapshot'ı burada; iki ayrı sorumluluk, tek çağrı noktası.
   useLatestLocations();
 
-  // Simple gate — render App when authenticated, otherwise render Basic sign-in.
-  return isAuthenticated ? <App /> : <Basic />;
+  if (isAuthenticated) {
+    return <App />;
+  }
+
+  // Unauthenticated users never reach App Routes — forgot-password must
+  // render here or the trial welcome-mail link has nowhere to land.
+  if (pathname === "/authentication/forgot-password") {
+    return <ForgotPassword />;
+  }
+
+  return <Basic />;
 }
 
 root.render(

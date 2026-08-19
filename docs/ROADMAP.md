@@ -2,6 +2,39 @@
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 
+**Status as of 2026-08-20 — FORGOT-PASSWORD ONARIMI + DEMO TEMIZLIGI FAZ-2 CANLIDA**
+(1) TRIAL HUNISI ONARIMI: dispatcher'da forgot-password UI YOKTU — hosgeldin
+mailinin vaadi bosa dusuyordu (L-2 damgasindaki "trial uctan uca canli" ifadesi
+ERKEN basilmisti; durustluk serhi: halka 4ea0cbe ile onarildi, TAM zincir testi
+yepyeni mail ile prod-inisi sonrasi yapilacak). 4ea0cbe: login'e "Sifremi
+unuttum" + 2 adimli OTP akisi (kanitli sozlesme: /api/auth/forgot-password
+{email}->ok:true enumeration-korumali [prod curl kaniti] + /reset-password
+{email,code,newPassword}; OTP 6 hane, resend 60sn, one-time-code+paste-ayiklama,
+e-posta state korunur). AuthGate cozumu: oturumsuz kok-swap'ta pathname
+istisnasi. GERCEK reset zinciri kanitli: mightyforever74@ ile gecici sifre ->
+login -> geri donus. Not: admin@fleet.com/superadmin@ gercek mailbox degil —
+sifre degisimleri DB-hash yoluyla (guvenlik paketi acik kalem).
+(2) DEMO TEMIZLIGI FAZ-2 ✅ (envanter-hukumlu, 9+2 commit: 3b9f0ed landing
+kancalari->live-fleet-map · 778bd86 B-listesi 21 demo sayfa · 4ef5a92 C:
+analytics+demo-auth+yetim-settings+2FA-yakinda-rozet · c09333d demo cekmece
+kalkti, Yonetim=Abonelik+Supervizor · ae1e8a8 CreativeTim->TulipFleet ·
+34723e3 examples yetimleri grep-0 · 5a9110f 43 yetim gorsel · ca259b9
+html-react-parser cikti [react 18.2.0 pin korundu] · 62e7823 rapor · 2325cf2
+prompt/gitignore · fa2ead0 index.html kabuk: MD2 title + github-buttons +
+nepcha YOUR_DOMAIN_HERE analytics KALDIRILDI). BUNDLE: 1.05MB -> 476.6kB gzip
+(-%55). Canli teyit: bundle ici grep — CreativeTim/Ecommerce izi SIFIR,
+TulipFleet/Abonelik metinleri mevcut; acilis=canli harita; menu tam.
+(3) IKI DERS: (a) "hayalet port" — 3000'i tutan bayat surec uc ayri ariza gibi
+gorunur (eski eslint overlay + JSON 404 + port sorusu); once netstat/taskkill.
+(b) "HASH KIMLIK DEGILDIR, ICERIK KIMLIKTIR" — lokal b2d2399b vs Pages 684914db
+ayni 476kB temiz build'in iki ortam-hash'i; ayni-hash=eski-build varsayimi
+YANLISTI, kanit build-log gzip satiri + bundle ici grep'tir. Tarayici cache'i
+eski JS gosterebilir — index.html curl'u yetmez.
+ACIK: guvenlik paketi (admin/superadmin DB-hash sifre + demo@ juri-kapisi
+kurgusu) · PROD INISI RUNBOOK (public-signup prod'a + landing PUBLIC_API_URL
+cutover + GERCEK uctan-uca trial testi) · KvK/imprint · privacy@ · stores.ts ·
+C-2 Clarity.
+
 **Status as of 2026-08-16 — L-2 TAMAM: app.tulipfleet.com CANLI, R1 KILIDI ACILDI 🔓**
 Dispatcher web paneli yayinda: Cloudflare Pages (tulipfleet-dispatcher, CRA,
 output=build, CI=false + NODE_VERSION=20 + GENERATE_SOURCEMAP=false + MQTT

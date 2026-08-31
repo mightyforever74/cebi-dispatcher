@@ -453,7 +453,7 @@ function LiveFleetMap(): JSX.Element {
                 <MapViewController fly={flyReq} />
 
                 <TileLayer
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2n9e_1_5c749a815246c8c8b2b608b7"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
                 />
 

@@ -16,18 +16,36 @@ if (!MQTT_PASS) { console.error("MQTT_PASS env eksik"); process.exit(1); }
 
 // Rotalar: seed görevleriyle uyumlu (RDM-1001..1006 waypoint koordinatları)
 // Araçlar rota sonunda geri döner (ping-pong) — demo boyunca sürekli hareket
+// Rotalar N15/A15 karayolu koridorlarini ve Maastunnel gecisini izler (kara ustu)
 const FLEET = [
   { id: "a1b2c3d40001", name: "43-BXK-1 ECT->Botlek", speedKmh: 70, route: [
-    [51.9536,4.0555],[51.9440,4.1050],[51.9300,4.1600],[51.9120,4.2150],[51.8980,4.2560],[51.8850,4.2870]]},
+    [51.9536,4.0555],[51.9500,4.0650],[51.9470,4.0800],[51.9445,4.0950],[51.9420,4.1100],
+    [51.9385,4.1300],[51.9340,4.1500],[51.9280,4.1700],[51.9200,4.1950],[51.9110,4.2200],
+    [51.9020,4.2420],[51.8950,4.2600],[51.8895,4.2750],[51.8850,4.2870]]},
   { id: "a1b2c3d40002", name: "56-BNT-2 Waalhaven->Euromax", speedKmh: 75, route: [
-    [51.8880,4.4350],[51.8950,4.3700],[51.9050,4.3000],[51.9200,4.2200],[51.9400,4.1500],[51.9575,4.0958]]},
+    [51.8880,4.4350],[51.8840,4.4150],[51.8810,4.3900],[51.8795,4.3650],[51.8790,4.3400],
+    [51.8800,4.3150],[51.8830,4.2950],[51.8880,4.2780],[51.8960,4.2570],[51.9060,4.2330],
+    [51.9160,4.2080],[51.9250,4.1820],[51.9330,4.1550],[51.9400,4.1300],[51.9460,4.1100],
+    [51.9520,4.1000],[51.9575,4.0958]]},
   { id: "a1b2c3d40003", name: "78-BZL-3 Botlek->Pernis", speedKmh: 55, route: [
-    [51.8850,4.2870],[51.8845,4.3200],[51.8855,4.3550],[51.8865,4.3830]]},
+    [51.8850,4.2870],[51.8825,4.3000],[51.8805,4.3150],[51.8795,4.3300],[51.8795,4.3450],
+    [51.8810,4.3580],[51.8835,4.3700],[51.8855,4.3780],[51.8865,4.3830]]},
   { id: "a1b2c3d40004", name: "12-TFE-4 ZE Centrum", speedKmh: 40, route: [
-    [51.8880,4.4350],[51.8990,4.4500],[51.9100,4.4650],[51.9225,4.4792]]},
+    [51.8880,4.4350],[51.8915,4.4430],[51.8950,4.4510],[51.8990,4.4580],[51.9030,4.4640],
+    [51.9070,4.4690],[51.9115,4.4730],[51.9160,4.4760],[51.9195,4.4780],[51.9225,4.4792]]},
   { id: "a1b2c3d40005", name: "34-TFE-5 ZE Kralingen", speedKmh: 40, route: [
-    [51.8880,4.4350],[51.9000,4.4600],[51.9130,4.4900],[51.9260,4.5120]]},
+    [51.8880,4.4350],[51.8920,4.4440],[51.8960,4.4530],[51.9010,4.4620],[51.9060,4.4690],
+    [51.9110,4.4740],[51.9150,4.4810],[51.9185,4.4890],[51.9215,4.4990],[51.9240,4.5060],
+    [51.9260,4.5120]]},
 ];
+
+// routes.json varsa (gen-routes.js ciktisi) elle cizilmis rotalarin yerine
+// OSRM'den gelen gercek yol geometrisi kullanilir
+try {
+  const real = JSON.parse(require("fs").readFileSync(__dirname + "/routes.json", "utf8"));
+  for (const f of FLEET) if (real[f.id] && real[f.id].length > 1) f.route = real[f.id];
+  console.log("[sim] routes.json yuklendi — gercek yol geometrisi aktif");
+} catch (e) { console.log("[sim] routes.json yok — gomulu koridor rotalari kullanilacak"); }
 
 const R = 6371000;
 const toRad = d => d*Math.PI/180, toDeg = r => r*180/Math.PI;

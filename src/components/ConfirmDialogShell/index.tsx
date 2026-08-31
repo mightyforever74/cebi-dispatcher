@@ -83,7 +83,7 @@ export function CopyChip({
     <MDBox
       component="button"
       type="button"
-      title="Panoya kopyala"
+      title="Copy to clipboard"
       onClick={() => {
         if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
         setCopied(true);
@@ -104,7 +104,7 @@ export function CopyChip({
         alignItems: "center",
       }}
     >
-      {copied ? "Kopyalandı ✓" : text}
+      {copied ? "Copied ✓" : text}
     </MDBox>
   );
 }
@@ -135,7 +135,7 @@ function ConfirmDialogShell({
   subtitle,
   submitting = false,
   children,
-  cancelLabel = "Vazgeç",
+  cancelLabel = "Discard",
   confirmLabel,
   submittingLabel,
   confirmDisabled = false,

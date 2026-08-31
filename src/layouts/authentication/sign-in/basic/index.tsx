@@ -43,7 +43,7 @@ function Basic(): JSX.Element {
       await login(email.trim(), password);
       navigate("/dashboards/live-fleet-map");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Giriş başarısız");
+      setError(e instanceof Error ? e.message : "Sign-in failed");
       setLoading(false);
     }
   };
@@ -99,7 +99,7 @@ function Basic(): JSX.Element {
                 color="info"
                 fontWeight="medium"
               >
-                Şifremi unuttum
+                Forgot password
               </MDTypography>
             </MDBox>
             <MDBox display="flex" alignItems="center" ml={-1}>

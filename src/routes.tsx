@@ -38,10 +38,10 @@ import Icon from "@mui/material/Icon";
 
 const routes = [
   // ═══════════ GRUP 1 — OPERASYON MERKEZİ ═══════════
-  { type: "title", title: "Operasyon Merkezi", key: "title-operations" },
+  { type: "title", title: "Operations Center", key: "title-operations" },
   {
     type: "collapse",
-    name: "Canlı Fleet İzleme",
+    name: "Live Fleet Tracking",
     key: "live-fleet-map",
     icon: <Icon fontSize="medium">map</Icon>,
     route: "/dashboards/live-fleet-map",
@@ -50,7 +50,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Görev & Sevk Yönetimi",
+    name: "Tasks & Dispatch",
     key: "task-list",
     icon: <Icon fontSize="medium">assignment</Icon>,
     route: "/dispatcher/tasks",
@@ -67,7 +67,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "İstisna Yönetimi (İkaz)",
+    name: "Exception Management (Alerts)",
     key: "exceptions",
     icon: (
       <Icon fontSize="medium" color="error">
@@ -80,10 +80,10 @@ const routes = [
   },
 
   // ═══════════ GRUP 2 — YAPAY ZEKÂ & OPTİMİZASYON (gated) ═══════════
-  { type: "title", title: "Yapay Zekâ & Optimizasyon", key: "title-optimization" },
+  { type: "title", title: "AI & Optimization", key: "title-optimization" },
   {
     type: "collapse",
-    name: "Akıllı Rota Optimizasyonu 🔒 (Phase 1.1)",
+    name: "Smart Route Optimization 🔒 (Phase 1.1)",
     key: "tour-planning",
     icon: (
       <Icon fontSize="medium" color="info">
@@ -96,7 +96,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Maliyet & Otoban Teftişi 🔒 (Temmuz 2026)",
+    name: "Cost & Toll Inspection 🔒 (July 2026)",
     key: "toll-analytics",
     icon: (
       <Icon fontSize="medium" color="warning">
@@ -109,10 +109,10 @@ const routes = [
   },
 
   // ═══════════ GRUP 3 — MATRİS & MASTER DATA ═══════════
-  { type: "title", title: "Matris & Master Data", key: "title-masterdata" },
+  { type: "title", title: "Matrix & Master Data", key: "title-masterdata" },
   {
     type: "collapse",
-    name: "Sürücü Yönetimi",
+    name: "Driver Management",
     key: "driver-list",
     icon: <Icon fontSize="medium">people</Icon>,
     route: "/dispatcher/drivers",
@@ -121,7 +121,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Araç & Ekipman Yönetimi",
+    name: "Vehicle & Equipment Management",
     key: "vehicle-list",
     icon: <Icon fontSize="medium">local_shipping</Icon>,
     route: "/dispatcher/vehicles",
@@ -131,10 +131,10 @@ const routes = [
 
   // ═══════════ GRUP 4 — SİSTEM ═══════════
   { type: "divider", key: "divider-system" },
-  { type: "title", title: "Sistem", key: "title-system" },
+  { type: "title", title: "System", key: "title-system" },
   {
     type: "collapse",
-    name: "Tenant & Sistem Ayarları",
+    name: "Tenant & System Settings",
     key: "system-settings",
     icon: <Icon fontSize="medium">settings</Icon>,
     route: "/system/settings",
@@ -143,10 +143,10 @@ const routes = [
   },
 
   // ═══════════ GRUP 5 — YÖNETİM ═══════════
-  { type: "title", title: "Yönetim", key: "title-management" },
+  { type: "title", title: "Administration", key: "title-management" },
   {
     type: "collapse",
-    name: "Abonelik",
+    name: "Subscription",
     key: "subscription",
     icon: <Icon fontSize="medium">card_membership</Icon>,
     route: "/subscription",
@@ -160,7 +160,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Supervizör",
+    name: "Supervisor",
     key: "supervisor",
     icon: <Icon fontSize="medium">admin_panel_settings</Icon>,
     route: "/admin/supervisor",

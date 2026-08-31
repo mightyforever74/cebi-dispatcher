@@ -90,7 +90,7 @@ function MapControlWidget(): JSX.Element {
           layers
         </Icon>
         <MDTypography variant="caption" color="white" fontWeight="bold">
-          Rotalar {showAllRoutes ? "• Tümü" : selectedCount > 0 ? `• ${selectedCount}` : ""}
+          Routes {showAllRoutes ? "• All" : selectedCount > 0 ? `• ${selectedCount}` : ""}
         </MDTypography>
       </Paper>
     );
@@ -122,12 +122,12 @@ function MapControlWidget(): JSX.Element {
           <Icon sx={{ color: C.accent }} fontSize="small">
             layers
           </Icon>
-          Rota Katmanları
+          Route layers
         </MDTypography>
         <MDBox
           component="button"
           type="button"
-          aria-label="Paneli daralt"
+          aria-label="Collapse panel"
           onClick={() => setOpen(false)}
           sx={{
             border: "none",
@@ -146,7 +146,7 @@ function MapControlWidget(): JSX.Element {
       {/* A — Global switch */}
       <MDBox display="flex" justifyContent="space-between" alignItems="center">
         <MDTypography variant="caption" color="white">
-          Tüm Rotaları Göster
+          Show all routes
         </MDTypography>
         <Switch checked={showAllRoutes} onChange={toggleShowAll} size="small" />
       </MDBox>
@@ -161,7 +161,7 @@ function MapControlWidget(): JSX.Element {
         value=""
         onChange={(e) => handleDriverPick(e.target.value as string)}
         renderValue={() => (
-          <span style={{ color: C.textFaint, fontSize: "12px" }}>Sürücü seç…</span>
+          <span style={{ color: C.textFaint, fontSize: "12px" }}>Select driver…</span>
         )}
         MenuProps={{
           PaperProps: {
@@ -181,7 +181,7 @@ function MapControlWidget(): JSX.Element {
         {drivers.length === 0 && (
           <MenuItem disabled value="">
             <MDTypography variant="caption" sx={{ color: C.textFaint }}>
-              Sürücü verisi yok
+              No driver data
             </MDTypography>
           </MenuItem>
         )}
@@ -193,7 +193,7 @@ function MapControlWidget(): JSX.Element {
             sx={{ fontSize: "12px", color: d.deviceId ? "#fff" : C.textFaint }}
           >
             {d.name}
-            {d.deviceId ? ` — ${d.plate}` : " (Atanmamış)"}
+            {d.deviceId ? ` — ${d.plate}` : " (Unassigned)"}
             {d.deviceId && selectedRouteVehicleIds[d.deviceId] ? " ✓" : ""}
           </MenuItem>
         ))}
@@ -253,7 +253,7 @@ function MapControlWidget(): JSX.Element {
               "&:hover": { color: "#fff" },
             }}
           >
-            Seçimi temizle ({selectedCount})
+            Clear selection ({selectedCount})
           </MDTypography>
         </MDBox>
       )}

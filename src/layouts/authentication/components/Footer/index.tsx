@@ -68,14 +68,14 @@ function Footer({ light }: { light?: boolean }): JSX.Element {
             <MDBox component="li" px={2} lineHeight={1}>
               <Link href="/subscription">
                 <MDTypography variant="button" fontWeight="regular" color={linkColor}>
-                  Abonelik
+                  Subscription
                 </MDTypography>
               </Link>
             </MDBox>
             <MDBox component="li" pl={2} lineHeight={1}>
               <Link href="mailto:info@tulipfleet.com">
                 <MDTypography variant="button" fontWeight="regular" color={linkColor}>
-                  İletişim
+                  Contact
                 </MDTypography>
               </Link>
             </MDBox>

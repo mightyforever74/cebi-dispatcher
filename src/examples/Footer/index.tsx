@@ -92,8 +92,8 @@ Footer.defaultProps = {
   company: { href: "https://tulipfleet.com", name: "TulipFleet" },
   links: [
     { href: "https://tulipfleet.com", name: "Site" },
-    { href: "/subscription", name: "Abonelik" },
-    { href: "mailto:info@tulipfleet.com", name: "İletişim" },
+    { href: "/subscription", name: "Subscription" },
+    { href: "mailto:info@tulipfleet.com", name: "Contact" },
   ],
 };
 

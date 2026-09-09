@@ -135,7 +135,7 @@ function ConfirmDialogShell({
   subtitle,
   submitting = false,
   children,
-  cancelLabel = "Discard",
+  cancelLabel = "Cancel",
   confirmLabel,
   submittingLabel,
   confirmDisabled = false,

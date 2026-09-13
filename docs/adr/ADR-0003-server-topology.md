@@ -3,7 +3,7 @@
 | Field             | Value                                                                  |
 | ----------------- | ---------------------------------------------------------------------- |
 | **Status**        | Accepted                                                               |
-| **Version**       | 1.2                                                                      |
+| **Version**       | 1.3                                                                      |
 | **Date**          | 2026-05-13                                                             |
 | **Decision by**   | Cem Sahinkaya (Founder / Lead Engineer)                                    |
 | **Component**     | TulipFleet Enterprise — Infrastructure                                 |
@@ -41,7 +41,7 @@ Adopt **two-server split with subdomain routing**.
 - **New domain:** `enterprise-api.tulipfleet.com` (separate DNS A record + Let's Encrypt certificate).
 - **New backend instance:** `tulipfleet-enterprise-backend` (separate Git repo, separate Docker Compose stack, separate deployment pipeline).
 - **Shared database:** Same PostgreSQL instance as production, accessed across the private Hetzner network (ADR-0004 defines schema separation).
-- **Shared MQTT broker:** Same EMQX instance; the enterprise backend subscribes to the same `fleet/device/+/*` topics for telemetry.
+- **Shared MQTT broker:** Same EMQX instance. The enterprise backend does not connect to MQTT (the `mqtt` dependency in package.json is unused). Live-map telemetry is consumed by the dispatcher frontend (`src/hooks/useMqttTelemetry.ts`) over WSS using the `dispatcher-readonly` user, subscribing to `fleet/device/+/location`.
 - **Existing production untouched:** `api.tulipfleet.com` continues serving mobile drivers and admins exactly as today.
 
 ## 3. Rationale
@@ -65,7 +65,7 @@ A previous draft of this ADR proposed CX42 (8 vCPU, 16 GB) under the assumption 
 - HERE API client (mostly idle, waiting on async polls).
 - WebSocket fan-out to dispatcher clients (~5-20 concurrent dispatchers in Phase 1).
 - PostgreSQL connection pool to the shared DB.
-- MQTT subscription to existing EMQX broker.
+- MQTT subscription to existing EMQX broker (planned; not implemented as of Sep 2026). The enterprise backend does not connect to MQTT (the `mqtt` dependency in package.json is unused). Live-map telemetry is consumed by the dispatcher frontend (`src/hooks/useMqttTelemetry.ts`) over WSS using the `dispatcher-readonly` user, subscribing to `fleet/device/+/location`.
 
 This profile is I/O-bound, not CPU-bound. CX32 is appropriately sized; CX42 would be over-provisioned and waste budget that is better spent on HERE API quota.
 
@@ -74,7 +74,7 @@ Hetzner allows in-place server type upgrades, so a future CX42 upgrade is a 5-mi
 ### 3.3 Why same Hetzner region
 
 - **Database access.** The enterprise backend talks to the production PostgreSQL frequently. Same-region private networking eliminates cross-DC latency.
-- **MQTT subscription.** Same-region keeps the EMQX subscriber stable.
+- **MQTT subscription.** Same-region keeps the EMQX subscriber stable (planned; not implemented as of Sep 2026). The enterprise backend does not connect to MQTT (the `mqtt` dependency in package.json is unused). Live-map telemetry is consumed by the dispatcher frontend (`src/hooks/useMqttTelemetry.ts`) over WSS using the `dispatcher-readonly` user, subscribing to `fleet/device/+/location`.
 - **Operational simplicity.** One Hetzner project, one billing, one console.
 
 ### 3.4 Why a subdomain (not a path prefix on api.tulipfleet.com)
@@ -116,7 +116,7 @@ Hetzner allows in-place server type upgrades, so a future CX42 upgrade is a 5-mi
 Notes on the shared services:
 
 - **PostgreSQL:** Both backends connect to the same Postgres instance on `fleet-prod-01`. Access uses the private Hetzner network (no public exposure). ADR-0004 defines schema separation (`public.*` vs `enterprise.*`).
-- **EMQX:** Both backends subscribe to MQTT topics. The enterprise backend is a **read-mostly** subscriber for telemetry; it does not publish device commands today.
+- **EMQX:** Only `fleet-backend` (and its staging copy) subscribes to MQTT topics. The enterprise backend does not connect to MQTT (the `mqtt` dependency in package.json is unused). Live-map telemetry is consumed by the dispatcher frontend (`src/hooks/useMqttTelemetry.ts`) over WSS using the `dispatcher-readonly` user, subscribing to `fleet/device/+/location`. The enterprise backend does not publish device commands today.
 - **Redis:** Both backends share Redis but use **separate key prefixes** to prevent collisions (`fleet:*` vs `enterprise:*`).
 
 ## 5. Consequences
@@ -153,8 +153,8 @@ Notes on the shared services:
 **Week 2 — Backend repo bootstrap**
 
 8. Create new private Git repo: `tulipfleet-enterprise-backend`.
-9. Copy minimal Fastify skeleton from the existing `tulipfleet-backend` (auth plugin, DB plugin, MQTT plugin, structure conventions).
-10. Configure environment variables: separate `DATABASE_URL`, separate `MQTT_USERNAME` (`enterprise-backend`), separate Redis prefix.
+9. Copy minimal Fastify skeleton from the existing `tulipfleet-backend` (auth plugin, DB plugin, MQTT plugin (planned; not implemented as of Sep 2026), structure conventions).
+10. Configure environment variables: separate `DATABASE_URL`, separate `MQTT_USERNAME` (`enterprise-backend`) (planned; not implemented as of Sep 2026), separate Redis prefix.
 11. Deploy a `/health` endpoint and confirm end-to-end response.
 
 **Week 3 — Database access**
@@ -197,7 +197,7 @@ These notes record how this ADR was implemented in practice. The decisions in Se
 The ADR text used "CX31 or current type" for `fleet-prod-01` and "CX32" for the new server. Both labels reference the CX series (Intel shared vCPU). The realized state uses the CPX series (AMD shared vCPU) on both sides:
 
 - `fleet-prod-01` is type **CPX 22** (2 vCPU AMD, 4 GB RAM, 80 GB disk). Provisioned this way before this ADR was written; the ADR's "CX31" was an approximate forward reference. No migration is planned.
-- `fleet-enterprise-01` is type **CPX 32** (4 vCPU AMD, 8 GB RAM, 160 GB NVMe disk, ~€13.99/month). Chosen for stack consistency with fleet-prod-01 (AMD/CPX line) and for headroom on Caddy + Node.js + the future MQTT subscriber.
+- `fleet-enterprise-01` is type **CPX 32** (4 vCPU AMD, 8 GB RAM, 160 GB NVMe disk, ~€13.99/month). Chosen for stack consistency with fleet-prod-01 (AMD/CPX line) and for headroom on Caddy + Node.js + the future MQTT subscriber (subscriber was never implemented; browser-side WSS is used instead).
 
 The architectural intent of Section 2 is unchanged: separate servers, shared private database, separate reverse proxy per side.
 
@@ -229,7 +229,9 @@ Section 7 of the Implementation Plan specifies Docker. The application image is 
 
 - **Read replica (Section 8):** Not yet needed. No measured contention.
 - **Staging (Section 8):** Phase 1 development uses `fleet_tracking_staging` database on the shared PostgreSQL. A dedicated `staging-enterprise-api.tulipfleet.com` host has not been created. Open.
+- **Staging side effect (deliberate):** the staging backend subscribes to the same production broker with the `fleet-backend` credentials and writes every publish into the staging DB as well — kept intentionally as a live-telemetry test lab (decision 2026-09-13).
 - **MQTT publish (Section 8):** Not started. Deferred to Mode 2 (per ADR-0005).
+- **ACL hardening (2026-09-13):** `{deny, {user, "dispatcher-readonly"}, publish, ["#"]}` added to acl.conf; the browser-exposed credential can only subscribe.
 
 ### 10.6 Domain & DNS policy (staging vs production) - 2026-06-29
 
@@ -255,3 +257,4 @@ This matches Section 10.5's fleet_tracking_staging (DB name); the live .env addi
 | 1       | 2026-05-13 | Cem Sahinkaya | Initial decision: CX32 + subdomain split.                                                             |
 | 1.1     | 2026-05-25 | Cem Sahinkaya | Added Implementation Notes (Section 10) capturing realized state. No decision change.                 |
 | 1.2     | 2026-06-29 | Cem Sahinkaya | Added section 10.6 Domain & DNS policy (duckdns OK for staging/local; official domain mandatory in prod for WSS + JWT-reuse) and section 10.7 Verified dispatcher data path (dispatcher -> enterprise-api -> 10.0.0.2:5433/fleet_tracking_staging, live .env-verified). No decision change. |
+| 1.3     | 2026-09-13 | Cem Sahinkaya | Reality corrections: enterprise MQTT subscription never implemented (dispatcher frontend WSS instead); staging dual-write documented as deliberate; dispatcher-readonly publish-deny ACL recorded. |

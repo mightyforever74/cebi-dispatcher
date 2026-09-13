@@ -3,7 +3,7 @@
 | Field             | Value                                                                  |
 | ----------------- | ---------------------------------------------------------------------- |
 | **Status**        | Accepted                                                               |
-| **Version**       | 1                                                                      |
+| **Version**       | 1.2                                                                    |
 | **Date**          | 2026-05-14                                                             |
 | **Decision by**   | Cem sahinkaya (Founder / Lead Engineer)                                    |
 | **Component**     | TulipFleet existing production ↔ TulipFleet Enterprise Dispatcher      |
@@ -38,7 +38,7 @@ This ADR is the **consolidated integration map**. It does not introduce new deci
 3. **Mobile driver app does not change in Phase 1.** No new fields surfaced to drivers, no new endpoints called by driver app, no API contract changes.
 4. **Dispatcher users are a new role.** New `role = 'dispatcher'` value in `public.users.role` — additive, does not affect existing roles (`super_admin`, `company_admin`, `driver`).
 5. **`enterprise.dispatch_tasks` → `public.tasks` is a one-way bridge.** Dispatcher-created and dispatcher-approved plans flow into the driver-facing task model. Driver actions on `public.tasks` are not synced back to `enterprise.dispatch_tasks` in Phase 1 (status mirroring deferred).
-6. **MQTT topic structure unchanged in Phase 1.** Existing `fleet/device/+/*` topics are read by both backends; dispatcher backend subscribes read-only.
+6. **MQTT topic structure unchanged in Phase 1.** Existing `fleet/device/+/*` topics are read by both backends; dispatcher frontend subscribes read-only (browser WSS).
 
 ## 3. Architecture Diagram
 
@@ -112,15 +112,18 @@ Enterprise backend role has `statement_timeout = '10s'` to bound runaway query i
 
 ### 4.2 MQTT topic access
 
-| Topic pattern                  | `fleet-backend` | `enterprise-backend`                                                        |
-| ------------------------------ | --------------- | --------------------------------------------------------------------------- |
-| `fleet/device/+/location`      | subscribe + ack | subscribe (read-only for live map per ROADMAP Sıra 4)                       |
-| `fleet/device/+/behavior`      | subscribe + ack | subscribe (read-only for behavior surfacing in dispatcher)                  |
-| `fleet/device/+/alert`         | subscribe + ack | subscribe (read-only for dispatcher alerts panel)                           |
-| `fleet/truck/+/command`        | publish         | (no access in Phase 1 — dispatcher commands flow via REST, not MQTT)        |
-| `enterprise/*` (any)           | (none)          | (reserved for Phase 2+ if direct command publish becomes needed)            |
+| Topic pattern                   | `fleet-backend`   | dispatcher frontend (WSS, `dispatcher-readonly`)                  |
+| ------------------------------- | ----------------- | ----------------------------------------------------------------- |
+| `fleet/device/+/location`       | subscribe + ack   | subscribe (read-only, live map)                                   |
+| `fleet/+/+/telemetry`           | subscribe         | (none)                                                            |
+| `fleet/+/+/alerts`              | subscribe         | (none)                                                            |
+| `fleet/device/+/geofence_event` | subscribe (QoS 1) | (none)                                                            |
+| `fleet/truck/+/command`         | publish           | (none — publish denied by acl.conf)                               |
+| `enterprise/*` (any)            | (none)            | (reserved for Phase 2+ if direct command publish becomes needed)  |
 
-A dedicated EMQX user `dispatcher-readonly` is created in ROADMAP Sıra 4 with an ACL restricting it to the `subscribe` operation on the above patterns.
+The enterprise backend has no MQTT access at all (the `mqtt` dependency in package.json is unused); it neither subscribes to nor publishes on any topic.
+
+The `dispatcher-readonly` EMQX user exists in production; since 2026-09-13 an explicit acl.conf rule denies it all publish (subscribe-only enforced and live-tested).
 
 ### 4.3 Redis key namespace separation
 
@@ -399,3 +402,4 @@ Each of these has explicit triggers and is **not** built speculatively.
 | ------- | ---------- | --------- | ----------------------------------------------------- |
 | 1       | 2026-05-14 | Cem sahinkaya | Initial integration map consolidating cross-ADR decisions. |
 | 1.1 (addendum) | 2026-05-14 | Cem sahinkaya | Added §4.5.1 — Compliance Engine architectural inheritance (per ADR-0012). Schema authority, database role constraints, MQTT access, Redis namespace, statement timeout, tenant isolation, audit logging — all confirmed to apply to Compliance Engine in Phase 1, Phase 2, and Phase 3 standalone product. |
+| 1.2     | 2026-09-13 | Cem Sahinkaya | Topic names aligned with code (telemetry/alerts); enterprise-backend MQTT rows corrected to dispatcher frontend; dispatcher-readonly publish-deny recorded. |

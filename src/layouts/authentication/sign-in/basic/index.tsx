@@ -28,6 +28,7 @@ import bgImage from "assets/images/bg-sign-in-basic.jpeg";
 import { Link, useNavigate } from "react-router-dom";
 import { useT } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
+import LanguageSwitcher from "components/LanguageSwitcher";
 function Basic(): JSX.Element {
   const { t } = useT();
   const [rememberMe, setRememberMe] = useState<boolean>(false);
@@ -53,7 +54,11 @@ function Basic(): JSX.Element {
   const handleSetRememberMe = () => setRememberMe(!rememberMe);
 
   return (
-    <BasicLayout image={bgImage}>
+    <>
+      <MDBox position="fixed" top={16} right={16} zIndex={1300}>
+        <LanguageSwitcher variant="login" />
+      </MDBox>
+      <BasicLayout image={bgImage}>
       <Card>
         <MDBox
           variant="gradient"
@@ -138,6 +143,7 @@ function Basic(): JSX.Element {
         </MDBox>
       </Card>
     </BasicLayout>
+    </>
   );
 }
 

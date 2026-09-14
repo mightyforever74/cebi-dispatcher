@@ -57,6 +57,7 @@ import {
 // Real API — GET/PUT /api/alerts (api.tulipfleet.com)
 import { useAlerts, useResolveAlert, Alert } from "hooks/useAlerts";
 import { useT } from "i18n";
+import LanguageSwitcher from "components/LanguageSwitcher";
 
 // Declaring prop types for DashboardNavbar
 interface Props {
@@ -289,6 +290,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
               <MDInput label={t("navbar.search")} />
             </MDBox>
             <MDBox color={light ? "white" : "inherit"}>
+              <LanguageSwitcher variant="navbar" />
               <Link to="/authentication/sign-in/basic">
                 <IconButton sx={navbarIconButton} size="small" disableRipple>
                   <Icon sx={iconsStyle}>account_circle</Icon>

@@ -12,6 +12,7 @@ import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
 import MDTypography from "components/MDTypography";
 import { AUTH_API_URL } from "config/api";
+import { useT, type TFunction } from "i18n";
 import BasicLayout from "layouts/authentication/components/BasicLayout";
 
 import bgImage from "assets/images/bg-sign-in-basic.jpeg";
@@ -47,21 +48,22 @@ async function parseJsonBody(response: Response): Promise<AuthErrorBody | null> 
   }
 }
 
-function mapResetError(status: number, errorCode: string | undefined): string {
+function mapResetError(status: number, errorCode: string | undefined, t: TFunction): string {
   if (status === 429) {
-    return "Çok fazla istek. Lütfen biraz bekleyin.";
+    return t("forgot.tooManyRequests");
   }
   if (status === 400 && errorCode === "Invalid or expired code") {
-    return "Geçersiz veya süresi dolmuş kod";
+    return t("forgot.invalidCode");
   }
   if (status === 400 && errorCode === "Too many attempts") {
-    return "Çok fazla deneme — yeni kod isteyin";
+    return t("forgot.tooManyAttempts");
   }
-  return "Şifre sıfırlanamadı. Lütfen tekrar deneyin.";
+  return t("forgot.resetFailed");
 }
 
 function ForgotPassword(): JSX.Element {
   const navigate = useNavigate();
+  const { t } = useT();
 
   const [step, setStep] = useState<Step>(1);
   const [email, setEmail] = useState("");
@@ -101,7 +103,7 @@ function ForgotPassword(): JSX.Element {
     setError(null);
     const normalized = normalizeEmail(email);
     if (!normalized || !EMAIL_PATTERN.test(normalized)) {
-      setError("Lütfen geçerli bir e-posta adresi girin.");
+      setError(t("forgot.invalidEmail"));
       return;
     }
 
@@ -114,7 +116,7 @@ function ForgotPassword(): JSX.Element {
       });
 
       if (response.status === 429) {
-        setError("Çok fazla istek. Lütfen biraz bekleyin.");
+        setError(t("forgot.tooManyRequests"));
         return;
       }
 
@@ -145,7 +147,7 @@ function ForgotPassword(): JSX.Element {
       });
 
       if (response.status === 429) {
-        setError("Çok fazla istek. Lütfen biraz bekleyin.");
+        setError(t("forgot.tooManyRequests"));
         return;
       }
 
@@ -160,15 +162,15 @@ function ForgotPassword(): JSX.Element {
   const resetPassword = async () => {
     setError(null);
     if (code.length !== 6) {
-      setError("Doğrulama kodu 6 haneli olmalıdır.");
+      setError(t("forgot.codeMustBe6"));
       return;
     }
     if (newPassword.length < 6) {
-      setError("Yeni şifre en az 6 karakter olmalıdır.");
+      setError(t("forgot.passwordMin"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Şifreler eşleşmiyor.");
+      setError(t("forgot.passwordMismatch"));
       return;
     }
 
@@ -190,9 +192,9 @@ function ForgotPassword(): JSX.Element {
       }
 
       const body = await parseJsonBody(response);
-      setError(mapResetError(response.status, body?.error));
+      setError(mapResetError(response.status, body?.error, t));
     } catch {
-      setError("Bağlantı kurulamadı. Lütfen tekrar deneyin.");
+      setError(t("forgot.connectionFailed"));
     } finally {
       setLoading(false);
     }
@@ -234,16 +236,16 @@ function ForgotPassword(): JSX.Element {
           textAlign="center"
         >
           <MDTypography variant="h4" fontWeight="medium" color="white" mt={1}>
-            Şifremi unuttum
+            {t("forgot.title")}
           </MDTypography>
           <MDTypography display="block" variant="button" color="white" my={1}>
-            TulipFleet Dispatcher
+            {t("login.brand")}
           </MDTypography>
         </MDBox>
         <MDBox pt={4} pb={3} px={3}>
           {succeeded ? (
             <>
-              <MDAlert color="success">Şifreniz değiştirildi</MDAlert>
+              <MDAlert color="success">{t("forgot.changed")}</MDAlert>
               <MDBox mt={3} mb={1}>
                 <MDButton
                   variant="gradient"
@@ -251,7 +253,7 @@ function ForgotPassword(): JSX.Element {
                   fullWidth
                   onClick={() => navigate("/authentication/sign-in/basic")}
                 >
-                  Girişe dön
+                  {t("forgot.backToSignIn")}
                 </MDButton>
               </MDBox>
             </>
@@ -262,7 +264,7 @@ function ForgotPassword(): JSX.Element {
                   <MDBox mb={2}>
                     <MDInput
                       type="email"
-                      label="E-posta"
+                      label={t("login.email")}
                       fullWidth
                       value={email}
                       autoComplete="email"
@@ -272,7 +274,7 @@ function ForgotPassword(): JSX.Element {
                     />
                   </MDBox>
                   <MDTypography variant="caption" color="text" display="block" mb={2}>
-                    Kayıtlı adresinize 6 haneli doğrulama kodu göndereceğiz.
+                    {t("forgot.hint")}
                   </MDTypography>
                   {error ? (
                     <MDBox mb={1}>
@@ -289,7 +291,7 @@ function ForgotPassword(): JSX.Element {
                       fullWidth
                       disabled={loading}
                     >
-                      {loading ? "Gönderiliyor..." : "Kod Gönder"}
+                      {loading ? t("forgot.sending") : t("forgot.sendCode")}
                     </MDButton>
                   </MDBox>
                 </>
@@ -318,13 +320,13 @@ function ForgotPassword(): JSX.Element {
                         setStep(1);
                       }}
                     >
-                      E-postayı değiştir
+                      {t("forgot.changeEmail")}
                     </MDTypography>
                   </MDBox>
                   <MDBox mb={2}>
                     <MDInput
                       type="text"
-                      label="Doğrulama kodu"
+                      label={t("forgot.verificationCode")}
                       fullWidth
                       value={code}
                       onChange={handleOtpChange}
@@ -340,7 +342,7 @@ function ForgotPassword(): JSX.Element {
                   <MDBox mb={2}>
                     <MDInput
                       type={showPassword ? "text" : "password"}
-                      label="Yeni şifre"
+                      label={t("forgot.newPassword")}
                       fullWidth
                       value={newPassword}
                       autoComplete="new-password"
@@ -351,7 +353,9 @@ function ForgotPassword(): JSX.Element {
                         endAdornment: (
                           <InputAdornment position="end">
                             <IconButton
-                              aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
+                              aria-label={
+                                showPassword ? t("forgot.hidePassword") : t("forgot.showPassword")
+                              }
                               onClick={() => setShowPassword((visible) => !visible)}
                               edge="end"
                             >
@@ -365,7 +369,7 @@ function ForgotPassword(): JSX.Element {
                   <MDBox mb={2}>
                     <MDInput
                       type={showConfirm ? "text" : "password"}
-                      label="Yeni şifre (tekrar)"
+                      label={t("forgot.confirmPassword")}
                       fullWidth
                       value={confirmPassword}
                       autoComplete="new-password"
@@ -376,7 +380,9 @@ function ForgotPassword(): JSX.Element {
                         endAdornment: (
                           <InputAdornment position="end">
                             <IconButton
-                              aria-label={showConfirm ? "Şifreyi gizle" : "Şifreyi göster"}
+                              aria-label={
+                                showConfirm ? t("forgot.hidePassword") : t("forgot.showPassword")
+                              }
                               onClick={() => setShowConfirm((visible) => !visible)}
                               edge="end"
                             >
@@ -402,7 +408,7 @@ function ForgotPassword(): JSX.Element {
                       fullWidth
                       disabled={loading}
                     >
-                      {loading ? "Kaydediliyor..." : "Şifreyi Sıfırla"}
+                      {loading ? t("forgot.saving") : t("forgot.reset")}
                     </MDButton>
                   </MDBox>
                   <MDBox mt={1} textAlign="center">
@@ -415,8 +421,8 @@ function ForgotPassword(): JSX.Element {
                       }}
                     >
                       {resendIn > 0
-                        ? `Kodu tekrar gönder (${resendIn})`
-                        : "Kodu tekrar gönder"}
+                        ? t("forgot.resendIn", { seconds: resendIn })
+                        : t("forgot.resend")}
                     </MDButton>
                   </MDBox>
                 </>
@@ -429,7 +435,7 @@ function ForgotPassword(): JSX.Element {
                   color="text"
                   fontWeight="medium"
                 >
-                  Girişe dön
+                  {t("forgot.backToSignIn")}
                 </MDTypography>
               </MDBox>
             </MDBox>

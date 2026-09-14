@@ -12,9 +12,11 @@ import useDrivers from "hooks/useDrivers";
 import useVehicles from "hooks/useVehicles";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useT } from "i18n";
 import { toNum } from "utils/toNum";
 
 function VehiclesLayout(): JSX.Element {
+  const { t } = useT();
   const { data: vehicles = [], isLoading, error } = useVehicles();
   const { data: drivers = [] } = useDrivers(); // YENİ
   const navigate = useNavigate();
@@ -66,16 +68,16 @@ function VehiclesLayout(): JSX.Element {
 
   const table = useMemo(() => {
     const columns = [
-      { Header: "Plaat / Model", accessor: "vehicle_info" },
-      { Header: "Categorie", accessor: "category_badge" },
-      { Header: "Mülkiyet", accessor: "ownership_badge" },
-      { Header: "Brandstof", accessor: "fuel_type_badge" },
-      { Header: "Brandstofniveau", accessor: "fuel_level_gauge" },
-      { Header: "Totaal km", accessor: "total_km_display" },
-      { Header: "Onderhoud", accessor: "maintenance_info" },
-      { Header: "Emissie", accessor: "emission_badge" },
-      { Header: "Status", accessor: "status_badge" },
-      { Header: "Chauffeur", accessor: "assigned_driver_name" },
+      { Header: t("vehicles.colPlateModel"), accessor: "vehicle_info" },
+      { Header: t("vehicles.colCategory"), accessor: "category_badge" },
+      { Header: t("vehicles.colOwnership"), accessor: "ownership_badge" },
+      { Header: t("vehicles.colFuel"), accessor: "fuel_type_badge" },
+      { Header: t("vehicles.colFuelLevel"), accessor: "fuel_level_gauge" },
+      { Header: t("vehicles.colTotalKm"), accessor: "total_km_display" },
+      { Header: t("vehicles.colMaintenance"), accessor: "maintenance_info" },
+      { Header: t("vehicles.colEmission"), accessor: "emission_badge" },
+      { Header: t("vehicles.colStatus"), accessor: "status_badge" },
+      { Header: t("vehicles.colDriver"), accessor: "assigned_driver_name" },
     ];
 
     const rows = vehicles.map((v: any) => {
@@ -113,11 +115,21 @@ function VehiclesLayout(): JSX.Element {
 
       const ownershipBadge =
         v.ownership_type === "rented" ? (
-          <Chip label={`Kiralık · ${v.owner_name || "—"}`} size="small" color="warning" variant="outlined" />
+          <Chip
+            label={t("vehicles.rentedOwner", { name: v.owner_name || "—" })}
+            size="small"
+            color="warning"
+            variant="outlined"
+          />
         ) : v.ownership_type === "leased" ? (
-          <Chip label={`Leasing · ${v.owner_name || "—"}`} size="small" color="info" variant="outlined" />
+          <Chip
+            label={t("vehicles.leasedOwner", { name: v.owner_name || "—" })}
+            size="small"
+            color="info"
+            variant="outlined"
+          />
         ) : (
-          <Chip label="Özmal" size="small" color="success" variant="outlined" />
+          <Chip label={t("vehicles.owned")} size="small" color="success" variant="outlined" />
         );
 
       const fuelTypeBadge = v.fuel_type ? (
@@ -155,7 +167,9 @@ function VehiclesLayout(): JSX.Element {
           </MDTypography>
           {toNum(v.next_maintenance_km) != null && (
             <MDTypography variant="caption" color="dark">
-              {toNum(v.next_maintenance_km)!.toLocaleString("nl-NL")} km
+              {t("common.distanceKm", {
+                value: toNum(v.next_maintenance_km)!.toLocaleString("nl-NL"),
+              })}
             </MDTypography>
           )}
         </MDBox>
@@ -205,41 +219,41 @@ function VehiclesLayout(): JSX.Element {
     });
 
     return { columns, rows };
-  }, [vehicles, driverNameByVehicleId]);
+  }, [vehicles, driverNameByVehicleId, navigate, t]);
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
         <MDTypography variant="h5" gutterBottom>
-          Voertuigen
+          {t("vehicles.title")}
         </MDTypography>
         <Grid container spacing={3} mb={3}>
           <Grid item xs={12} md={4}>
             <ComplexStatisticsCard
               color="info"
               icon="local_shipping"
-              title="Actieve voertuigen"
+              title={t("vehicles.kpiActive")}
               count={vehicles.length}
-              percentage={{ color: "success", amount: "live", label: "realtime" }}
+              percentage={{ color: "success", amount: t("vehicles.kpiLive"), label: t("vehicles.kpiRealtime") }}
             />
           </Grid>
           <Grid item xs={12} md={4}>
             <ComplexStatisticsCard
               color="success"
               icon="people"
-              title="Chauffeurs"
+              title={t("vehicles.kpiDrivers")}
               count={drivers.length}
-              percentage={{ color: "success", amount: "actief", label: "" }}
+              percentage={{ color: "success", amount: t("vehicles.kpiActiveAmount"), label: "" }}
             />
           </Grid>
           <Grid item xs={12} md={4}>
             <ComplexStatisticsCard
               color="warning"
               icon="local_gas_station"
-              title="Gem. brandstof"
+              title={t("vehicles.kpiAvgFuel")}
               count="60%"
-              percentage={{ color: "warning", amount: "~", label: "gemiddeld" }}
+              percentage={{ color: "warning", amount: "~", label: t("vehicles.kpiAverage") }}
             />
           </Grid>
         </Grid>
@@ -251,13 +265,13 @@ function VehiclesLayout(): JSX.Element {
 
         {isLoading && (
           <MDTypography variant="caption" color="dark">
-            Voertuigen laden...
+            {t("vehicles.loading")}
           </MDTypography>
         )}
 
         {error && (
           <MDTypography variant="caption" color="error">
-            Fout: {error.message}
+            {t("common.errorWithMessage", { message: error.message })}
           </MDTypography>
         )}
       </MDBox>

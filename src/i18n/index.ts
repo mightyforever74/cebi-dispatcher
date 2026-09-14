@@ -1,4 +1,12 @@
-import { createContext, createElement, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { en } from "./en";
 import { nl } from "./nl";
@@ -94,19 +102,34 @@ type LanguageApi = {
   t: TFunction;
   lang: Lang;
   locale: Locale;
+  setLang: (next: Lang) => void;
 };
 
 const LanguageContext = createContext<LanguageApi | null>(null);
 
+function persistLang(next: Lang): void {
+  currentLang = next;
+  try {
+    window.localStorage.setItem("tf-lang", next);
+  } catch {
+    /* private mode / SSR */
+  }
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const lang = currentLang;
+  const [lang, setLangState] = useState<Lang>(currentLang);
+  const setLang = useCallback((next: Lang) => {
+    persistLang(next);
+    setLangState(next);
+  }, []);
   const value = useMemo<LanguageApi>(
     () => ({
       t: (key, vars) => translate(lang, key, vars),
       lang,
       locale: LOCALE_BY_LANG[lang],
+      setLang,
     }),
-    [lang]
+    [lang, setLang]
   );
 
   return createElement(LanguageContext.Provider, { value }, children);
@@ -119,5 +142,6 @@ export function useT(): LanguageApi {
     t: (key, vars) => translate(currentLang, key, vars),
     lang: currentLang,
     locale: LOCALE_BY_LANG[currentLang],
+    setLang: persistLang,
   };
 }

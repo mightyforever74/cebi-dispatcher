@@ -35,9 +35,10 @@ import CustomerDetailPage from "layouts/supervisor/customerDetail";
 
 // ── icons ──
 import Icon from "@mui/material/Icon";
-import { t } from "i18n";
+import type { TFunction } from "i18n";
 
-const routes = [
+export function createRoutes(t: TFunction) {
+  return [
   // ═══════════ GRUP 1 — OPERASYON MERKEZİ ═══════════
   { type: "title", title: t("nav.operationsCenter"), key: "title-operations" },
   {
@@ -187,5 +188,4 @@ const routes = [
     component: <SignInBasic />,
   },
 ];
-
-export default routes;
+}

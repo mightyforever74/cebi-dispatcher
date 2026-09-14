@@ -7,10 +7,12 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import DataTable from "examples/Tables/DataTable";
 import useDrivers from "hooks/useDrivers";
 import useVehicles from "hooks/useVehicles";
+import { useT } from "i18n";
 import { useMemo } from "react";
 import { toNum } from "utils/toNum";
 
 function DriversLayout(): JSX.Element {
+  const { t } = useT();
   const { data: drivers = [], isLoading, error } = useDrivers();
   const { data: vehicles = [] } = useVehicles(); // YENİ (sadece data, isLoading/error gerekmez)
 
@@ -70,15 +72,15 @@ function DriversLayout(): JSX.Element {
 
   const table = useMemo(() => {
     const columns = [
-      { Header: "Chauffeur", accessor: "driver_name" },
-      { Header: "Telefoon / Rijbewijs", accessor: "contact_info" },
-      { Header: "Veiligheidsscore", accessor: "safety_score_display" },
-      { Header: "Status", accessor: "status_badge" },
-      { Header: "Toegewezen voertuig", accessor: "assigned_vehicle_plate" },
+      { Header: t("drivers.colDriver"), accessor: "driver_name" },
+      { Header: t("drivers.colContact"), accessor: "contact_info" },
+      { Header: t("drivers.colSafety"), accessor: "safety_score_display" },
+      { Header: t("drivers.colStatus"), accessor: "status_badge" },
+      { Header: t("drivers.colVehicle"), accessor: "assigned_vehicle_plate" },
     ];
 
     const rows = drivers.map((d: any) => {
-      const fullName = `${d.first_name || ""} ${d.last_name || ""}`.trim() || "N/A";
+      const fullName = `${d.first_name || ""} ${d.last_name || ""}`.trim() || t("drivers.na");
       const email = d.email || "";
 
       const driverName = (
@@ -99,8 +101,12 @@ function DriversLayout(): JSX.Element {
           {d.phone && <MDTypography variant="body2">{d.phone}</MDTypography>}
           {d.license_no && (
             <MDTypography variant="caption" color="dark">
-              {d.license_no}
-              {d.license_expiry && ` (${formatDate(d.license_expiry)})`}
+              {d.license_expiry
+                ? t("drivers.licenseWithExpiry", {
+                    license: d.license_no,
+                    expiry: formatDate(d.license_expiry),
+                  })
+                : d.license_no}
             </MDTypography>
           )}
         </MDBox>
@@ -160,14 +166,14 @@ function DriversLayout(): JSX.Element {
     });
 
     return { columns, rows };
-  }, [drivers, plateByVehicleId]);
+  }, [drivers, plateByVehicleId, t]);
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
         <MDTypography variant="h5" gutterBottom>
-          Chauffeurs
+          {t("drivers.title")}
         </MDTypography>
 
         <DataTable
@@ -178,13 +184,13 @@ function DriversLayout(): JSX.Element {
 
         {isLoading && (
           <MDTypography variant="caption" color="dark">
-            Chauffeurs laden...
+            {t("drivers.loading")}
           </MDTypography>
         )}
 
         {error && (
           <MDTypography variant="caption" color="error">
-            Fout: {error.message}
+            {t("common.errorWithMessage", { message: error.message })}
           </MDTypography>
         )}
       </MDBox>

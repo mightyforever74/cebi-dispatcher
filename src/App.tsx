@@ -14,6 +14,7 @@ Coded by www.creative-tim.com
 */
 
 import { JSXElementConstructor, Key, ReactElement, useEffect, useMemo, useState } from "react";
+import { useT } from "i18n";
 
 // react-router components
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
@@ -38,7 +39,7 @@ import { CacheProvider } from "@emotion/react";
 import rtlPlugin from "stylis-plugin-rtl";
 
 // Material Dashboard 2 PRO React TS routes
-import routes from "routes";
+import { createRoutes } from "routes";
 
 // Material Dashboard 2 PRO React TS contexts
 import { setMiniSidenav, setOpenConfigurator, useMaterialUIController } from "context";
@@ -52,6 +53,8 @@ export default function App() {
   const [onMouseEnter, setOnMouseEnter] = useState(false);
   const [rtlCache, setRtlCache] = useState(null);
   const { pathname } = useLocation();
+  const { t } = useT();
+  const routes = useMemo(() => createRoutes(t), [t]);
 
   // Cache for the rtl
   useMemo(() => {
@@ -146,7 +149,7 @@ export default function App() {
           <Sidenav
             color={sidenavColor}
             brand={tulipfleetLogo}
-            brandName="TulipFleet Dispatcher"
+            brandName={t("login.brand")}
             routes={routes}
             onMouseEnter={handleOnMouseEnter}
             onMouseLeave={handleOnMouseLeave}
@@ -169,7 +172,7 @@ export default function App() {
           <Sidenav
             color={sidenavColor}
             brand={tulipfleetLogo}
-            brandName="TulipFleet Dispatcher"
+            brandName={t("login.brand")}
             routes={routes}
             onMouseEnter={handleOnMouseEnter}
             onMouseLeave={handleOnMouseLeave}

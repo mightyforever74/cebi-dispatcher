@@ -11,6 +11,7 @@ import useTasks, { TaskFilter } from "hooks/useTasks";
 import useVehicles from "hooks/useVehicles";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useT } from "i18n";
 import { toNum } from "utils/toNum";
 
 type BadgeColor =
@@ -24,6 +25,7 @@ type BadgeColor =
   | "dark";
 
 function TasksLayout(): JSX.Element {
+  const { t } = useT();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<TaskFilter>("all");
   const { data: tasks = [], isLoading, error } = useTasks(filter);
@@ -104,24 +106,24 @@ function TasksLayout(): JSX.Element {
 
   const table = useMemo(() => {
     const columns = [
-      { Header: "Taak", accessor: "task_info" },
-      { Header: "Route", accessor: "route_info" },
-      { Header: "Chauffeur / Voertuig", accessor: "driver_vehicle" },
-      { Header: "Gepland", accessor: "scheduled_info" },
-      { Header: "Afstand", accessor: "distance_display" },
-      { Header: "Prioriteit", accessor: "priority_badge" },
-      { Header: "Status", accessor: "status_badge" },
+      { Header: t("tasks.colTask"), accessor: "task_info" },
+      { Header: t("tasks.colRoute"), accessor: "route_info" },
+      { Header: t("tasks.colDriverVehicle"), accessor: "driver_vehicle" },
+      { Header: t("tasks.colScheduled"), accessor: "scheduled_info" },
+      { Header: t("tasks.colDistance"), accessor: "distance_display" },
+      { Header: t("tasks.colPriority"), accessor: "priority_badge" },
+      { Header: t("tasks.colStatus"), accessor: "status_badge" },
     ];
 
-    const rows = tasks.map((t: any) => {
+    const rows = tasks.map((task: any) => {
       const taskInfo = (
         <MDBox display="flex" flexDirection="column">
           <MDTypography variant="body2" fontWeight="medium">
-            {t.task_no || "—"}
+            {task.task_no || "—"}
           </MDTypography>
-          {t.title && (
+          {task.title && (
             <MDTypography variant="caption" color="dark">
-              {t.title}
+              {task.title}
             </MDTypography>
           )}
         </MDBox>
@@ -129,15 +131,15 @@ function TasksLayout(): JSX.Element {
 
       const routeInfo = (
         <MDBox display="flex" flexDirection="column">
-          <MDTypography variant="caption">{t.start_location || "—"}</MDTypography>
+          <MDTypography variant="caption">{task.start_location || "—"}</MDTypography>
           <MDTypography variant="caption" color="dark">
-            → {t.end_location || "—"}
+            → {task.end_location || "—"}
           </MDTypography>
         </MDBox>
       );
 
-      const driverName = t.driver_id ? driverNameById.get(t.driver_id) ?? "—" : "—";
-      const plate = t.vehicle_id ? plateById.get(t.vehicle_id) ?? null : null;
+      const driverName = task.driver_id ? driverNameById.get(task.driver_id) ?? "—" : "—";
+      const plate = task.vehicle_id ? plateById.get(task.vehicle_id) ?? null : null;
       const driverVehicle = (
         <MDBox display="flex" flexDirection="column" gap={0.5}>
           <MDTypography variant="body2">{driverName}</MDTypography>
@@ -153,20 +155,20 @@ function TasksLayout(): JSX.Element {
 
       const scheduledInfo = (
         <MDBox display="flex" flexDirection="column">
-          <MDTypography variant="caption">{formatDateTime(t.scheduled_start)}</MDTypography>
-          {t.scheduled_end && (
+          <MDTypography variant="caption">{formatDateTime(task.scheduled_start)}</MDTypography>
+          {task.scheduled_end && (
             <MDTypography variant="caption" color="dark">
-              {formatDateTime(t.scheduled_end)}
+              {formatDateTime(task.scheduled_end)}
             </MDTypography>
           )}
         </MDBox>
       );
 
-      const km = toNum(t.total_distance_km);
+      const km = toNum(task.total_distance_km);
       const distanceDisplay =
         km != null ? (
           <MDTypography variant="body2" sx={{ textAlign: "right" }}>
-            {km.toLocaleString("nl-NL")} km
+            {t("common.distanceKm", { value: km.toLocaleString("nl-NL") })}
           </MDTypography>
         ) : (
           <MDTypography variant="caption">—</MDTypography>
@@ -174,8 +176,8 @@ function TasksLayout(): JSX.Element {
 
       const priorityBadge = (
         <MDBadge
-          badgeContent={t.priority || "normal"}
-          color={priorityColor(t.priority)}
+          badgeContent={task.priority || "normal"}
+          color={priorityColor(task.priority)}
           variant="gradient"
           size="sm"
         />
@@ -183,8 +185,8 @@ function TasksLayout(): JSX.Element {
 
       const statusBadge = (
         <MDBadge
-          badgeContent={t.status || "unknown"}
-          color={statusColor(t.status)}
+          badgeContent={task.status || "unknown"}
+          color={statusColor(task.status)}
           variant="gradient"
           size="sm"
         />
@@ -198,12 +200,12 @@ function TasksLayout(): JSX.Element {
         distance_display: distanceDisplay,
         priority_badge: priorityBadge,
         status_badge: statusBadge,
-        id: t.id,
+        id: task.id,
       };
     });
 
     return { columns, rows };
-  }, [tasks, driverNameById, plateById]);
+  }, [tasks, driverNameById, plateById, t]);
 
   return (
     <DashboardLayout>
@@ -211,7 +213,7 @@ function TasksLayout(): JSX.Element {
       <MDBox p={3}>
         <MDBox display="flex" alignItems="center" justifyContent="space-between" mb={1}>
           <MDTypography variant="h5" gutterBottom>
-            Taken
+            {t("tasks.title")}
           </MDTypography>
           <MDButton
             variant="gradient"
@@ -219,7 +221,7 @@ function TasksLayout(): JSX.Element {
             size="small"
             onClick={() => navigate("/dispatcher/tasks/optimize")}
           >
-            + Nieuwe Taak
+            {t("tasks.newTask")}
           </MDButton>
         </MDBox>
 
@@ -230,10 +232,10 @@ function TasksLayout(): JSX.Element {
             textColor="primary"
             indicatorColor="primary"
           >
-            <Tab label="Alle" value="all" />
-            <Tab label="Te beoordelen" value="pending_review" />
-            <Tab label="Vandaag" value="today" />
-            <Tab label="Gepland" value="planned" />
+            <Tab label={t("tasks.tabAll")} value="all" />
+            <Tab label={t("tasks.tabReview")} value="pending_review" />
+            <Tab label={t("tasks.tabToday")} value="today" />
+            <Tab label={t("tasks.tabPlanned")} value="planned" />
           </Tabs>
         </MDBox>
 
@@ -245,21 +247,21 @@ function TasksLayout(): JSX.Element {
 
         {isLoading && (
           <MDTypography variant="caption" color="dark">
-            Taken laden...
+            {t("tasks.loading")}
           </MDTypography>
         )}
 
         {!isLoading && !error && tasks.length === 0 && (
           <MDBox py={3} textAlign="center">
             <MDTypography variant="body2" color="dark">
-              Geen taken in dit filter.
+              {t("tasks.empty")}
             </MDTypography>
           </MDBox>
         )}
 
         {error && (
           <MDTypography variant="caption" color="error">
-            Fout: {error.message}
+            {t("common.errorWithMessage", { message: error.message })}
           </MDTypography>
         )}
       </MDBox>

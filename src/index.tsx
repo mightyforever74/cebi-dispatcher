@@ -9,6 +9,7 @@ import Basic from "layouts/authentication/sign-in/basic";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
 
+import { LanguageProvider } from "i18n";
 import { useLatestLocations } from "hooks/useLatestLocations";
 import { useAuthStore } from "store/useAuthStore";
 
@@ -49,7 +50,9 @@ root.render(
       <ThemeProvider theme={themeDark}>
         <CssBaseline />
         <MaterialUIControllerProvider>
-          <AuthGate />
+          <LanguageProvider>
+            <AuthGate />
+          </LanguageProvider>
         </MaterialUIControllerProvider>
       </ThemeProvider>
     </BrowserRouter>

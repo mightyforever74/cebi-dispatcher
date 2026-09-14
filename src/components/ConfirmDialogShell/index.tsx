@@ -18,6 +18,7 @@ import Icon from "@mui/material/Icon";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import { useT } from "i18n";
 
 export const SHELL_C = {
   panelBg: "#1a2035",
@@ -77,13 +78,14 @@ export function CopyChip({
   text: string;
   color: ShellSeverity;
 }): JSX.Element {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const sev = SEV[color];
   return (
     <MDBox
       component="button"
       type="button"
-      title="Copy to clipboard"
+      title={t("dialog.copyToClipboard")}
       onClick={() => {
         if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
         setCopied(true);
@@ -104,7 +106,7 @@ export function CopyChip({
         alignItems: "center",
       }}
     >
-      {copied ? "Copied ✓" : text}
+      {copied ? t("dialog.copied") : text}
     </MDBox>
   );
 }
@@ -135,13 +137,15 @@ function ConfirmDialogShell({
   subtitle,
   submitting = false,
   children,
-  cancelLabel = "Cancel",
+  cancelLabel,
   confirmLabel,
   submittingLabel,
   confirmDisabled = false,
   onCancel,
   onConfirm,
 }: Props): JSX.Element {
+  const { t } = useT();
+  const resolvedCancel = cancelLabel ?? t("dialog.cancel");
   const sev = SEV[severity];
   return (
     <Dialog
@@ -212,7 +216,7 @@ function ConfirmDialogShell({
               "&:disabled": { opacity: 0.5, cursor: "not-allowed" },
             }}
           >
-            {cancelLabel}
+            {resolvedCancel}
           </MDBox>
           <MDBox
             component="button"

@@ -26,8 +26,10 @@ import BasicLayout from "layouts/authentication/components/BasicLayout";
 // Images
 import bgImage from "assets/images/bg-sign-in-basic.jpeg";
 import { Link, useNavigate } from "react-router-dom";
+import { useT } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 function Basic(): JSX.Element {
+  const { t } = useT();
   const [rememberMe, setRememberMe] = useState<boolean>(false);
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
@@ -43,7 +45,7 @@ function Basic(): JSX.Element {
       await login(email.trim(), password);
       navigate("/dashboards/live-fleet-map");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Sign-in failed");
+      setError(e instanceof Error ? e.message : t("login.failed"));
       setLoading(false);
     }
   };
@@ -65,10 +67,10 @@ function Basic(): JSX.Element {
           textAlign="center"
         >
           <MDTypography variant="h4" fontWeight="medium" color="white" mt={1}>
-            Sign in
+            {t("login.title")}
           </MDTypography>
           <MDTypography display="block" variant="button" color="white" my={1}>
-            TulipFleet Dispatcher
+            {t("login.brand")}
           </MDTypography>
         </MDBox>
         <MDBox pt={4} pb={3} px={3}>
@@ -76,7 +78,7 @@ function Basic(): JSX.Element {
             <MDBox mb={2}>
               <MDInput
                 type="email"
-                label="Email"
+                label={t("login.email")}
                 fullWidth
                 value={email}
                 onChange={(e: any) => setEmail(e.target.value)}
@@ -85,7 +87,7 @@ function Basic(): JSX.Element {
             <MDBox mb={2}>
               <MDInput
                 type="password"
-                label="Password"
+                label={t("login.password")}
                 fullWidth
                 value={password}
                 onChange={(e: any) => setPassword(e.target.value)}
@@ -99,7 +101,7 @@ function Basic(): JSX.Element {
                 color="info"
                 fontWeight="medium"
               >
-                Forgot password
+                {t("login.forgotPassword")}
               </MDTypography>
             </MDBox>
             <MDBox display="flex" alignItems="center" ml={-1}>
@@ -111,7 +113,7 @@ function Basic(): JSX.Element {
                 onClick={handleSetRememberMe}
                 sx={{ cursor: "pointer", userSelect: "none", ml: -1 }}
               >
-                &nbsp;&nbsp;Remember me
+                &nbsp;&nbsp;{t("login.rememberMe")}
               </MDTypography>
             </MDBox>
             <MDBox mt={4} mb={1}>
@@ -129,7 +131,7 @@ function Basic(): JSX.Element {
                 onClick={handleSignIn}
                 disabled={loading}
               >
-                {loading ? "signing in..." : "sign in"}
+                {loading ? t("login.submitting") : t("login.submit")}
               </MDButton>
             </MDBox>
           </MDBox>

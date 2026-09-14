@@ -11,8 +11,10 @@ import { Theme } from "@mui/material/styles";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import typography from "assets/theme/base/typography";
+import { useT } from "i18n";
 
 function Footer({ light }: { light?: boolean }): JSX.Element {
+  const { t } = useT();
   const { size } = typography;
   const linkColor = light ? "white" : "dark";
 
@@ -61,21 +63,21 @@ function Footer({ light }: { light?: boolean }): JSX.Element {
             <MDBox component="li" pr={2} lineHeight={1}>
               <Link href="https://tulipfleet.com" target="_blank" rel="noreferrer">
                 <MDTypography variant="button" fontWeight="regular" color={linkColor}>
-                  Site
+                  {t("footer.site")}
                 </MDTypography>
               </Link>
             </MDBox>
             <MDBox component="li" px={2} lineHeight={1}>
               <Link href="/subscription">
                 <MDTypography variant="button" fontWeight="regular" color={linkColor}>
-                  Subscription
+                  {t("footer.subscription")}
                 </MDTypography>
               </Link>
             </MDBox>
             <MDBox component="li" pl={2} lineHeight={1}>
               <Link href="mailto:info@tulipfleet.com">
                 <MDTypography variant="button" fontWeight="regular" color={linkColor}>
-                  Contact
+                  {t("footer.contact")}
                 </MDTypography>
               </Link>
             </MDBox>

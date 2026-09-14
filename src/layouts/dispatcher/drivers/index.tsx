@@ -12,7 +12,7 @@ import { useMemo } from "react";
 import { toNum } from "utils/toNum";
 
 function DriversLayout(): JSX.Element {
-  const { t } = useT();
+  const { t, locale } = useT();
   const { data: drivers = [], isLoading, error } = useDrivers();
   const { data: vehicles = [] } = useVehicles(); // YENİ (sadece data, isLoading/error gerekmez)
 
@@ -47,7 +47,7 @@ function DriversLayout(): JSX.Element {
   const formatDate = (dateStr?: string): string => {
     if (!dateStr) return "—";
     try {
-      return new Date(dateStr).toLocaleDateString("nl-NL");
+      return new Date(dateStr).toLocaleDateString(locale);
     } catch {
       return "—";
     }
@@ -166,7 +166,7 @@ function DriversLayout(): JSX.Element {
     });
 
     return { columns, rows };
-  }, [drivers, plateByVehicleId, t]);
+  }, [drivers, plateByVehicleId, t, locale]);
 
   return (
     <DashboardLayout>

@@ -25,7 +25,7 @@ type BadgeColor =
   | "dark";
 
 function TasksLayout(): JSX.Element {
-  const { t } = useT();
+  const { t, locale } = useT();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<TaskFilter>("all");
   const { data: tasks = [], isLoading, error } = useTasks(filter);
@@ -92,7 +92,7 @@ function TasksLayout(): JSX.Element {
   const formatDateTime = (s?: string | null): string => {
     if (!s) return "—";
     try {
-      return new Date(s).toLocaleString("nl-NL", {
+      return new Date(s).toLocaleString(locale, {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
@@ -168,7 +168,7 @@ function TasksLayout(): JSX.Element {
       const distanceDisplay =
         km != null ? (
           <MDTypography variant="body2" sx={{ textAlign: "right" }}>
-            {t("common.distanceKm", { value: km.toLocaleString("nl-NL") })}
+            {t("common.distanceKm", { value: km.toLocaleString(locale) })}
           </MDTypography>
         ) : (
           <MDTypography variant="caption">—</MDTypography>
@@ -205,7 +205,7 @@ function TasksLayout(): JSX.Element {
     });
 
     return { columns, rows };
-  }, [tasks, driverNameById, plateById, t]);
+  }, [tasks, driverNameById, plateById, t, locale]);
 
   return (
     <DashboardLayout>

@@ -16,7 +16,7 @@ import { useT } from "i18n";
 import { toNum } from "utils/toNum";
 
 function VehiclesLayout(): JSX.Element {
-  const { t } = useT();
+  const { t, locale } = useT();
   const { data: vehicles = [], isLoading, error } = useVehicles();
   const { data: drivers = [] } = useDrivers(); // YENİ
   const navigate = useNavigate();
@@ -60,7 +60,7 @@ function VehiclesLayout(): JSX.Element {
   const formatDate = (dateStr?: string): string => {
     if (!dateStr) return "—";
     try {
-      return new Date(dateStr).toLocaleDateString("nl-NL");
+      return new Date(dateStr).toLocaleDateString(locale);
     } catch {
       return "—";
     }
@@ -154,7 +154,7 @@ function VehiclesLayout(): JSX.Element {
       const totalKmDisplay =
         totalKm != null ? (
           <MDTypography variant="body2" sx={{ textAlign: "right" }}>
-            {totalKm.toLocaleString("nl-NL")}
+            {totalKm.toLocaleString(locale)}
           </MDTypography>
         ) : (
           <MDTypography variant="caption">—</MDTypography>
@@ -168,7 +168,7 @@ function VehiclesLayout(): JSX.Element {
           {toNum(v.next_maintenance_km) != null && (
             <MDTypography variant="caption" color="dark">
               {t("common.distanceKm", {
-                value: toNum(v.next_maintenance_km)!.toLocaleString("nl-NL"),
+                value: toNum(v.next_maintenance_km)!.toLocaleString(locale),
               })}
             </MDTypography>
           )}
@@ -219,7 +219,7 @@ function VehiclesLayout(): JSX.Element {
     });
 
     return { columns, rows };
-  }, [vehicles, driverNameByVehicleId, navigate, t]);
+  }, [vehicles, driverNameByVehicleId, navigate, t, locale]);
 
   return (
     <DashboardLayout>

@@ -126,9 +126,9 @@ export const nl = {
     lightDark: "Licht / donker",
   },
   table: {
-    entriesPerPage: "regels per pagina",
+    entriesPerPage: "rijen per pagina",
     search: "Zoeken...",
-    showing: "{start} tot {end} van {total} regels",
+    showing: "{start} tot {end} van {total} rijen",
   },
   tasks: {
     title: "Taken",
@@ -159,7 +159,7 @@ export const nl = {
     colEmission: "Emissie",
     colStatus: "Status",
     colDriver: "Chauffeur",
-    owned: "In eigendom",
+    owned: "Eigen",
     rentedOwner: "Huur · {name}",
     leasedOwner: "Lease · {name}",
     kpiActive: "Actieve voertuigen",

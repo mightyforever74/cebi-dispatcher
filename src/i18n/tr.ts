@@ -8,7 +8,7 @@ export const tr = {
     exceptions: "İstisna Yönetimi (İkaz)",
     aiOptimization: "Yapay Zekâ & Optimizasyon",
     smartRoute: "Akıllı Rota Optimizasyonu 🔒 (Phase 1.1)",
-    costToll: "Maliyet & Otoban Teftişi 🔒 (Temmuz 2026)",
+    costToll: "Maliyet & Vrachtwagenheffing Denetimi 🔒 (Temmuz 2026)",
     matrixMaster: "Matris & Master Data",
     driverManagement: "Sürücü Yönetimi",
     vehicleEquipment: "Araç & Ekipman Yönetimi",
@@ -16,7 +16,7 @@ export const tr = {
     tenantSettings: "Tenant & Sistem Ayarları",
     administration: "Yönetim",
     subscription: "Abonelik",
-    supervisor: "Supervizör",
+    supervisor: "Supervisor",
   },
   login: {
     title: "Giriş",

@@ -57,7 +57,6 @@ function LanguageSwitcher({ variant = "navbar" }: Props): JSX.Element {
           lineHeight: 1,
         }}
       >
-        <span aria-hidden="true">{current.flag}</span>
         {current.label}
       </MDBox>
     ) : (
@@ -77,9 +76,6 @@ function LanguageSwitcher({ variant = "navbar" }: Props): JSX.Element {
           letterSpacing: "0.04em",
         }}
       >
-        <span aria-hidden="true" style={{ marginRight: 6 }}>
-          {current.flag}
-        </span>
         {current.label}
       </IconButton>
     );

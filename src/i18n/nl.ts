@@ -18,6 +18,15 @@ export const nl = {
     subscription: "Abonnement",
     supervisor: "Supervisor",
   },
+  crumb: {
+    dashboards: "Dashboards",
+    dispatcher: "Dispatcher",
+    optimize: "Nieuwe taak",
+    b2bApi: "B2B API",
+    customerDetail: "Klantgegevens",
+    authentication: "Authenticatie",
+    basic: "Basis",
+  },
   login: {
     title: "Inloggen",
     brand: "TulipFleet Dispatcher",

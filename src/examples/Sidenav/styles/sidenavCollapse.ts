@@ -125,7 +125,7 @@ function collapseText(theme: any, ownerState: any) {
     "& span": {
       fontWeight: active ? fontWeightRegular : fontWeightLight,
       fontSize: size.sm,
-      lineHeight: 0,
+      lineHeight: 1.5,
       display: "block",
       overflow: "hidden",
       textOverflow: "ellipsis",

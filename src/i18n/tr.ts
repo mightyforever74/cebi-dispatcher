@@ -18,6 +18,15 @@ export const tr = {
     subscription: "Abonelik",
     supervisor: "Supervisor",
   },
+  crumb: {
+    dashboards: "Panolar",
+    dispatcher: "Dispatcher",
+    optimize: "Yeni görev",
+    b2bApi: "B2B API",
+    customerDetail: "Müşteri detayı",
+    authentication: "Kimlik doğrulama",
+    basic: "Temel",
+  },
   login: {
     title: "Giriş",
     brand: "TulipFleet Dispatcher",

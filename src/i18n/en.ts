@@ -20,6 +20,15 @@ export const en = {
     subscription: "Subscription",
     supervisor: "Supervisor",
   },
+  crumb: {
+    dashboards: "Dashboards",
+    dispatcher: "Dispatcher",
+    optimize: "New task",
+    b2bApi: "B2B API",
+    customerDetail: "Customer detail",
+    authentication: "Authentication",
+    basic: "Basic",
+  },
   login: {
     title: "Sign in",
     brand: "TulipFleet Dispatcher",

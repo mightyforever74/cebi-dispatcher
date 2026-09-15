@@ -3,6 +3,7 @@ import {
   createElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -131,6 +132,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }),
     [lang, setLang]
   );
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   return createElement(LanguageContext.Provider, { value }, children);
 }

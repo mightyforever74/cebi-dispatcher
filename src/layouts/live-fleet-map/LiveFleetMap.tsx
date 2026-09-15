@@ -34,6 +34,7 @@ import { useRouteLayerStore, isRouteVisible } from "store/useRouteLayerStore";
 import { useMqttTelemetry } from "hooks/useMqttTelemetry";
 import { useFleetSnapshot } from "hooks/useFleetSnapshot";
 import { useActiveRoutes } from "hooks/useActiveRoutes";
+import { useT, type TranslationKey } from "i18n";
 import "leaflet/dist/leaflet.css";
 
 const STATUS_COLOR: Record<VehicleStatus, string> = {
@@ -121,8 +122,15 @@ function MapViewController({ fly }: { fly: FlyRequest | null }): null {
   return null;
 }
 
+const STATUS_LABEL: Record<VehicleStatus, TranslationKey> = {
+  moving: "map.statusMoving",
+  idle: "map.statusIdle",
+  stopped: "map.statusStopped",
+};
+
 type StatusFilter = "all" | "moving" | "stopped" | "ze";
 function LiveFleetMap(): JSX.Element {
+  const { t } = useT();
   const { vehicles, selectedVehicleId, selectVehicle } = useVehicleStore();
   const { state: mqttState } = useMqttTelemetry();
   const activeRoutes = useActiveRoutes(); // hedef-yonu cizgileri (HERE gelince gercek geometri)
@@ -178,7 +186,7 @@ function LiveFleetMap(): JSX.Element {
     if (e === "zero_emission") {
       return (
         <Chip
-          label="ZE"
+          label={t("map.ze")}
           size="small"
           sx={{
             fontSize: "9px",
@@ -241,11 +249,11 @@ function LiveFleetMap(): JSX.Element {
                 color="white"
                 sx={{ display: "flex", alignItems: "center", gap: 1 }}
               >
-                <Icon sx={{ color: C.accent }}>navigation</Icon> Live Fleet
+                <Icon sx={{ color: C.accent }}>navigation</Icon> {t("map.title")}
               </MDTypography>
               <MDBox display="flex" alignItems="center" gap={0.75}>
                 <span
-                  title={`MQTT: ${mqttState}`}
+                  title={t("map.mqttTitle", { state: mqttState })}
                   style={{
                     width: "8px",
                     height: "8px",
@@ -259,7 +267,7 @@ function LiveFleetMap(): JSX.Element {
                   }}
                 />
                 <Chip
-                  label={`${filteredVehicles.length} active`}
+                  label={t("map.activeCount", { count: filteredVehicles.length })}
                   size="small"
                   sx={{
                     bgcolor: C.border,
@@ -275,7 +283,7 @@ function LiveFleetMap(): JSX.Element {
               <TextField
                 fullWidth
                 size="small"
-                placeholder="Search plate..."
+                placeholder={t("map.searchPlate")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -300,7 +308,7 @@ function LiveFleetMap(): JSX.Element {
 
             <MDBox display="flex" gap={0.5} flexWrap="wrap" mb={2}>
               <Chip
-                label="All"
+                label={t("map.filterAll")}
                 size="small"
                 onClick={() => setStatusFilter("all")}
                 sx={{
@@ -310,7 +318,7 @@ function LiveFleetMap(): JSX.Element {
                 }}
               />
               <Chip
-                label="Moving"
+                label={t("map.filterMoving")}
                 size="small"
                 onClick={() => setStatusFilter("moving")}
                 sx={{
@@ -320,7 +328,7 @@ function LiveFleetMap(): JSX.Element {
                 }}
               />
               <Chip
-                label="Stopped"
+                label={t("map.filterStopped")}
                 size="small"
                 onClick={() => setStatusFilter("stopped")}
                 sx={{
@@ -330,7 +338,7 @@ function LiveFleetMap(): JSX.Element {
                 }}
               />
               <Chip
-                label="Electric"
+                label={t("map.filterElectric")}
                 size="small"
                 onClick={() => setStatusFilter("ze")}
                 sx={{
@@ -357,7 +365,7 @@ function LiveFleetMap(): JSX.Element {
                   variant="caption"
                   sx={{ color: C.textFaint, display: "block", textAlign: "center", mt: 3 }}
                 >
-                  No vehicles match.
+                  {t("map.noMatch")}
                 </MDTypography>
               )}
               {filteredVehicles.map((v) => (
@@ -411,7 +419,9 @@ function LiveFleetMap(): JSX.Element {
                         </MDTypography>
                         <MDTypography variant="caption" fontWeight="bold" color="white">
                           {v.speed_kmh}{" "}
-                          <span style={{ color: C.textFaint, fontSize: "10px" }}>km/h</span>
+                          <span style={{ color: C.textFaint, fontSize: "10px" }}>
+                            {t("map.kmh")}
+                          </span>
                         </MDTypography>
                       </MDBox>
                       <MDBox display="flex" gap={0.5}>
@@ -558,7 +568,7 @@ function LiveFleetMap(): JSX.Element {
                       component="button"
                       type="button"
                       onClick={() => selectVehicle(null)}
-                      aria-label="Close detail panel"
+                      aria-label={t("map.closeDetail")}
                       sx={{
                         border: "none",
                         background: "transparent",
@@ -592,13 +602,13 @@ function LiveFleetMap(): JSX.Element {
                   </MDBox>
 
                   {[
-                    { label: "Speed", value: `${selectedVehicle.speed_kmh} km/h` },
+                    { label: t("map.speed"), value: t("map.speedValue", { value: selectedVehicle.speed_kmh }) },
                     {
-                      label: "Weight",
+                      label: t("map.weight"),
                       value: fmtWeight(selectedVehicle.vehicle_weight_class),
                     },
                     {
-                      label: "Position",
+                      label: t("map.position"),
                       value: `${selectedVehicle.latitude.toFixed(
                         4
                       )}, ${selectedVehicle.longitude.toFixed(4)}`,
@@ -651,7 +661,7 @@ function LiveFleetMap(): JSX.Element {
                       },
                     }}
                   >
-                    Center on map
+                    {t("map.centerOnMap")}
                   </MDBox>
                 </GlassPanel>
               )}
@@ -683,7 +693,6 @@ function LiveFleetMap(): JSX.Element {
                         display: "flex",
                         alignItems: "center",
                         gap: 1,
-                        textTransform: "capitalize",
                       }}
                     >
                       <span
@@ -694,7 +703,7 @@ function LiveFleetMap(): JSX.Element {
                           backgroundColor: STATUS_COLOR[s],
                         }}
                       />{" "}
-                      {s}
+                      {t(STATUS_LABEL[s])}
                     </MDTypography>
                   ))}
                 </MDBox>

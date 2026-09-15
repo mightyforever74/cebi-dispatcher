@@ -56,6 +56,8 @@ import {
 
 // Real API — GET/PUT /api/alerts (api.tulipfleet.com)
 import { useAlerts, useResolveAlert, Alert } from "hooks/useAlerts";
+import { useT } from "i18n";
+import LanguageSwitcher from "components/LanguageSwitcher";
 
 // Declaring prop types for DashboardNavbar
 interface Props {
@@ -99,6 +101,7 @@ function getAlertConfig(type: string | undefined) {
 }
 
 function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
+  const { t } = useT();
   const [navbarType, setNavbarType] = useState<
     "fixed" | "absolute" | "relative" | "static" | "sticky"
   >();
@@ -154,9 +157,11 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const unreadCount = activeAlerts.length;
 
   const buildMailto = (alert: Alert) => {
-    const alertType = alert.alert_type || alert.type || "Alert";
-    const subject = `${alertType}${alert.vehicle_plate ? " - " + alert.vehicle_plate : ""}`;
-    const body = alert.description || alert.title || "See dispatcher for details.";
+    const alertType = alert.alert_type || alert.type || t("navbar.alertFallback");
+    const subject = alert.vehicle_plate
+      ? t("navbar.alertWithPlate", { type: alertType, plate: alert.vehicle_plate })
+      : alertType;
+    const body = alert.description || alert.title || t("navbar.seeDispatcher");
     return `mailto:${notificationEmail}?subject=${encodeURIComponent(
       subject
     )}&body=${encodeURIComponent(body)}`;
@@ -182,10 +187,10 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
     >
       <MDBox px={2} pt={1.5} pb={1}>
         <MDTypography variant="button" fontWeight="bold" color="text">
-          🔥 Hot Alert Station
+          {t("navbar.hotAlert")}
         </MDTypography>
         <MDTypography variant="caption" color="text" display="block">
-          Click to resolve and open your mail program
+          {t("navbar.hotAlertHint")}
         </MDTypography>
       </MDBox>
       <Divider sx={{ my: 0.5 }} />
@@ -194,24 +199,25 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
         {loadingAlerts && (
           <MDBox px={2} py={2}>
             <MDTypography variant="caption" color="text">
-              Loading...
+              {t("navbar.loading")}
             </MDTypography>
           </MDBox>
         )}
         {!loadingAlerts && activeAlerts.length === 0 && (
           <MDBox px={2} py={2}>
             <MDTypography variant="caption" color="text">
-              No active alerts
+              {t("navbar.noAlerts")}
             </MDTypography>
           </MDBox>
         )}
         {activeAlerts.map((alert: Alert) => {
           const config = getAlertConfig(alert.alert_type || alert.type);
+          const fallbackType = alert.alert_type || alert.type || t("navbar.alertFallback");
           const label =
             alert.title ||
-            `${alert.alert_type || alert.type || "Alert"}${
-              alert.vehicle_plate ? " — " + alert.vehicle_plate : ""
-            }`;
+            (alert.vehicle_plate
+              ? t("navbar.alertLabelWithPlate", { type: fallbackType, plate: alert.vehicle_plate })
+              : fallbackType);
           return (
             <NotificationItem
               key={alert.id}
@@ -236,7 +242,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
             settings
           </Icon>
         }
-        title="Setup Your Mailbox"
+        title={t("navbar.setupMailbox")}
         component={Link}
         to="/system/settings"
         onClick={handleCloseMenu}
@@ -281,9 +287,10 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
         {isMini ? null : (
           <MDBox sx={(theme) => navbarRow(theme, { isMini })}>
             <MDBox pr={1}>
-              <MDInput label="Search here" />
+              <MDInput label={t("navbar.search")} />
             </MDBox>
             <MDBox color={light ? "white" : "inherit"}>
+              <LanguageSwitcher variant="navbar" />
               <Link to="/authentication/sign-in/basic">
                 <IconButton sx={navbarIconButton} size="small" disableRipple>
                   <Icon sx={iconsStyle}>account_circle</Icon>

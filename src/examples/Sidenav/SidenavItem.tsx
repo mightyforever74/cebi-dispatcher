@@ -67,7 +67,7 @@ function SidenavItem({ color, name, active, nested, children, open, ...rest }: P
             })
           }
         >
-          <ListItemText primary={name} />
+          <ListItemText primary={name} title={name} sx={{ minWidth: 0, overflow: "hidden" }} />
           {children && (
             <Icon
               component="i"

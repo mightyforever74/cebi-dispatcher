@@ -51,6 +51,7 @@ function collapseItem(theme: Theme, ownerState: any) {
     cursor: "pointer",
     userSelect: "none",
     whiteSpace: "nowrap",
+    overflow: "hidden",
     boxShadow: active && !whiteSidenav && !darkMode && !transparentSidenav ? md : "none",
     [breakpoints.up("xl")]: {
       transition: transitions.create(["box-shadow", "background-color"], {
@@ -107,6 +108,9 @@ function collapseText(theme: any, ownerState: any) {
 
   return {
     marginLeft: pxToRem(10),
+    flex: "1 1 auto",
+    minWidth: 0,
+    overflow: "hidden",
 
     [breakpoints.up("xl")]: {
       opacity: miniSidenav || (miniSidenav && transparentSidenav) ? 0 : 1,
@@ -121,7 +125,11 @@ function collapseText(theme: any, ownerState: any) {
     "& span": {
       fontWeight: active ? fontWeightRegular : fontWeightLight,
       fontSize: size.sm,
-      lineHeight: 0,
+      lineHeight: 1.5,
+      display: "block",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
     },
   };
 }

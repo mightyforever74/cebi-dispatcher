@@ -33,8 +33,10 @@ import {
   setFixedNavbar,
   setDarkMode,
 } from "context";
+import { useT } from "i18n";
 
 function Configurator(): JSX.Element {
+  const { t } = useT();
   const [controller, dispatch] = useMaterialUIController();
   const { openConfigurator, miniSidenav, fixedNavbar, transparentSidenav, whiteSidenav, darkMode } =
     controller;
@@ -118,9 +120,9 @@ function Configurator(): JSX.Element {
         px={3}
       >
         <MDBox>
-          <MDTypography variant="h5">TulipFleet Configurator</MDTypography>
+          <MDTypography variant="h5">{t("configurator.title")}</MDTypography>
           <MDTypography variant="body2" color="text">
-            Dashboard Options
+            {t("configurator.options")}
           </MDTypography>
         </MDBox>
 
@@ -143,9 +145,9 @@ function Configurator(): JSX.Element {
 
       <MDBox pt={0.5} pb={3} px={3}>
         <MDBox lineHeight={1}>
-          <MDTypography variant="h6">Sidenav Type</MDTypography>
+          <MDTypography variant="h6">{t("configurator.sidenavType")}</MDTypography>
           <MDTypography variant="button" color="text">
-            Choose between different sidenav types.
+            {t("configurator.sidenavTypeHint")}
           </MDTypography>
 
           <MDBox
@@ -167,7 +169,7 @@ function Configurator(): JSX.Element {
                   : sidenavTypeButtonsStyles
               }
             >
-              Dark
+              {t("configurator.dark")}
             </MDButton>
             <MDBox sx={{ mx: 1, width: "8rem", minWidth: "8rem" }}>
               <MDButton
@@ -182,7 +184,7 @@ function Configurator(): JSX.Element {
                     : sidenavTypeButtonsStyles
                 }
               >
-                Transparent
+                {t("configurator.transparent")}
               </MDButton>
             </MDBox>
             <MDButton
@@ -197,7 +199,7 @@ function Configurator(): JSX.Element {
                   : sidenavTypeButtonsStyles
               }
             >
-              White
+              {t("configurator.white")}
             </MDButton>
           </MDBox>
         </MDBox>
@@ -208,19 +210,19 @@ function Configurator(): JSX.Element {
           mt={3}
           lineHeight={1}
         >
-          <MDTypography variant="h6">Navbar Fixed</MDTypography>
+          <MDTypography variant="h6">{t("configurator.navbarFixed")}</MDTypography>
 
           <Switch checked={fixedNavbar} onChange={handleFixedNavbar} />
         </MDBox>
         <Divider />
         <MDBox display="flex" justifyContent="space-between" alignItems="center" lineHeight={1}>
-          <MDTypography variant="h6">Sidenav Mini</MDTypography>
+          <MDTypography variant="h6">{t("configurator.sidenavMini")}</MDTypography>
 
           <Switch checked={miniSidenav} onChange={handleMiniSidenav} />
         </MDBox>
         <Divider />
         <MDBox display="flex" justifyContent="space-between" alignItems="center" lineHeight={1}>
-          <MDTypography variant="h6">Light / Dark</MDTypography>
+          <MDTypography variant="h6">{t("configurator.lightDark")}</MDTypography>
 
           <Switch checked={darkMode} onChange={handleDarkMode} />
         </MDBox>

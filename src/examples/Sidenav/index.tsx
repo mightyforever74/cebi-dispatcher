@@ -251,6 +251,9 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
             mt={2}
             mb={1}
             ml={1}
+            pr={2}
+            title={title}
+            sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
           >
             {title}
           </MDTypography>

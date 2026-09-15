@@ -35,6 +35,7 @@ import MDTypography from "components/MDTypography";
 // Material Dashboard 2 PRO React TS examples components
 import DataTableBodyCell from "examples/Tables/DataTable/DataTableBodyCell";
 import DataTableHeadCell from "examples/Tables/DataTable/DataTableHeadCell";
+import { useT } from "i18n";
 
 // Declaring props types for DataTable
 interface Props {
@@ -67,6 +68,7 @@ function DataTable({
   isSorted,
   noEndBorder,
 }: Props): JSX.Element {
+  const { t } = useT();
   let defaultValue: any;
   let entries: any[];
 
@@ -186,14 +188,14 @@ function DataTable({
                 renderInput={(params) => <MDInput {...params} />}
               />
               <MDTypography variant="caption" color="secondary">
-                &nbsp;&nbsp;entries per page
+                &nbsp;&nbsp;{t("table.entriesPerPage")}
               </MDTypography>
             </MDBox>
           )}
           {canSearch && (
             <MDBox width="12rem" ml="auto">
               <MDInput
-                placeholder="Search..."
+                placeholder={t("table.search")}
                 value={search}
                 size="small"
                 fullWidth
@@ -255,7 +257,11 @@ function DataTable({
         {showTotalEntries && (
           <MDBox mb={{ xs: 3, sm: 0 }}>
             <MDTypography variant="button" color="secondary" fontWeight="regular">
-              Showing {entriesStart} to {entriesEnd} of {rows.length} entries
+              {t("table.showing", {
+                start: entriesStart,
+                end: entriesEnd,
+                total: rows.length,
+              })}
             </MDTypography>
           </MDBox>
         )}

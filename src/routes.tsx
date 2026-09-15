@@ -35,13 +35,15 @@ import CustomerDetailPage from "layouts/supervisor/customerDetail";
 
 // ── icons ──
 import Icon from "@mui/material/Icon";
+import type { TFunction } from "i18n";
 
-const routes = [
+export function createRoutes(t: TFunction) {
+  return [
   // ═══════════ GRUP 1 — OPERASYON MERKEZİ ═══════════
-  { type: "title", title: "Operations Center", key: "title-operations" },
+  { type: "title", title: t("nav.operationsCenter"), key: "title-operations" },
   {
     type: "collapse",
-    name: "Live Fleet Tracking",
+    name: t("nav.liveFleet"),
     key: "live-fleet-map",
     icon: <Icon fontSize="medium">map</Icon>,
     route: "/dashboards/live-fleet-map",
@@ -50,7 +52,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Tasks & Dispatch",
+    name: t("nav.tasksDispatch"),
     key: "task-list",
     icon: <Icon fontSize="medium">assignment</Icon>,
     route: "/dispatcher/tasks",
@@ -67,7 +69,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Exception Management (Alerts)",
+    name: t("nav.exceptions"),
     key: "exceptions",
     icon: (
       <Icon fontSize="medium" color="error">
@@ -80,10 +82,10 @@ const routes = [
   },
 
   // ═══════════ GRUP 2 — YAPAY ZEKÂ & OPTİMİZASYON (gated) ═══════════
-  { type: "title", title: "AI & Optimization", key: "title-optimization" },
+  { type: "title", title: t("nav.aiOptimization"), key: "title-optimization" },
   {
     type: "collapse",
-    name: "Smart Route Optimization 🔒 (Phase 1.1)",
+    name: t("nav.smartRoute"),
     key: "tour-planning",
     icon: (
       <Icon fontSize="medium" color="info">
@@ -96,7 +98,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Cost & Toll Inspection 🔒 (July 2026)",
+    name: t("nav.costToll"),
     key: "toll-analytics",
     icon: (
       <Icon fontSize="medium" color="warning">
@@ -109,10 +111,10 @@ const routes = [
   },
 
   // ═══════════ GRUP 3 — MATRİS & MASTER DATA ═══════════
-  { type: "title", title: "Matrix & Master Data", key: "title-masterdata" },
+  { type: "title", title: t("nav.matrixMaster"), key: "title-masterdata" },
   {
     type: "collapse",
-    name: "Driver Management",
+    name: t("nav.driverManagement"),
     key: "driver-list",
     icon: <Icon fontSize="medium">people</Icon>,
     route: "/dispatcher/drivers",
@@ -121,7 +123,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Vehicle & Equipment Management",
+    name: t("nav.vehicleEquipment"),
     key: "vehicle-list",
     icon: <Icon fontSize="medium">local_shipping</Icon>,
     route: "/dispatcher/vehicles",
@@ -131,10 +133,10 @@ const routes = [
 
   // ═══════════ GRUP 4 — SİSTEM ═══════════
   { type: "divider", key: "divider-system" },
-  { type: "title", title: "System", key: "title-system" },
+  { type: "title", title: t("nav.system"), key: "title-system" },
   {
     type: "collapse",
-    name: "Tenant & System Settings",
+    name: t("nav.tenantSettings"),
     key: "system-settings",
     icon: <Icon fontSize="medium">settings</Icon>,
     route: "/system/settings",
@@ -143,10 +145,10 @@ const routes = [
   },
 
   // ═══════════ GRUP 5 — YÖNETİM ═══════════
-  { type: "title", title: "Administration", key: "title-management" },
+  { type: "title", title: t("nav.administration"), key: "title-management" },
   {
     type: "collapse",
-    name: "Subscription",
+    name: t("nav.subscription"),
     key: "subscription",
     icon: <Icon fontSize="medium">card_membership</Icon>,
     route: "/subscription",
@@ -160,7 +162,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Supervisor",
+    name: t("nav.supervisor"),
     key: "supervisor",
     icon: <Icon fontSize="medium">admin_panel_settings</Icon>,
     route: "/admin/supervisor",
@@ -186,5 +188,4 @@ const routes = [
     component: <SignInBasic />,
   },
 ];
-
-export default routes;
+}

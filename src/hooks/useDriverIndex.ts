@@ -17,6 +17,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { ENTERPRISE_API_URL } from "config/api";
+import { useT } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 import { useVehicleStore } from "store/useVehicleStore";
 
@@ -37,6 +38,7 @@ export interface DriverIndexEntry {
 }
 
 export function useDriverIndex(): DriverIndexEntry[] {
+  const { t } = useT();
   const token = useAuthStore((s) => s.token);
   const vehicles = useVehicleStore((s) => s.vehicles);
   const [rows, setRows] = useState<ApiDriverRow[]>([]);
@@ -70,7 +72,7 @@ export function useDriverIndex(): DriverIndexEntry[] {
 
     return rows.map((r) => {
       const name =
-        [r.first_name, r.last_name].filter(Boolean).join(" ").trim() || "İsimsiz sürücü";
+        [r.first_name, r.last_name].filter(Boolean).join(" ").trim() || t("map.unnamedDriver");
       const match = r.assigned_vehicle_id ? byVehicleUuid[r.assigned_vehicle_id] : undefined;
       return {
         driverId: r.id,
@@ -79,5 +81,5 @@ export function useDriverIndex(): DriverIndexEntry[] {
         plate: match ? match.plate : null,
       };
     });
-  }, [rows, vehicles]);
+  }, [rows, vehicles, t]);
 }

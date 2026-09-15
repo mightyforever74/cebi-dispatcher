@@ -8,6 +8,7 @@ import Link from "@mui/material/Link";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import { useT } from "i18n";
 import typography from "assets/theme/base/typography";
 
 interface Props {
@@ -23,11 +24,19 @@ interface Props {
 }
 
 function Footer({ company, links }: Props): JSX.Element {
+  const { t } = useT();
   const { href, name } = company;
   const { size } = typography;
+  const resolvedLinks =
+    links ??
+    [
+      { href: "https://tulipfleet.com", name: t("footer.site") },
+      { href: "/subscription", name: t("footer.subscription") },
+      { href: "mailto:info@tulipfleet.com", name: t("footer.contact") },
+    ];
 
   const renderLinks = () =>
-    links.map((link) => (
+    resolvedLinks.map((link) => (
       <MDBox key={link.name} component="li" px={2} lineHeight={1}>
         <Link
           href={link.href}
@@ -90,11 +99,6 @@ function Footer({ company, links }: Props): JSX.Element {
 
 Footer.defaultProps = {
   company: { href: "https://tulipfleet.com", name: "TulipFleet" },
-  links: [
-    { href: "https://tulipfleet.com", name: "Site" },
-    { href: "/subscription", name: "Subscription" },
-    { href: "mailto:info@tulipfleet.com", name: "Contact" },
-  ],
 };
 
 export default Footer;

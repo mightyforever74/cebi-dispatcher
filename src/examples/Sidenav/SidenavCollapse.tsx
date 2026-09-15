@@ -81,6 +81,7 @@ function SidenavCollapse({
 
           <ListItemText
             primary={name}
+            title={name}
             sx={(theme) =>
               collapseText(theme, {
                 miniSidenav,

@@ -70,11 +70,11 @@ export function postDecisionLog(token: string | null, payload: DecisionLogPayloa
     .then((res) => {
       if (!res.ok) {
         // eslint-disable-next-line no-console
-        console.warn(`[decision-log] best-effort kayıt başarısız: HTTP ${res.status}`);
+        console.warn(`[decision-log] best-effort persist failed: HTTP ${res.status}`);
       }
     })
     .catch((err) => {
       // eslint-disable-next-line no-console
-      console.warn("[decision-log] best-effort kayıt başarısız:", err);
+      console.warn("[decision-log] best-effort persist failed:", err);
     });
 }

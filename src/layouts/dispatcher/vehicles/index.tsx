@@ -1,92 +1,68 @@
 import { Chip } from "@mui/material";
 import Grid from "@mui/material/Grid";
+import DataState, { dataStateOf, isDataStale } from "components/DataState";
+import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import FuelGaugeMini from "components/FuelGaugeMini";
 import MDBadge from "components/MDBadge";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import StatusChip from "components/StatusChip";
 import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatisticsCard";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import DataTable from "examples/Tables/DataTable";
-import useDrivers, { Driver } from "hooks/useDrivers";
-import useVehicles, { Vehicle } from "hooks/useVehicles";
+import useDrivers, { type Driver } from "hooks/useDrivers";
+import useVehicles, { type Vehicle } from "hooks/useVehicles";
+import { formatDate, formatNumber, useT } from "i18n";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useT } from "i18n";
 import { toNum } from "utils/toNum";
 
 const EMPTY_VEHICLES: Vehicle[] = [];
 const EMPTY_DRIVERS: Driver[] = [];
 const VEHICLES_PAGE_SIZE = { defaultValue: 10, entries: [5, 10, 25, 50] };
 
+function emissionClassColor(emissionClass?: string): "success" | "info" | "warning" | "error" {
+  if (!emissionClass) return "info";
+  if (emissionClass === "zero_emission") return "success";
+  if (emissionClass.startsWith("euro_6")) return "success";
+  if (emissionClass.startsWith("euro_5")) return "info";
+  return "warning";
+}
+
 function VehiclesLayout(): JSX.Element {
-  const { t, locale } = useT();
-  const { data: vehiclesData, isLoading, error } = useVehicles();
+  const { t, lang } = useT();
+  const { data: vehiclesData, isLoading, isError, error, dataUpdatedAt, refetch } = useVehicles();
   const { data: driversData } = useDrivers();
   const vehicles = vehiclesData ?? EMPTY_VEHICLES;
   const drivers = driversData ?? EMPTY_DRIVERS;
   const navigate = useNavigate();
 
-  // assigned_vehicle_id -> driver_name ters haritası
   const driverNameByVehicleId = useMemo(() => {
     const m = new Map<string, string>();
-    drivers.forEach((d: any) => {
+    drivers.forEach((d: Driver) => {
       if (!d?.assigned_vehicle_id) return;
       const name = `${d.first_name ?? ""} ${d.last_name ?? ""}`.trim() || d.email || "—";
-      if (!m.has(d.assigned_vehicle_id)) m.set(d.assigned_vehicle_id, name); // ilk eşleşmeyi tut
+      if (!m.has(d.assigned_vehicle_id)) m.set(d.assigned_vehicle_id, name);
     });
     return m;
   }, [drivers]);
-  // Helper: map emission_class to compliance badge color
-  const emissionClassColor = (emissionClass?: string): "success" | "info" | "warning" | "error" => {
-    if (!emissionClass) return "info";
-    if (emissionClass === "zero_emission") return "success";
-    if (emissionClass.startsWith("euro_6")) return "success";
-    if (emissionClass.startsWith("euro_5")) return "info";
-    return "warning";
-  };
-
-  // Helper: map status to badge color
-  const statusColor = (status?: string): "success" | "info" | "warning" | "error" => {
-    switch (status) {
-      case "available":
-        return "success";
-      case "in_use":
-        return "info";
-      case "maintenance":
-        return "warning";
-      case "retired":
-        return "error";
-      default:
-        return "info";
-    }
-  };
-
-  // Helper: format date
-  const formatDate = (dateStr?: string): string => {
-    if (!dateStr) return "—";
-    try {
-      return new Date(dateStr).toLocaleDateString(locale);
-    } catch {
-      return "—";
-    }
-  };
 
   const table = useMemo(() => {
-    const columns = [
-      { Header: t("vehicles.colPlateModel"), accessor: "vehicle_info" },
-      { Header: t("vehicles.colCategory"), accessor: "category_badge" },
-      { Header: t("vehicles.colOwnership"), accessor: "ownership_badge" },
-      { Header: t("vehicles.colFuel"), accessor: "fuel_type_badge" },
-      { Header: t("vehicles.colFuelLevel"), accessor: "fuel_level_gauge" },
-      { Header: t("vehicles.colTotalKm"), accessor: "total_km_display" },
-      { Header: t("vehicles.colMaintenance"), accessor: "maintenance_info" },
-      { Header: t("vehicles.colEmission"), accessor: "emission_badge" },
-      { Header: t("vehicles.colStatus"), accessor: "status_badge" },
-      { Header: t("vehicles.colDriver"), accessor: "assigned_driver_name" },
+    const columns: DataColumn[] = [
+      { Header: t("vehicles.colPlateModel"), accessor: "vehicle_info", minWidth: 140, truncate: true, primary: true },
+      { Header: t("vehicles.colCategory"), accessor: "category_badge", minWidth: 88, maxWidth: 120 },
+      { Header: t("vehicles.colOwnership"), accessor: "ownership_badge", minWidth: 110, maxWidth: 160, truncate: true },
+      { Header: t("vehicles.colFuel"), accessor: "fuel_type_badge", minWidth: 80, maxWidth: 110 },
+      { Header: t("vehicles.colFuelLevel"), accessor: "fuel_level_gauge", minWidth: 72, maxWidth: 88 },
+      { Header: t("vehicles.colTotalKm"), accessor: "total_km_display", minWidth: 80, maxWidth: 100, numeric: true, primary: true },
+      { Header: t("vehicles.colMaintenance"), accessor: "maintenance_info", minWidth: 100, maxWidth: 140 },
+      { Header: t("vehicles.colEmission"), accessor: "emission_badge", minWidth: 88, maxWidth: 120 },
+      { Header: t("vehicles.colStatus"), accessor: "status_badge", minWidth: 96, maxWidth: 120, primary: true },
+      { Header: t("vehicles.colDriver"), accessor: "assigned_driver_name", minWidth: 110, maxWidth: 160, truncate: true },
     ];
 
-    const rows = vehicles.map((v: any) => {
+    const rows: DataRow[] = vehicles.map((v: Vehicle) => {
+      const plate = v.plate_no || "—";
       const vehicleInfo = (
         <MDBox
           display="flex"
@@ -97,16 +73,18 @@ function VehiclesLayout(): JSX.Element {
             navigate(`/dashboards/live-fleet-map?focusPlate=${encodeURIComponent(v.plate_no)}`)
           }
           sx={{ cursor: v.plate_no ? "pointer" : "default" }}
+          title={plate}
         >
           <MDBox display="flex" flexDirection="column">
             <MDTypography
               variant="body2"
               fontWeight="medium"
+              noWrap
               sx={{ color: "info.main", "&:hover": { textDecoration: "underline" } }}
             >
-              {v.plate_no || "—"}
+              {plate}
             </MDTypography>
-            <MDTypography variant="caption" color="dark">
+            <MDTypography variant="caption" color="dark" noWrap>
               {[v.brand, v.model].filter(Boolean).join(" ") || "—"}
             </MDTypography>
           </MDBox>
@@ -116,7 +94,7 @@ function VehiclesLayout(): JSX.Element {
       const categoryBadge = v.vehicle_category ? (
         <Chip label={v.vehicle_category} size="small" variant="outlined" />
       ) : (
-        <MDTypography variant="caption">—</MDTypography>
+        "—"
       );
 
       const ownershipBadge =
@@ -141,10 +119,9 @@ function VehiclesLayout(): JSX.Element {
       const fuelTypeBadge = v.fuel_type ? (
         <Chip label={v.fuel_type} size="small" variant="outlined" />
       ) : (
-        <MDTypography variant="caption">—</MDTypography>
+        "—"
       );
 
-      // Yakıt seviyesi göstergesi: current_fuel_level / fuel_capacity -> %
       const fuelLevel = toNum(v.current_fuel_level);
       const fuelCap = toNum(v.fuel_capacity);
       const fuelLevelGauge =
@@ -153,29 +130,26 @@ function VehiclesLayout(): JSX.Element {
             <FuelGaugeMini percent={(fuelLevel / fuelCap) * 100} />
           </MDBox>
         ) : (
-          <MDTypography variant="caption">—</MDTypography>
+          "—"
         );
 
       const totalKm = toNum(v.total_km);
       const totalKmDisplay =
         totalKm != null ? (
-          <MDTypography variant="body2" sx={{ textAlign: "right" }}>
-            {totalKm.toLocaleString(locale)}
+          <MDTypography variant="body2" sx={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+            {formatNumber(totalKm, lang)}
           </MDTypography>
         ) : (
-          <MDTypography variant="caption">—</MDTypography>
+          "—"
         );
 
+      const nextKm = toNum(v.next_maintenance_km);
       const maintenanceInfo = (
         <MDBox display="flex" flexDirection="column" gap={0.5}>
-          <MDTypography variant="caption">
-            {v.last_maintenance_date ? formatDate(v.last_maintenance_date) : "—"}
-          </MDTypography>
-          {toNum(v.next_maintenance_km) != null && (
+          <MDTypography variant="caption">{formatDate(v.last_maintenance_date, lang)}</MDTypography>
+          {nextKm != null && (
             <MDTypography variant="caption" color="dark">
-              {t("common.distanceKm", {
-                value: toNum(v.next_maintenance_km)!.toLocaleString(locale),
-              })}
+              {t("common.distanceKm", { value: formatNumber(nextKm, lang) })}
             </MDTypography>
           )}
         </MDBox>
@@ -189,25 +163,10 @@ function VehiclesLayout(): JSX.Element {
           size="sm"
         />
       ) : (
-        <MDTypography variant="caption">—</MDTypography>
+        "—"
       );
 
-      const statusBadge = (
-        <MDBadge
-          badgeContent={v.status || "unknown"}
-          color={statusColor(v.status)}
-          variant="gradient"
-          size="sm"
-        />
-      );
-
-      // Assigned driver lookup (denormalized from drivers list would require extra endpoint; for now show ID)
       const driverName = driverNameByVehicleId.get(v.id) ?? null;
-      const assignedDriverName = driverName ? (
-        <MDTypography variant="body2">{driverName}</MDTypography>
-      ) : (
-        <MDTypography variant="caption">—</MDTypography>
-      );
 
       return {
         vehicle_info: vehicleInfo,
@@ -218,14 +177,21 @@ function VehiclesLayout(): JSX.Element {
         total_km_display: totalKmDisplay,
         maintenance_info: maintenanceInfo,
         emission_badge: emissionBadge,
-        status_badge: statusBadge,
-        assigned_driver_name: assignedDriverName,
+        status_badge: <StatusChip kind="vehicle" value={v.status} />,
+        assigned_driver_name: driverName ?? "—",
         id: v.id,
+        _ariaLabel: plate,
       };
     });
 
     return { columns, rows };
-  }, [vehicles, driverNameByVehicleId, navigate, t, locale]);
+  }, [vehicles, driverNameByVehicleId, navigate, t, lang]);
+
+  const status = dataStateOf({
+    isLoading,
+    isError,
+    isEmpty: !isLoading && !isError && vehicles.length === 0,
+  });
 
   return (
     <DashboardLayout>
@@ -263,23 +229,25 @@ function VehiclesLayout(): JSX.Element {
             />
           </Grid>
         </Grid>
-        <DataTable
-          table={table}
-          canSearch
-          entriesPerPage={VEHICLES_PAGE_SIZE}
-        />
-
-        {isLoading && (
-          <MDTypography variant="caption" color="dark">
-            {t("vehicles.loading")}
-          </MDTypography>
-        )}
-
-        {error && (
-          <MDTypography variant="caption" color="error">
-            {t("common.errorWithMessage", { message: error.message })}
-          </MDTypography>
-        )}
+        <DataState
+          status={status}
+          stale={isDataStale(dataUpdatedAt)}
+          staleWhen={dataUpdatedAt}
+          onRetry={() => {
+            void refetch();
+          }}
+          emptyMessage={t("dataState.emptyVehicles")}
+          emptyIcon="local_shipping"
+          errorMessage={error ? t("common.errorWithMessage", { message: error.message }) : undefined}
+        >
+          <DataTable
+            table={table}
+            canSearch
+            loading={isLoading}
+            ariaLabel={t("vehicles.title")}
+            entriesPerPage={VEHICLES_PAGE_SIZE}
+          />
+        </DataState>
       </MDBox>
     </DashboardLayout>
   );

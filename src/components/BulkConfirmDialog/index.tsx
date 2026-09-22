@@ -3,12 +3,11 @@
  *
  * Fan-out sözleşmesi DEĞİŞMEDİ: N>1 seçimde onay kapısı; onaylanırsa her
  * araca aynı görevin 1 kopyası (draft[i] → araç[i]); N=1 akışı buraya uğramaz.
- * Yenilik: gövde ortak ConfirmDialogShell'den (accent severity), plakalar
- * taranabilir pill rozetler halinde.
  */
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import ConfirmDialogShell, { SHELL_C } from "components/ConfirmDialogShell";
+import { useT } from "i18n";
 
 interface BulkVehicle {
   id: string;
@@ -17,12 +16,9 @@ interface BulkVehicle {
 
 interface Props {
   open: boolean;
-  /** Seçili araçlar (plaka etiketiyle) — fan-out hedef listesi. */
   vehicles: BulkVehicle[];
-  /** Submit isteği uçarken buton kilidi. */
   submitting?: boolean;
   onCancel: () => void;
-  /** Onay — çağıran doSubmit() ile fan-out'u fırlatır. */
   onConfirm: () => void;
 }
 
@@ -33,20 +29,21 @@ function BulkConfirmDialog({
   onCancel,
   onConfirm,
 }: Props): JSX.Element {
+  const { t } = useT();
+  const count = vehicles.length;
   return (
     <ConfirmDialogShell
       open={open}
       severity="accent"
       icon="library_add"
-      title="Toplu Görev Oluşturma"
-      subtitle={`${vehicles.length} araç seçili — toplu oluşturma onayı`}
+      title={t("bulk.title")}
+      subtitle={t("bulk.subtitle", { count })}
       submitting={submitting}
-      confirmLabel={`${vehicles.length} Araca Oluştur`}
-      submittingLabel="Gönderiliyor..."
+      confirmLabel={t("bulk.confirm", { count })}
+      submittingLabel={t("bulk.submitting")}
       onCancel={onCancel}
       onConfirm={onConfirm}
     >
-      {/* Sözleşme açıklaması */}
       <MDBox
         sx={{
           bgcolor: SHELL_C.accentBg,
@@ -57,15 +54,13 @@ function BulkConfirmDialog({
         }}
       >
         <MDTypography variant="button" color="white" sx={{ display: "block" }}>
-          Seçili <b>{vehicles.length} araca</b> aynı görevin{" "}
-          <b>1&apos;er kopyası</b> oluşturulacak.
+          {t("bulk.body", { count })}
         </MDTypography>
         <MDTypography variant="caption" sx={{ color: SHELL_C.textMuted, display: "block", mt: 0.5 }}>
-          Atamalar onay ekranında (Kanban) sürüklenerek değiştirilebilir.
+          {t("bulk.bodyHint")}
         </MDTypography>
       </MDBox>
 
-      {/* Plaka rozetleri — taranabilir pill formu */}
       <MDBox
         display="flex"
         flexWrap="wrap"

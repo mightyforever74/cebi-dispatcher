@@ -173,6 +173,28 @@ export function formatNumber(
   return new Intl.NumberFormat(LOCALE_BY_LANG[lang], options).format(n);
 }
 
+/** Duration for KPI chips (`1 h 12 min` / `12 min`). */
+export function formatDurationMinutes(totalMin: number, lang: Lang = currentLang): string {
+  const safe = Math.max(0, Math.round(totalMin));
+  const h = Math.floor(safe / 60);
+  const m = safe % 60;
+  if (h > 0) return translate(lang, "optimize.hoursMinutes", { h, m });
+  return translate(lang, "optimize.minutesOnly", { m });
+}
+
+/**
+ * Parse a user-typed decimal. NL/TR treat `,` as the decimal mark;
+ * EN treats `.` as decimal and strips grouping commas.
+ */
+export function parseDecimal(raw: string, lang: Lang = currentLang): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const normalized =
+    lang === "en" ? trimmed.replace(/,/g, "") : trimmed.replace(/\./g, "").replace(",", ".");
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
 /** Empty-cell renderer — never print `null` / `undefined`. */
 export function emptyDash(lang: Lang = currentLang): string {
   return translate(lang, "common.emptyDash");

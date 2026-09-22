@@ -143,6 +143,7 @@ import {
 } from "types/metadata";
 
 // FEAT-010:FN-18/FN-20 - karar logu (ML-analiz veri temeli; best-effort, approve'u bloke etmez)
+import { formatDateTime } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 import { postDecisionLog } from "services/dispatch/decisionLog";
 import OverrideReasonDialog from "components/OverrideReasonDialog";
@@ -283,15 +284,7 @@ function ConstraintsSummary({
     DIRECTION_OPTIONS.find((o) => o.value === ext.direction)?.label ?? ext.direction;
   const locLabel =
     LOCATION_TYPE_OPTIONS.find((o) => o.value === ext.location_type)?.label ?? ext.location_type;
-  const fmt = (iso: string | null) =>
-    iso
-      ? new Date(iso).toLocaleString("tr-TR", {
-          day: "2-digit",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : null;
+  const fmt = (iso: string | null) => (iso ? formatDateTime(iso) : null);
   const wStart = fmt(ext.time_window_start);
   const wEnd = fmt(ext.time_window_end);
 
@@ -1022,10 +1015,7 @@ function OptimizeTask(): JSX.Element {
     minuteIncrement: 5,
   };
 
-  const fmtChip = (d: Date | null) =>
-    d
-      ? d.toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
-      : null;
+  const fmtChip = (d: Date | null) => (d ? formatDateTime(d) : null);
 
   return (
     <DashboardLayout>

@@ -23,13 +23,13 @@ import { StrictTaskConstraints } from "types/metadata";
 
 // §6.4 / UNCERTAINTIES #20 ONAYLI enum — opsiyonel; boş override da sinyaldir.
 export const OVERRIDE_REASON_OPTIONS = [
-  { value: "driver_familiarity", label: "Sürücü bölgeyi/müşteriyi tanıyor" },
-  { value: "customer_preference", label: "Müşteri tercihi" },
-  { value: "vehicle_condition", label: "Araç durumu (bakım/donanım)" },
-  { value: "workload_balance", label: "İş yükü dengeleme" },
-  { value: "scorer_data_stale", label: "Skor verisi bayat/eksik" },
-  { value: "other", label: "Diğer" },
-] as const;
+  { value: "driver_familiarity" as const },
+  { value: "customer_preference" as const },
+  { value: "vehicle_condition" as const },
+  { value: "workload_balance" as const },
+  { value: "scorer_data_stale" as const },
+  { value: "other" as const },
+];
 
 export interface ScorerSnapshotEntry {
   vehicle_id: string;

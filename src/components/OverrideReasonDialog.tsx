@@ -4,12 +4,6 @@
  * Sözleşme DEĞİŞMEDİ (spec v1.8, #20): scorer #1 dışında araç seçilince
  * approve öncesi TEK soru; sebep OPSİYONEL — boş override da sinyaldir,
  * dialog approve'u engelleyemez. onConfirm(reason: string | null) aynı.
- * Yenilikler (Cem onaylı regression fix + K4):
- *  - Gövde ortak ConfirmDialogShell (accent — hata değil, bilinçli tercih).
- *  - Label/çizgi çakışması: Conflict modalında kanıtlı dark TextField reçetesi.
- *  - Çiğ yeşil buton → accent gradyan "Onayla ve Devam Et".
- *  - K4: opsiyonel chosenPlate/recommendedPlate chip'leri — sayfa kablolayana
- *    kadar görünmez (geriye dönük uyumlu, props'suz çağrı bugünkü gibi çalışır).
  */
 import { useState } from "react";
 
@@ -19,13 +13,12 @@ import TextField from "@mui/material/TextField";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import ConfirmDialogShell, { DetailRow, SHELL_C } from "components/ConfirmDialogShell";
+import { useT, type TranslationKey } from "i18n";
 import { OVERRIDE_REASON_OPTIONS } from "services/dispatch/decisionLog";
 
 interface Props {
   open: boolean;
-  /** K4 (opsiyonel): dispatcher'ın seçtiği araç plakası — chip olarak gösterilir. */
   chosenPlate?: string;
-  /** K4 (opsiyonel): scorer #1 önerisinin plakası — karşılaştırma chip'i. */
   recommendedPlate?: string;
   onCancel: () => void;
   onConfirm: (reason: string | null) => void;
@@ -59,6 +52,7 @@ export default function OverrideReasonDialog({
   onCancel,
   onConfirm,
 }: Props) {
+  const { t } = useT();
   const [reason, setReason] = useState<string>("");
   const handleConfirm = () => {
     onConfirm(reason === "" ? null : reason);
@@ -73,18 +67,16 @@ export default function OverrideReasonDialog({
       open={open}
       severity="accent"
       icon="swap_horiz"
-      title="Öneri dışında araç seçtiniz"
-      subtitle="Skor önerisinden farklı bir tercih yaptınız."
-      confirmLabel="Onayla ve Devam Et"
+      title={t("override.title")}
+      subtitle={t("override.subtitle")}
+      confirmLabel={t("override.confirm")}
       onCancel={handleCancel}
       onConfirm={handleConfirm}
     >
       <MDTypography variant="caption" sx={{ color: SHELL_C.textMuted, display: "block", mb: 1.5 }}>
-        Skor sıralamasının #1 önerisi yerine farklı bir araç atadınız. Sebebini
-        belirtmek ister misiniz? (İsteğe bağlı — boş bırakabilirsiniz.)
+        {t("override.body")}
       </MDTypography>
 
-      {/* K4: seçim vs öneri karşılaştırma kartı (props geldiyse) */}
       {(chosenPlate || recommendedPlate) && (
         <MDBox
           sx={{
@@ -96,11 +88,11 @@ export default function OverrideReasonDialog({
           }}
         >
           {chosenPlate && (
-            <DetailRow label="Seçilen Araç" value={<Pill text={chosenPlate} accent />} />
+            <DetailRow label={t("override.chosen")} value={<Pill text={chosenPlate} accent />} />
           )}
           {recommendedPlate && (
             <DetailRow
-              label="Skor Önerisi (#1)"
+              label={t("override.recommended")}
               value={<Pill text={recommendedPlate} accent={false} />}
             />
           )}
@@ -111,7 +103,7 @@ export default function OverrideReasonDialog({
         select
         fullWidth
         size="small"
-        label="Override sebebi (opsiyonel)"
+        label={t("override.reasonLabel")}
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         SelectProps={{
@@ -141,15 +133,18 @@ export default function OverrideReasonDialog({
           "& .MuiSvgIcon-root": { color: SHELL_C.textMuted },
         }}
       >
-        <MenuItem value="">— Belirtmek istemiyorum —</MenuItem>
-        {OVERRIDE_REASON_OPTIONS.map((o) => (
-          <MenuItem key={o.value} value={o.value}>
-            {o.label}
-          </MenuItem>
-        ))}
+        <MenuItem value="">{t("override.none")}</MenuItem>
+        {OVERRIDE_REASON_OPTIONS.map((o) => {
+          const key = `overrideReason.${o.value}` as TranslationKey;
+          return (
+            <MenuItem key={o.value} value={o.value}>
+              {t(key)}
+            </MenuItem>
+          );
+        })}
       </TextField>
       <MDTypography variant="caption" sx={{ color: SHELL_C.textFaint, display: "block", mt: 0.5 }}>
-        ℹ️ Tercih ve sebep karar kaydına (Audit Log) işlenir.
+        {t("override.auditNote")}
       </MDTypography>
     </ConfirmDialogShell>
   );

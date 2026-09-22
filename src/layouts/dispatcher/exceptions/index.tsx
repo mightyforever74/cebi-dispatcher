@@ -22,24 +22,28 @@ import { useNotifications } from "components/Notifications";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { ExceptionEvent, ResolveAction } from "hooks/useExceptions";
-import { formatDateTime, useT, type TranslationKey } from "i18n";
+import { formatDateTime, useT, type TFunction, type TranslationKey } from "i18n";
 
-const RESOLVE_OPTIONS: { value: ResolveAction; label: string }[] = [
-  { value: "manual_replan", label: "Yeniden planlandı (manuel)" },
-  { value: "manual_reassign", label: "Yeniden atandı (manuel)" },
-  { value: "dismiss", label: "Kapat (aksiyon gerekmiyor)" },
-];
+const RESOLVE_OPTIONS: ResolveAction[] = ["manual_replan", "manual_reassign", "dismiss"];
 
-function payloadSummary(e: ExceptionEvent): string {
+function payloadSummary(e: ExceptionEvent, translate: TFunction): string {
   const p = e.detection_payload || {};
   const parts: string[] = [];
   if (p.task_no) parts.push(String(p.task_no));
   if (p.vehicle_plate) parts.push(String(p.vehicle_plate));
-  if (p.eta_deviation_minutes) parts.push(`sapma ~${p.eta_deviation_minutes} dk`);
-  if (p.remaining_km) parts.push(`kalan ${p.remaining_km} km`);
-  if (p.distance_from_pickup_m) parts.push(`pickup'a ${p.distance_from_pickup_m} m`);
-  if (p.silence_minutes_after_debounce) parts.push(`${p.silence_minutes_after_debounce} dk sessiz`);
-  if (p.city) parts.push(`bölge: ${p.city}`);
+  if (p.eta_deviation_minutes) {
+    parts.push(translate("exceptions.payloadDeviation", { n: Number(p.eta_deviation_minutes) }));
+  }
+  if (p.remaining_km) {
+    parts.push(translate("exceptions.payloadRemaining", { n: Number(p.remaining_km) }));
+  }
+  if (p.distance_from_pickup_m) {
+    parts.push(translate("exceptions.payloadPickup", { n: Number(p.distance_from_pickup_m) }));
+  }
+  if (p.silence_minutes_after_debounce) {
+    parts.push(translate("exceptions.payloadSilent", { n: Number(p.silence_minutes_after_debounce) }));
+  }
+  if (p.city) parts.push(translate("exceptions.payloadRegion", { city: String(p.city) }));
   return parts.join(" · ") || "—";
 }
 
@@ -118,7 +122,7 @@ export default function Exceptions(): JSX.Element {
     ];
 
     const rows: DataRow[] = exceptions.map((e) => {
-      const summary = payloadSummary(e);
+      const summary = payloadSummary(e, t);
       return {
         type: (
           <MDBox display="flex" alignItems="center" gap={0.75} title={exceptionTypeLabel(e.exception_type, t)}>
@@ -225,23 +229,23 @@ export default function Exceptions(): JSX.Element {
       </MDBox>
 
       <Dialog open={dialogFor !== null} onClose={() => setDialogFor(null)} fullWidth maxWidth="xs">
-        <DialogTitle>İstisnayı çöz</DialogTitle>
+        <DialogTitle>{t("exceptions.resolveTitle")}</DialogTitle>
         <DialogContent>
           <MDTypography variant="body2" mb={2}>
             {dialogFor ? exceptionTypeLabel(dialogFor.exception_type, t) : ""} —{" "}
-            {dialogFor ? payloadSummary(dialogFor) : ""}
+            {dialogFor ? payloadSummary(dialogFor, t) : ""}
           </MDTypography>
           <TextField
             select
             fullWidth
-            label="Çözüm aksiyonu"
+            label={t("exceptions.actionLabel")}
             value={action}
             onChange={(ev) => setAction(ev.target.value as ResolveAction)}
             sx={{ mb: 2 }}
           >
-            {RESOLVE_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
+            {RESOLVE_OPTIONS.map((value) => (
+              <MenuItem key={value} value={value}>
+                {t(`exceptions.action.${value}` as TranslationKey)}
               </MenuItem>
             ))}
           </TextField>
@@ -249,17 +253,17 @@ export default function Exceptions(): JSX.Element {
             fullWidth
             multiline
             minRows={2}
-            label="Yorum (opsiyonel)"
+            label={t("exceptions.commentLabel")}
             value={comment}
             onChange={(ev) => setComment(ev.target.value)}
           />
         </DialogContent>
         <DialogActions>
           <MDButton variant="text" color="secondary" onClick={() => setDialogFor(null)}>
-            Vazgeç
+            {t("dialog.cancel")}
           </MDButton>
           <MDButton variant="gradient" color="success" onClick={() => void doResolve()} disabled={busy}>
-            {busy ? "Kaydediliyor…" : "Çöz ve Kapat"}
+            {busy ? t("exceptions.saving") : t("exceptions.resolveClose")}
           </MDButton>
         </DialogActions>
       </Dialog>

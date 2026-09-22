@@ -151,7 +151,7 @@ function VehiclesLayout(): JSX.Element {
 
       const emissionBadge = v.emission_class ? (
         <MDBadge
-          badgeContent={v.emission_class}
+          badgeContent={enumLabel("vehicle.emission", v.emission_class, t)}
           color={emissionClassColor(v.emission_class)}
           variant="gradient"
           size="sm"

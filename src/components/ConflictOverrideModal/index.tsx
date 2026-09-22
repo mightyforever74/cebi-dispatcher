@@ -4,13 +4,6 @@
  *
  * Davranış sözleşmesi DEĞİŞMEDİ: zorunlu ≥5 karakter gerekçe, Vazgeç /
  * Gerekçeli Onay yolları, çağıran approve'u override:true ile yeniden fırlatır.
- * Yenilikler:
- *  - HTTP 409 kullanıcıya gösterilmez — altbaşlık operasyonel dilde.
- *  - Çakışma detayı Structured KV kartı: kopyalanabilir görev rozeti + süre.
- *  - K1 (Cem onaylı): overlap < 15 dk → turuncu (warning), ≥ 15 dk → kırmızı
- *    (danger); modal çerçevesi, halka ve rozet birlikte döner.
- *  - K2: onay butonu "Riski Onayla ve Görevi Ata".
- *  - Gövde ortak ConfirmDialogShell'den gelir (tek standart, tüm ikaz kutuları).
  */
 import { useEffect, useState } from "react";
 
@@ -24,11 +17,13 @@ import ConfirmDialogShell, {
   SHELL_C,
   ShellSeverity,
 } from "components/ConfirmDialogShell";
+import { useT } from "i18n";
 
 import { ConflictMetadata } from "hooks/useTaskOptimization";
 
 /** K1 eşiği: bu dakikanın altı "dikkat" (turuncu), üstü "kritik" (kırmızı). */
 const SEVERITY_THRESHOLD_MIN = 15;
+const REASON_MIN = 5;
 
 interface Props {
   open: boolean;
@@ -48,16 +43,15 @@ function ConflictOverrideModal({
   onCancel,
   onConfirm,
 }: Props): JSX.Element {
+  const { t } = useT();
   const [reason, setReason] = useState("");
 
-  // Her açılışta temiz gerekçe kutusu
   useEffect(() => {
     if (open) setReason("");
   }, [open]);
 
-  const reasonOk = reason.trim().length >= 5;
+  const reasonOk = reason.trim().length >= REASON_MIN;
 
-  // K1: metadata yoksa temkinli davran — kritik (danger) varsay.
   const severity: ShellSeverity =
     conflict && conflict.overlap_minutes < SEVERITY_THRESHOLD_MIN ? "warning" : "danger";
 
@@ -66,16 +60,15 @@ function ConflictOverrideModal({
       open={open}
       severity={severity}
       icon="warning_amber"
-      title="Zaman Penceresi Çakışması"
-      subtitle="Zaman pencereleri birbiriyle çakışıyor."
+      title={t("conflict.title")}
+      subtitle={t("conflict.subtitle")}
       submitting={submitting}
-      confirmLabel="Riski Onayla ve Görevi Ata"
-      submittingLabel="Atanıyor..."
+      confirmLabel={t("conflict.confirm")}
+      submittingLabel={t("conflict.submitting")}
       confirmDisabled={!reasonOk}
       onCancel={onCancel}
       onConfirm={() => reasonOk && onConfirm(reason.trim())}
     >
-      {/* Structured KV kartı — taranabilir çakışma detayı */}
       <MDBox
         sx={{
           bgcolor: "rgba(255,255,255,0.03)",
@@ -88,30 +81,35 @@ function ConflictOverrideModal({
         {conflict ? (
           <>
             <DetailRow
-              label="Çakışan Görev"
+              label={t("conflict.task")}
               value={<CopyChip text={conflict.conflicting_task_no} color={severity} />}
             />
-            <DetailRow label="Çakışma Süresi" value={`~${conflict.overlap_minutes} dakika`} />
+            <DetailRow
+              label={t("conflict.duration")}
+              value={t("conflict.durationValue", { n: conflict.overlap_minutes })}
+            />
           </>
         ) : (
           <MDTypography variant="caption" color="white">
-            Bu araca belirtilen aralıkta atanmış görev var.
+            {t("conflict.fallback")}
           </MDTypography>
         )}
       </MDBox>
 
-      {/* Zorunlu gerekçe (Mode 1 Advisory — Gerekçeli Onay) */}
       <TextField
         fullWidth
         multiline
         minRows={2}
         size="small"
-        label="Manuel Onay Gerekçesi *"
+        label={t("conflict.reasonLabel")}
         InputLabelProps={{ shrink: true }}
-        placeholder="Örn: Operasyonel aciliyet / Müşteri zaman esnekliği sağladı..."
+        placeholder={t("conflict.reasonPlaceholder")}
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         disabled={submitting}
+        required
+        inputProps={{ "aria-required": true }}
+        helperText={reasonOk ? undefined : t("dialog.reasonMin", { n: REASON_MIN })}
         sx={{
           mt: 0.5,
           "& .MuiInputLabel-root": { color: SHELL_C.textMuted, fontSize: "13px" },
@@ -128,7 +126,7 @@ function ConflictOverrideModal({
         }}
       />
       <MDTypography variant="caption" sx={{ color: SHELL_C.textFaint, display: "block", mt: 0.5 }}>
-        ℹ️ Bu işlem sistem denetim kaydına (Audit Log) kaydedilecektir.
+        {t("conflict.auditNote")}
       </MDTypography>
     </ConfirmDialogShell>
   );

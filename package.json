@@ -63,6 +63,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "verify:i18n": "node --experimental-strip-types scripts/verify-i18n.ts",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

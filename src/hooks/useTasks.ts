@@ -22,7 +22,7 @@ export interface Task {
   [key: string]: any;
 }
 
-const EMPTY_TASKS: Task[] = [];
+export const EMPTY_TASKS: Task[] = [];
 
 export function useTasks(filter: TaskFilter = "all") {
   const token = useAuthStore((s) => s.token);
@@ -41,7 +41,7 @@ export function useTasks(filter: TaskFilter = "all") {
         throw new Error(`Tasks fetch failed: ${res.status} ${text}`);
       }
       const body = await res.json();
-      return Array.isArray(body) ? body : body.tasks || [];
+      return Array.isArray(body) ? body : body.tasks || EMPTY_TASKS;
     },
     enabled: !!token,
     staleTime: 1000 * 60 * 2,

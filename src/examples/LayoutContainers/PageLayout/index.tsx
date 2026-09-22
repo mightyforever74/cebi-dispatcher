@@ -36,7 +36,7 @@ function PageLayout({ background, children }: Props): JSX.Element {
 
   useEffect(() => {
     setLayout(dispatch, "page");
-  }, [pathname]);
+  }, [pathname, dispatch]);
 
   return (
     <MDBox

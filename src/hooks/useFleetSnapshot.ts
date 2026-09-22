@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ENTERPRISE_API_URL } from "config/api";
 import { map as mapTokens } from "assets/theme/tokens";
 import { useAuthStore } from "store/useAuthStore";
+import { EMPTY_ARRAY } from "utils/empty";
 import {
   useVehicleStore,
   VehicleTelemetry,
@@ -86,7 +87,7 @@ export function useFleetSnapshot(): {
       });
       if (!res.ok) throw new Error(`snapshot HTTP ${res.status}`);
       const data = await res.json();
-      const rows: SnapshotRow[] = data.locations || [];
+      const rows: SnapshotRow[] = data.locations || EMPTY_ARRAY;
       if (stoppedRef.current) return;
 
       const store = useVehicleStore.getState();

@@ -7,7 +7,7 @@ import StatusChip from "components/StatusChip";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import useDrivers, { type Driver } from "hooks/useDrivers";
-import useVehicles, { type Vehicle } from "hooks/useVehicles";
+import useVehicles, { EMPTY_VEHICLES, type Vehicle } from "hooks/useVehicles";
 import { formatDate, formatNumber, useT } from "i18n";
 import { useMemo } from "react";
 import { toNum } from "utils/toNum";
@@ -33,7 +33,7 @@ function DriversLayout(): JSX.Element {
   const { t, lang } = useT();
   const { data, isLoading, isError, isPaused, error, dataUpdatedAt, refetch } = useDrivers();
   const drivers = data ?? EMPTY_DRIVERS_LIST;
-  const { data: vehicles = [] } = useVehicles();
+  const { data: vehicles = EMPTY_VEHICLES } = useVehicles();
 
   const plateByVehicleId = useMemo(() => {
     const m = new Map<string, string>();

@@ -46,6 +46,7 @@ import {
   setWhiteSidenav,
 } from "context";
 
+import { breakpoints } from "assets/theme/tokens";
 import { useT } from "i18n";
 
 interface Props {
@@ -113,14 +114,14 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
   useEffect(() => {
     setOpenCollapse(collapseName);
     setOpenNestedCollapse(itemParentName);
-  }, []);
+  }, [collapseName, itemParentName]);
 
   useEffect(() => {
     // A function that sets the mini state of the sidenav.
     function handleMiniSidenav() {
-      setMiniSidenav(dispatch, window.innerWidth < 1200);
-      setTransparentSidenav(dispatch, window.innerWidth < 1200 ? false : transparentSidenav);
-      setWhiteSidenav(dispatch, window.innerWidth < 1200 ? false : whiteSidenav);
+      setMiniSidenav(dispatch, window.innerWidth < breakpoints.xl);
+      setTransparentSidenav(dispatch, window.innerWidth < breakpoints.xl ? false : transparentSidenav);
+      setWhiteSidenav(dispatch, window.innerWidth < breakpoints.xl ? false : whiteSidenav);
     }
 
     /** 
@@ -133,7 +134,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
 
     // Remove event listener on cleanup
     return () => window.removeEventListener("resize", handleMiniSidenav);
-  }, [dispatch, pathname]);
+  }, [dispatch, pathname, transparentSidenav, whiteSidenav]);
 
   // Render all the nested collapse items from the routes.js
   const renderNestedCollapse = (collapse: any) => {

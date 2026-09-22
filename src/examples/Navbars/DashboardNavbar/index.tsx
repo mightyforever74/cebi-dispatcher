@@ -57,7 +57,7 @@ import {
 } from "context";
 
 // Real API — GET/PUT /api/alerts (api.tulipfleet.com)
-import { useAlerts, useResolveAlert, Alert } from "hooks/useAlerts";
+import { useAlerts, useResolveAlert, Alert, EMPTY_ALERTS } from "hooks/useAlerts";
 import { useT } from "i18n";
 import LanguageSwitcher from "components/LanguageSwitcher";
 import { useDensity } from "context/density";
@@ -187,7 +187,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const { data: alertsData, isLoading: loadingAlerts } = useAlerts();
   const resolveMutation = useResolveAlert();
 
-  const alerts: Alert[] = alertsData || [];
+  const alerts: Alert[] = alertsData || EMPTY_ALERTS;
   const activeAlerts = alerts.filter((a: Alert) => !a.is_resolved).slice(0, 10);
   const unreadCount = activeAlerts.length;
 

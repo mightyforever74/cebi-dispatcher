@@ -24,6 +24,7 @@
 
 import Box from "@mui/material/Box";
 import { styled, Theme } from "@mui/material/styles";
+import { EMPTY_OBJECT } from "utils/empty";
 
 // TulipFleet brand (temporary inline — see NOTE above)
 const BRAND_A = "#7C3AED"; // violet
@@ -43,7 +44,7 @@ export interface GlassPanelProps {
 const GlassPanel = styled(Box, {
   shouldForwardProp: (prop) => prop !== "ownerState",
 })<GlassPanelProps>(
-  ({ theme, ownerState = {} }: { theme: Theme | any; ownerState?: GlassPanelOwnerState }) => {
+  ({ theme, ownerState = EMPTY_OBJECT }: { theme: Theme | any; ownerState?: GlassPanelOwnerState }) => {
     const { palette, functions, borders, boxShadows } = theme;
     const { rgba, linearGradient, pxToRem } = functions;
     const { borderRadius } = borders;

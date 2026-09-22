@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AUTH_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
+import { EMPTY_OBJECT } from "utils/empty";
 
 // Desen: src/hooks/useTasks.ts'ten kanitli (fetch + Authorization header).
 // Base URL farki: bu hook ANA backend'e (api.tulipfleet.com) gider, enterprise-api'ye
@@ -113,7 +114,7 @@ export function useDeleteAccount() {
         const text = await res.text();
         throw new Error(`Delete account failed: ${res.status} ${text}`);
       }
-      return res.json().catch(() => ({}));
+      return res.json().catch(() => EMPTY_OBJECT);
     },
     onSuccess: () => {
       logout();

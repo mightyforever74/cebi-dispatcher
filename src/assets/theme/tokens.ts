@@ -561,6 +561,15 @@ export function prefersReducedMotion(): boolean {
   }
 }
 
+/** MD2 breakpoint table (theme `lg` is 992, not MUI default 1200). */
+export const breakpoints = {
+  sm: 576,
+  md: 768,
+  lg: 992,
+  xl: 1200,
+  xxl: 1400,
+} as const;
+
 /** `theme.transitions.duration` için — reduced-motion aktifse tüm süreler 0
  * olur (MUI'nin kendi `transitions.create()` çıktısı da 0ms üretir). Aktif
  * DEĞİLSE `undefined` döner; `createTheme()` kendi varsayılanlarını kullanır. */

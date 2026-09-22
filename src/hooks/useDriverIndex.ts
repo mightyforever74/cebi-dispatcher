@@ -20,6 +20,7 @@ import { ENTERPRISE_API_URL } from "config/api";
 import { useT } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 import { useVehicleStore } from "store/useVehicleStore";
+import { EMPTY_ARRAY } from "utils/empty";
 
 
 interface ApiDriverRow {
@@ -52,7 +53,7 @@ export function useDriverIndex(): DriverIndexEntry[] {
         });
         if (!res.ok) throw new Error(`drivers HTTP ${res.status}`);
         const data = await res.json();
-        if (!stopped) setRows(data.drivers || []);
+        if (!stopped) setRows(data.drivers || EMPTY_ARRAY);
       } catch (e) {
         console.error("[driver-index]", e instanceof Error ? e.message : e);
       }

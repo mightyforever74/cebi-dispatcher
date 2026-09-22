@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
+import { EMPTY_ARRAY } from "utils/empty";
 
 /**
  * Decision Support Engine icin sayfa-lokal telemetri snapshot'i.
@@ -51,7 +52,7 @@ export function useDispatchLocationSnapshot() {
         throw new Error(`Locations snapshot fetch failed: ${res.status} ${text}`);
       }
       const body = await res.json();
-      const rows = Array.isArray(body?.locations) ? body.locations : [];
+      const rows = Array.isArray(body?.locations) ? body.locations : EMPTY_ARRAY;
       return rows.map((r: any): DispatchLocationFrame => ({
         device_id: String(r.device_id),
         plate_no: r.plate_no ?? null,

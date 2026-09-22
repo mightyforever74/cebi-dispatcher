@@ -18,6 +18,7 @@ import { FC, forwardRef } from "react";
 // Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import { EMPTY_OBJECT } from "utils/empty";
 
 // declaring props types for MDBadgeDot
 interface Props {
@@ -35,7 +36,7 @@ interface Props {
 }
 
 const MDBadgeDot: FC<Props> = forwardRef(
-  ({ variant, color, size, badgeContent, font = {}, ...rest }, ref) => {
+  ({ variant, color, size, badgeContent, font = EMPTY_OBJECT, ...rest }, ref) => {
     let finalSize;
     let fontSize: any;
     let padding;

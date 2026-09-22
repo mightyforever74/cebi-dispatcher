@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useAlerts, type Alert } from "hooks/useAlerts";
+import { useAlerts, EMPTY_ALERTS, type Alert } from "hooks/useAlerts";
 import {
   useExceptions,
   type ExceptionEvent,
@@ -154,7 +154,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     lastOkAt,
   } = useExceptions(token);
   const { data: alertsData } = useAlerts();
-  const alerts = useMemo<Alert[]>(() => alertsData ?? [], [alertsData]);
+  const alerts = useMemo<Alert[]>(() => alertsData ?? EMPTY_ALERTS, [alertsData]);
 
   const [banners, setBanners] = useState<NotifyItem[]>([]);
   const [toastQueue, setToastQueue] = useState<NotifyItem[]>([]);

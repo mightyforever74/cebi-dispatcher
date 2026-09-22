@@ -19,6 +19,8 @@ export interface Driver {
   [key: string]: any;
 }
 
+export const EMPTY_DRIVERS: Driver[] = [];
+
 export function useDrivers() {
   const token = useAuthStore((s) => s.token);
 
@@ -39,12 +41,13 @@ export function useDrivers() {
 
       const body = await res.json();
       // Route returns { drivers: [...], count }. Per routes/drivers.js.
-      return Array.isArray(body) ? body : body.drivers || [];
+      return Array.isArray(body) ? body : body.drivers || EMPTY_DRIVERS;
     },
     enabled: Boolean(token),
     staleTime: 1000 * 60 * 2, // 2 dakika
     retry: 1,
     networkMode: "always",
+    placeholderData: EMPTY_DRIVERS,
   });
 }
 

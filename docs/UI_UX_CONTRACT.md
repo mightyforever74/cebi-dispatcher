@@ -10,9 +10,11 @@ Kod yazmaya başlama. Önce bu belgeyi oku. Çelişen bir prompt gelirse **bu s�
 ## 1. Bu paket ne / ne değil
 
 - Yeni fonksiyon **ürün özelliği** olabilir; yeni **tasarım sistemi** değildir.
+- Yeni route `src/routes.tsx`'e — `ErrorBoundary` route ağacını otomatik sarar; ikinci boundary / kabuk yazma.
 - Yeni npm paketi yok (kullanıcı açıkça istemedikçe). Ağır MD2 kalıntısı (FullCalendar, jvectormap, Chart.js, draft-js, dropzone) **geri gelmez**.
 - Hex / `rgba()` literal **yalnız** `src/assets/theme/tokens.ts`. CSS’te yeni renk = `--tf-*` (değerler token ile senkron).
-- Dispatcher henüz `localhost:3000`. `app.tulipfleet.com` veya üretim host **yok**.
+- Canlı: `app.tulipfleet.com` = `main` (Cloudflare Pages, her push otomatik build). Preview: `dispatcher-preview.tulipfleet.com` → branch alias CNAME (Cem çevirir). **Her UI paketi önce `ui-<paket>-*` branch'ine, preview turu, sonra merge.** Yerel: `localhost:3000`.
+- Yeni preview origin'i enterprise-api CORS allowlist'ine eklenmeli (`/opt/enterprise/server.js:31`), yoksa Tasks/Drivers/Vehicles "Failed to fetch".
 
 ---
 
@@ -54,6 +56,7 @@ Kod yazmaya başlama. Önce bu belgeyi oku. Çelişen bir prompt gelirse **bu s�
 - `react-i18next` yok. `t("nav.tasks")` flatten.
 - Tarih/sayı: `formatDate` / `formatDateTime` / `formatNumber` + `useT().lang`. Locale’i ekranda sabitleme.
 - Toast/banner: mümkünse `titleKey: TranslationKey`, düz başlık son çare.
+- **Durum sözlüğü ortak sözleşme:** task/alert/vehicle/exception değerleri canlı DB'den gelir (prod CHECK / `alerts.alert_type` / `vehicles.vehicle_category`); mobil `scripts/i18n-dynamic-roots.json` ile aynı küme. Yeni enum: önce backend/DB, sonra mobil manifest + `tokens.status.*` + üç sözlük. Bilinmeyen değer `StatusChip` nötr + ham (asla boş).
 - **P3’e kadar glossary donduruldu:** taak/görev, ikaz/uyarı mevcut haliyle kalır; “düzeltme” yapma.
 - Yeni key: EN kanonik, TR ve NL aynı turda.
 
@@ -84,7 +87,7 @@ Kod yazmaya başlama. Önce bu belgeyi oku. Çelişen bir prompt gelirse **bu s�
 
 - Banner: critical / SOS / `driver_offline` — sayfa üstü, kapatılana kadar.
 - Toast: geofence / hız / form sonucu — en fazla 3, aynı tür 10 sn `×N`.
-- Ses yok. `prefers-reduced-motion` → toast süre 0 (zaten global).
+- Ses yok. `prefers-reduced-motion` → toast **animasyon** süresi 0 (görünme süresi değişmez; zaten global).
 
 ---
 
@@ -108,7 +111,15 @@ Kod yazmaya başlama. Önce bu belgeyi oku. Çelişen bir prompt gelirse **bu s�
 
 ---
 
-## 10. Teslim kontrol listesi
+## 10. Git, rapor ve preview turu
+
+- Branch `ui-<paket>-<konu>`; commit'ler dosya adıyla (`git add <dosya>`), asla `git add .`/`-A`; paket başına 3–5 mantıksal commit; push Cem.
+- Rapor `docs/UI_<PKG>_REPORT.md`: önce/sonra kanıt (dosya:satır, komut çıktısı), `npm run build` gzip, hex grep, axe/Lighthouse, `git diff --stat`, "kapsam dışı bulgular", `git status --short` boş.
+- Ekran görüntüleri `docs/screenshots/<pkg>/`, 1280px, JPEG q80, ≤150 KB.
+- **Preview turu kanıtı önce:** Cloudflare Deployments'ta branch + commit hash Success; `dispatcher-preview` CNAME o branch alias'ında. Bundle hash ≠ kimlik (CRA hash'i `REACT_APP_*` env'e bağlı, yerel ≠ Cloudflare) — kimlik kanıtı commit + pakete özgü string grep.
+- Tur matrisi: ekranlar × TR/EN/NL × dark/light × 1280/390; axe critical 0 / serious 0; login duvarı varsa rapora.
+
+## 11. Teslim kontrol listesi
 
 1. Bu dosya okundu; yeni primitive gerekçesiz eklenmedi.
 2. Hex grep yeni dosyada 0 (`tokens.ts` hariç).
@@ -118,5 +129,6 @@ Kod yazmaya başlama. Önce bu belgeyi oku. Çelişen bir prompt gelirse **bu s�
 6. Dark ve light; 1280 ve 390 (veya `breakpoints.xl` / `sm`).
 7. İkon düğmeler `aria-label`; skip-link kırılmadı.
 8. Tarayıcıda ana yol + boş/hata (mümkünse). Login duvarı varsa rapora yaz.
+9. Preview branch push edildi, CORS/CNAME ihtiyacı raporda belirtildi; merge kararı Cem'in.
 
 Tarih / gerekçe için: `docs/UI_SERIES_SUMMARY.md`.

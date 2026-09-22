@@ -363,10 +363,12 @@ export const status: {
 // 6) YOĞUNLUK / RADIUS / SHADOW / GLASS
 // =========================================================================
 
-/** Satır yüksekliği (px) — DataTable "compact/comfortable" anahtarı D2'de bağlanacak. */
+/** Satır yüksekliği (px) — DataTable "compact/comfortable" anahtarı D2'de bağlanacak.
+ * `navbar` D2 kabuk yüksekliği (landing Header paritesi, 64px). */
 export const density = {
   compact: 40,
   comfortable: 56,
+  navbar: 64,
 } as const;
 
 /** src/assets/theme/base/borders.ts + theme-dark eşdeğerinin px değerleriyle

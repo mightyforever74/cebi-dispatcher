@@ -15,23 +15,33 @@ Coded by www.creative-tim.com
 
 // @mui material components
 import { Theme } from "@mui/material/styles";
+import { density } from "assets/theme/tokens";
+
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1): 64px sabit yükseklikte, edge-to-edge
+// sticky navbar (landing Header paritesi). `glass` token'ı (D1 tokens.ts + global.css
+// CSS custom properties) CSS var() referanslarıyla TÜKETİLİR — bu sayede
+// `prefers-reduced-transparency: reduce` fallback'i (global.css) JS'e dokunmadan
+// otomatik uygulanır.
+const NAVBAR_HEIGHT_PX = density.navbar;
 
 function navbar(theme: Theme | any, ownerState: any) {
-  const { palette, boxShadows, functions, transitions, breakpoints, borders } = theme;
+  const { palette, boxShadows, functions, transitions, breakpoints } = theme;
   const { transparentNavbar, absolute, light, darkMode } = ownerState;
 
   const { dark, white, text, transparent, background } = palette;
   const { navbarBoxShadow } = boxShadows;
-  const { rgba, pxToRem } = functions;
-  const { borderRadius } = borders;
+  const { rgba: withAlpha, pxToRem } = functions;
 
   return {
     boxShadow: transparentNavbar || absolute ? "none" : navbarBoxShadow,
-    backdropFilter: transparentNavbar || absolute ? "none" : `saturate(200%) blur(${pxToRem(30)})`,
+    backdropFilter:
+      transparentNavbar || absolute
+        ? "none"
+        : "saturate(var(--tf-glass-saturate, 140%)) blur(var(--tf-glass-blur, 16px))",
     backgroundColor:
       transparentNavbar || absolute
         ? `${transparent.main} !important`
-        : rgba(darkMode ? background.default : white.main, 0.8),
+        : withAlpha(darkMode ? background.default : white.main, 0.8),
 
     color: () => {
       let color;
@@ -46,13 +56,15 @@ function navbar(theme: Theme | any, ownerState: any) {
 
       return color;
     },
-    top: absolute ? 0 : pxToRem(12),
-    minHeight: pxToRem(75),
+    // Landing Header paritesi: floating/rounded kart değil, viewport üstüne
+    // hizalanmış düz bir çubuk (top:0, borderRadius:0, minHeight: 64px).
+    top: 0,
+    minHeight: pxToRem(NAVBAR_HEIGHT_PX),
     display: "grid",
     alignItems: "center",
-    borderRadius: borderRadius.xl,
-    paddingTop: pxToRem(8),
-    paddingBottom: pxToRem(8),
+    borderRadius: absolute ? 0 : 0,
+    paddingTop: 0,
+    paddingBottom: 0,
     paddingRight: absolute ? pxToRem(8) : 0,
     paddingLeft: absolute ? pxToRem(16) : 0,
 
@@ -67,46 +79,63 @@ function navbar(theme: Theme | any, ownerState: any) {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
+      minHeight: pxToRem(NAVBAR_HEIGHT_PX),
 
       [breakpoints.up("sm")]: {
-        minHeight: "auto",
-        padding: `${pxToRem(4)} ${pxToRem(16)}`,
+        minHeight: pxToRem(NAVBAR_HEIGHT_PX),
+        padding: `0 ${pxToRem(16)}`,
       },
     },
   };
 }
 
-const navbarContainer = ({ breakpoints }: Theme): any => ({
-  flexDirection: "column",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  pt: 0.5,
-  pb: 0.5,
-
-  [breakpoints.up("md")]: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: "0",
-    paddingBottom: "0",
-  },
-});
-
-const navbarRow = ({ breakpoints }: Theme, { isMini }: any) => ({
-  display: "flex",
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1): mobilde de navbar TEK SATIR kalmalı
+// ("navbar içeriği tek satırda kalır"). Önceki MD2 şablonu <md genişlikte
+// `flexDirection: column` kullanıyordu — bu, breadcrumb+başlık satırının ikinci
+// bir satıra (arama kutusu + ikonlar) düşmesine, dolayısıyla navbar'ın 2-3
+// satıra bölünmesine yol açıyordu (bkz. 390px mobil ekran görüntüsü, D0/D1
+// döneminden kalma bozukluk). Artık HER genişlikte `row` — taşan öğe (arama
+// kutusu) `index.tsx`'te <sm gizleniyor, kalanlar (dil/tema/hesap/hamburger/
+// ayarlar/bildirim ikonları) tek satıra sığıyor.
+const navbarContainer = (): any => ({
+  flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  width: "100%",
-
-  [breakpoints.up("md")]: {
-    justifyContent: isMini ? "space-between" : "stretch",
-    width: isMini ? "100%" : "max-content",
-  },
-
-  [breakpoints.up("xl")]: {
-    justifyContent: "stretch !important",
-    width: "max-content !important",
-  },
+  flexWrap: "nowrap",
+  pt: 0,
+  pb: 0,
 });
+
+// D2 Adım 1: navbarContainer artık her genişlikte `row` (bkz. yukarısı) — bu
+// yüzden iki alt kutu (sol: breadcrumb/başlık, sağ: dil/tema/hesap/ikonlar)
+// AYNI satırda yan yana sığmalı. Sol kutu daralabilir (flex-shrink + minWidth:0
+// + overflow:hidden, başlık zaten `noWrap` — bkz. Breadcrumbs/index.tsx), sağ
+// kutu asla küçülmez (flex-shrink: 0) — ikonlar hiçbir genişlikte kırpılmaz.
+const navbarRow = ({ breakpoints }: Theme, { isMini, variant }: any) => {
+  if (variant === "end") {
+    return {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      flex: "0 0 auto",
+      width: "auto",
+
+      [breakpoints.up("xl")]: {
+        justifyContent: isMini ? "flex-end" : "stretch !important",
+        width: isMini ? "auto" : "max-content !important",
+      },
+    };
+  }
+
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flex: "1 1 auto",
+    minWidth: 0,
+    overflow: "hidden",
+  };
+};
 
 const navbarIconButton = ({ typography: { size }, breakpoints }: Theme) => ({
   px: 1,

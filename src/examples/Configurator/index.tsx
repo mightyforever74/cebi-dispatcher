@@ -31,8 +31,6 @@ import {
   setWhiteSidenav,
   setMiniSidenav,
   setFixedNavbar,
-  setDarkMode,
-  THEME_STORAGE_KEY,
 } from "context";
 import { useT } from "i18n";
 
@@ -75,22 +73,10 @@ function Configurator(): JSX.Element {
   };
   const handleMiniSidenav = () => setMiniSidenav(dispatch, !miniSidenav);
   const handleFixedNavbar = () => setFixedNavbar(dispatch, !fixedNavbar);
-  // D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 1.4): switch tetiklendiğinde
-  // localStorage (`tf.theme`) ve `data-theme`/`color-scheme` DOM özniteliği
-  // senkron güncellenir — index.html'deki FOUC-önleyici script ve
-  // index.tsx'teki ThemedApp effect'i ile aynı sözleşmeyi paylaşır.
-  const handleDarkMode = () => {
-    const next = !darkMode;
-    setDarkMode(dispatch, next);
-    const value = next ? "dark" : "light";
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, value);
-    } catch {
-      // localStorage erişilemez (gizli sekme/kota) — sessizce yok say.
-    }
-    document.documentElement.setAttribute("data-theme", value);
-    document.documentElement.style.colorScheme = value;
-  };
+  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1.2): Açık/Koyu anahtarı buradan
+  // kaldırıldı — birincil kontrol artık DashboardNavbar'da (her zaman görünür).
+  // D1'de burada tanımlanan sözleşme (localStorage `tf.theme` + `data-theme`)
+  // DashboardNavbar/index.tsx'teki handleToggleDarkMode'a BİREBİR taşındı.
 
   // sidenav type buttons styles
   const sidenavTypeButtonsStyles = ({
@@ -124,6 +110,13 @@ function Configurator(): JSX.Element {
       color: darkMode ? background.sidenav : white.main,
     },
   });
+
+  // D2 Adım 1.2: Configurator paneli üretimde yok — tema anahtarı navbar'da.
+  // App.tsx Configurator'ı hâlâ mount ediyor (izin verilen yollar dışında);
+  // üretimde null dönerek panel ve kalan MD2 seçenekleri gizlenir.
+  if (process.env.NODE_ENV !== "development") {
+    return null;
+  }
 
   return (
     <ConfiguratorRoot variant="permanent" ownerState={{ openConfigurator }}>
@@ -235,12 +228,6 @@ function Configurator(): JSX.Element {
           <MDTypography variant="h6">{t("configurator.sidenavMini")}</MDTypography>
 
           <Switch checked={miniSidenav} onChange={handleMiniSidenav} />
-        </MDBox>
-        <Divider />
-        <MDBox display="flex" justifyContent="space-between" alignItems="center" lineHeight={1}>
-          <MDTypography variant="h6">{t("configurator.lightDark")}</MDTypography>
-
-          <Switch checked={darkMode} onChange={handleDarkMode} />
         </MDBox>
       </MDBox>
     </ConfiguratorRoot>

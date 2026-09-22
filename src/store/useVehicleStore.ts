@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 /**
- * Live Fleet Map — vehicle telemetry store (Sira 4.1 / 4.2 / 4.3).
+ * Live Fleet Map — vehicle telemetry store (Sıra 4.1 / 4.2 / 4.3).
  *
  * IMPORTANT — `status` is a DERIVED UI value, not a DB column.
  * Verified 2026-06-04 against prod: `public.locations` has `speed` (numeric 6,2)
@@ -24,9 +24,9 @@ export type VehicleStatus = "moving" | "idle" | "stopped";
 export interface VehicleTelemetry {
   id: string;
   plate: string;
-  /** public.vehicles.id (UUID) — BUG-4 v2: surucu (assigned_vehicle_id) →
-   * device_id eslemesi icin snapshot'tan doldurulur. Mock tohumlarda yoktur
-   * (opsiyonel, additive — hicbir mevcut tuketiciyi kirmaz). */
+  /** public.vehicles.id (UUID) — BUG-4 v2: sürücü (assigned_vehicle_id) →
+   * device_id eşlemesi için snapshot'tan doldurulur. Mock tohumlarda yoktur
+   * (opsiyonel, additive — hiçbir mevcut tüketiciyi kırmaz). */
   vehicle_id?: string;
   vehicle_weight_class: "12_18t" | "18_32t" | "32_plus_t";
   emission_class: string;

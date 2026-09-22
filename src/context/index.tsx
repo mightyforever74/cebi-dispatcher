@@ -26,15 +26,15 @@ import { createContext, ReactNode, useContext, useMemo, useReducer } from "react
 const MaterialUI = createContext<any>(null);
 
 /**
- * D1 "Tema Koprusu" (docs/UI_D1_REPORT.md, Adim 1): tema tercihi icin
- * localStorage anahtari. `public/index.html`'deki FOUC-onleyici inline
- * script ve `examples/Configurator/index.tsx`'teki switch ile BIREBIR
- * ayni tutulmalidir.
+ * D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 1): tema tercihi için
+ * localStorage anahtarı. `public/index.html`'deki FOUC-önleyici inline
+ * script ve `examples/Configurator/index.tsx`'teki switch ile BİREBİR
+ * aynı tutulmalıdır.
  */
 export const THEME_STORAGE_KEY = "tf.theme";
 
-/** Ilk `darkMode` degerini localStorage → `prefers-color-scheme` sirasiyla
- * cozer. SSR/test ortamlarinda `window` yoksa guvenli varsayilan (dark) doner. */
+/** İlk `darkMode` değerini localStorage → `prefers-color-scheme` sırasıyla
+ * çözer. SSR/test ortamlarında `window` yoksa güvenli varsayılan (dark) döner. */
 function resolveInitialDarkMode(): boolean {
   if (typeof window === "undefined") return true;
   try {
@@ -42,7 +42,7 @@ function resolveInitialDarkMode(): boolean {
     if (stored === "dark") return true;
     if (stored === "light") return false;
   } catch {
-    // localStorage erisilemez (gizli sekme/kota) — sistem tercihine dus.
+    // localStorage erişilemez (gizli sekme/kota) — sistem tercihine düş.
   }
   return typeof window.matchMedia === "function"
     ? window.matchMedia("(prefers-color-scheme: dark)").matches

@@ -2,7 +2,7 @@
  * FEAT-010 Dilim 4 - Istisna Yonetimi sayfasi (FN-13 ExceptionStatusPanel
  * + FN-14 ResolutionActionPanel MVP + FN-12 MVP sayfa-ici "yeni olay" vurgusu).
  * D4: StatusChip + DataTable + DataState; toast/banner `useNotifications`.
- * D5: coz modali ConfirmDialogShell.
+ * D5: çöz modalı ConfirmDialogShell.
  */
 import { useCallback, useMemo, useState } from "react";
 import Card from "@mui/material/Card";

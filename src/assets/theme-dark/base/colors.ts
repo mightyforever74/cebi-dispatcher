@@ -14,9 +14,9 @@ Coded by www.creative-tim.com
 */
 
 /**
- * D1 "Tema Koprusu" (docs/UI_D1_REPORT.md): bu dosya artik hicbir hex/rgba
- * literal ICERMIYOR — tum degerler `assets/theme/tokens.ts`'ten (single
- * source of truth) okunur. Gorsel cikti D1 oncesi ile BIREBIR AYNIDIR.
+ * D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md): bu dosya artık hiçbir hex/rgba
+ * literal İÇERMİYOR — tüm değerler `assets/theme/tokens.ts`'ten (single
+ * source of truth) okunur. Görsel çıktı D1 öncesi ile BİREBİR AYNIDIR.
  */
 
 // Design tokens (single source of truth)

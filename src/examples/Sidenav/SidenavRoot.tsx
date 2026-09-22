@@ -17,9 +17,9 @@ Coded by www.creative-tim.com
 import Drawer from "@mui/material/Drawer";
 import { styled, Theme } from "@mui/material/styles";
 
-// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 2): sidenav yuzeyi artik MD2'nin
-// jenerik `background.sidenav`/`gradients.dark` degerleri yerine landing
-// koprusu `navyInk` token'indan besleniyor — tek kaynak `tokens.ts`.
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 2): sidenav yüzeyi artık MD2'nin
+// jenerik `background.sidenav`/`gradients.dark` değerleri yerine landing
+// köprüsü `navyInk` token'ından besleniyor — tek kaynak `tokens.ts`.
 import { landing } from "assets/theme/tokens";
 
 export default styled(Drawer)(({ theme, ownerState }: { theme?: Theme | any; ownerState: any }) => {
@@ -32,8 +32,8 @@ export default styled(Drawer)(({ theme, ownerState }: { theme?: Theme | any; own
   const { pxToRem, rgba: withAlpha } = functions;
 
   // Sidenav her iki MUI tema modunda da (light/dark) markaya sabit koyu-lacivert
-  // (navyInk) yuzey — bu davranis D1 oncesinde de zaten boyleydi (bkz.
-  // docs/UI_D0_DISCOVERY.md), yalnizca tam hex degeri artik tokens.ts'ten.
+  // (navyInk) yüzey — bu davranış D1 öncesinde de zaten böyleydi (bkz.
+  // docs/UI_D0_DISCOVERY.md), yalnızca tam hex değeri artık tokens.ts'ten.
   let backgroundValue = withAlpha(landing.navyInk, darkMode ? 0.92 : 1);
 
   if (transparentSidenav) {

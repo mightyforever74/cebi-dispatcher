@@ -20,11 +20,11 @@ import Grid from "@mui/material/Grid";
 import MDBox from "components/MDBox";
 
 // Settings page components
-// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 5): "Authentication" (2FA "Yakinda"
-// placeholder — hicbir backend'e bagli degil) kaldirildi. BasicInfo/
-// ChangePassword/EmailIntegration/DeleteAccount gercek API'lere bagli
-// (bkz. her bilesenin baslik yorumu) — placeholder DEGIL, kaldirilmadi.
-// Bilesen dosyasi SILINMEDI (D1.5 bundle diyeti import-kanitiyla siler).
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 5): "Authentication" (2FA "Yakında"
+// placeholder — hiçbir backend'e bağlı değil) kaldırıldı. BasicInfo/
+// ChangePassword/EmailIntegration/DeleteAccount gerçek API'lere bağlı
+// (bkz. her bileşenin başlık yorumu) — placeholder DEĞİL, kaldırılmadı.
+// Bileşen dosyası SİLİNMEDİ (D1.5 bundle diyeti import-kanıtıyla siler).
 import BaseLayout from "layouts/pages/account/components/BaseLayout";
 import Sidenav from "layouts/pages/account/settings/components/Sidenav";
 import BasicInfo from "layouts/pages/account/settings/components/BasicInfo";

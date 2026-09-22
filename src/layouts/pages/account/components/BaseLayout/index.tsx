@@ -2,10 +2,10 @@
 =========================================================
 * TulipFleet Dispatcher — Settings BaseLayout
 =========================================================
-* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 5): MD2 template sekmeleri
-* (Messages / Social / Notifications / Backup) kaldirildi — hicbirinin
-* icerigi yoktu (`tabValue` children'i filtrelemiyordu). Bu dosya yalniz
-* `layouts/pages/account/settings` tarafindan kullaniliyor.
+* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 5): MD2 template sekmeleri
+* (Messages / Social / Notifications / Backup) kaldırıldı — hiçbirinin
+* içeriği yoktu (`tabValue` children'ı filtrelemiyordu). Bu dosya yalnız
+* `layouts/pages/account/settings` tarafından kullanılıyor.
 */
 
 import { ReactNode } from "react";

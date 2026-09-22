@@ -601,10 +601,10 @@ function DefaultNavbar({ routes, brand, transparent, light, action }: Props): JS
 }
 
 // Declaring default props for DefaultNavbar
-// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 4): "Material Dashboard PRO" marka
-// kalintisi kaldirildi — login/forgot-password ekranlarinin tek kullanicisi
-// oldugu icin i18n `login.brand` ile BIREBIR ayni deger (uc dilde de
-// "TulipFleet Dispatcher" — marka adi cevrilmez).
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 4): "Material Dashboard PRO" marka
+// kalıntısı kaldırıldı — login/forgot-password ekranlarının tek kullanıcısı
+// olduğu için i18n `login.brand` ile BİREBİR aynı değer (üç dilde de
+// "TulipFleet Dispatcher" — marka adı çevrilmez).
 DefaultNavbar.defaultProps = {
   brand: "TulipFleet Dispatcher",
   transparent: false,

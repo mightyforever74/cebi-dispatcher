@@ -2,9 +2,9 @@
 =========================================================
 * TulipFleet Dispatcher — Auth BrandBlock
 =========================================================
-* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 4): login/forgot-password kart
-* basligi. Logo `public/tulipfleet-logo.png` + display-font wordmark +
-* sozlukten tagline. MD2 "info" gradient basligi yok.
+* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 4): login/forgot-password kart
+* başlığı. Logo `public/tulipfleet-logo.png` + display-font wordmark +
+* sözlükten tagline. MD2 "info" gradient başlığı yok.
 */
 
 import MDBox from "components/MDBox";

@@ -2,26 +2,26 @@
  * FEAT-010:FN-18 — Dispatcher karar logu istemcisi (ML-analiz veri temeli).
  * Spec: docs/functions/FEAT-010-automated-exception-handling.md §1.8 + §6.4 (v1.8).
  *
- * BEST-EFFORT SOZLESMESI: Bu cagri approve akisini ASLA bloke etmez ve ASLA
- * throw etmez (FN-16 push paterni). Basarisizlik console.warn ile gecilir —
- * loglama, operasyonun onune gecemez.
+ * BEST-EFFORT SÖZLEŞMESİ: Bu çağrı approve akışını ASLA bloke etmez ve ASLA
+ * throw etmez (FN-16 push paterni). Başarısızlık console.warn ile geçilir —
+ * loglama, operasyonun önüne geçemez.
  *
- * DIKKAT (path): optimize/poll/approve route'lari /api ONEKSIZ, ama FN-18
- * /api/dispatcher/decision-log ONEKLIdir (enterprise-backend routes/decisionLog.js,
- * commit b3cdd06 — koddan kanitli, varsayilmadi).
+ * DİKKAT (path): optimize/poll/approve route'ları /api ÖNEKSİZ, ama FN-18
+ * /api/dispatcher/decision-log ÖNEKLİdir (enterprise-backend routes/decisionLog.js,
+ * commit b3cdd06 — koddan kanıtlı, varsayılmadı).
  *
  * BUG-1 Faz C (2026-08-02): opsiyonel conflict_metadata + override_comment.
- * Zaman penceresi cakismasi "Gerekceli Onay" ile gecildiginde koprunun muhru
+ * Zaman penceresi çakışması "Gerekçeli Onay" ile geçildiğinde köprünün mührü
  * (conflicting_task_no + overlap_minutes) conflict_metadata'ya, serbest metin
- * gerekce override_comment'e yazilir. §6.4 override_reason enum'una DOKUNULMAZ;
- * cakisma override'inin isareti conflict_metadata IS NOT NULL'dur (backend
- * routes/decisionLog.js c478bee + migration 1782900000000 kanitli).
+ * gerekçe override_comment'e yazılır. §6.4 override_reason enum'una DOKUNULMAZ;
+ * çakışma override'ının işareti conflict_metadata IS NOT NULL'dur (backend
+ * routes/decisionLog.js c478bee + migration 1782900000000 kanıtlı).
  */
 import { ENTERPRISE_API_URL } from "config/api";
 import { StrictTaskConstraints } from "types/metadata";
 
 
-// §6.4 / UNCERTAINTIES #20 ONAYLI enum — opsiyonel; bos override da sinyaldir.
+// §6.4 / UNCERTAINTIES #20 ONAYLI enum — opsiyonel; boş override da sinyaldir.
 export const OVERRIDE_REASON_OPTIONS = [
   { value: "driver_familiarity" as const },
   { value: "customer_preference" as const },
@@ -39,7 +39,7 @@ export interface ScorerSnapshotEntry {
   mode: string;
 }
 
-// BUG-1 Faz C: kopru muhrunun sekli (routes/internalBridge.js kanitli).
+// BUG-1 Faz C: köprü mührünün şekli (routes/internalBridge.js kanıtlı).
 export interface ConflictMetadataSeal {
   conflicting_task_no: string;
   overlap_minutes: number;
@@ -53,7 +53,7 @@ export interface DecisionLogPayload {
   recommended_vehicle_id: string | null;
   chosen_vehicle_id: string;
   override_reason: string | null;
-  // BUG-1 Faz C — cakisma override'i (opsiyonel; normal akista gonderilmez)
+  // BUG-1 Faz C — çakışma override'ı (opsiyonel; normal akışta gönderilmez)
   override_comment?: string | null;
   conflict_metadata?: ConflictMetadataSeal | null;
 }
@@ -70,11 +70,11 @@ export function postDecisionLog(token: string | null, payload: DecisionLogPayloa
     .then((res) => {
       if (!res.ok) {
         // eslint-disable-next-line no-console
-        console.warn(`[decision-log] best-effort kayit basarisiz: HTTP ${res.status}`);
+        console.warn(`[decision-log] best-effort kayıt başarısız: HTTP ${res.status}`);
       }
     })
     .catch((err) => {
       // eslint-disable-next-line no-console
-      console.warn("[decision-log] best-effort kayit basarisiz:", err);
+      console.warn("[decision-log] best-effort kayıt başarısız:", err);
     });
 }

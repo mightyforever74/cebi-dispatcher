@@ -25,7 +25,7 @@ import colors from "assets/theme/base/colors";
 // Material Dashboard 2 PRO React TS Helper Functions
 import pxToRem from "assets/theme/functions/pxToRem";
 
-// Design tokens (single source of truth) — D1 "Tema Koprusu"
+// Design tokens (single source of truth) — D1 "Tema Köprüsü"
 import { radius } from "assets/theme/tokens";
 
 const { grey } = colors;

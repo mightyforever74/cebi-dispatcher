@@ -17,7 +17,7 @@ Coded by www.creative-tim.com
 import borders from "assets/theme/base/borders";
 import colors from "assets/theme/base/colors";
 
-// Design tokens (single source of truth) — D1 "Tema Koprusu"
+// Design tokens (single source of truth) — D1 "Tema Köprüsü"
 import { misc } from "assets/theme/tokens";
 
 const { white } = colors;

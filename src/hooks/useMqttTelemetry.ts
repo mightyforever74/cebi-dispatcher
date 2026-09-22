@@ -3,7 +3,7 @@ import mqtt, { MqttClient } from "mqtt";
 import { useVehicleStore, deriveStatus, VehicleTelemetry } from "store/useVehicleStore";
 
 /**
- * Live MQTT telemetry (Sira 4.2).
+ * Live MQTT telemetry (Sıra 4.2).
  *
  * Connects to EMQX over WebSocket as `dispatcher-readonly` (subscribe-only ACL,
  * ADR-0009 §4.2), subscribes to fleet/device/+/location, and pushes each frame

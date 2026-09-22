@@ -2,14 +2,14 @@
 =========================================================
 * TulipFleet Dispatcher — Material Dashboard 3 (PRO React TS, MD2 merged)
 =========================================================
-* Zero-Touch Core: stock Sidenav bilesenlerine dokunulmadi.
-* UI/UX (gated badge hissi, AI vurgusu, demo pasiflestirme) tamamen
-* routes.tsx icinde isim + emoji + ikon aksani ile cozuldu.
+* Zero-Touch Core: stock Sidenav bileşenlerine dokunulmadı.
+* UI/UX (gated badge hissi, AI vurgusu, demo pasifleştirme) tamamen
+* routes.tsx içinde isim + emoji + ikon aksanı ile çözüldü.
 * Sidenav: dark (transparentSidenav=false, whiteSidenav=false), sidenavColor=info.
 =========================================================
 */
 
-// ── Dispatcher — canli operasyonel ekranlar ──
+// ── Dispatcher — canlı operasyonel ekranlar ──
 import Drivers from "layouts/dispatcher/drivers";
 import Tasks from "layouts/dispatcher/tasks";
 import OptimizeTask from "layouts/dispatcher/tasks/optimize";
@@ -39,7 +39,7 @@ import type { TFunction } from "i18n";
 
 export function createRoutes(t: TFunction) {
   return [
-  // ═══════════ GRUP 1 — OPERASYON MERKEZI ═══════════
+  // ═══════════ GRUP 1 — OPERASYON MERKEZİ ═══════════
   { type: "title", title: t("nav.operationsCenter"), key: "title-operations" },
   {
     type: "collapse",
@@ -81,7 +81,7 @@ export function createRoutes(t: TFunction) {
     noCollapse: true,
   },
 
-  // ═══════════ GRUP 2 — YAPAY ZEKÂ & OPTIMIZASYON (gated) ═══════════
+  // ═══════════ GRUP 2 — YAPAY ZEKÂ & OPTİMİZASYON (gated) ═══════════
   { type: "title", title: t("nav.aiOptimization"), key: "title-optimization" },
   {
     type: "collapse",
@@ -110,7 +110,7 @@ export function createRoutes(t: TFunction) {
     noCollapse: true,
   },
 
-  // ═══════════ GRUP 3 — MATRIS & MASTER DATA ═══════════
+  // ═══════════ GRUP 3 — MATRİS & MASTER DATA ═══════════
   { type: "title", title: t("nav.matrixMaster"), key: "title-masterdata" },
   {
     type: "collapse",
@@ -131,7 +131,7 @@ export function createRoutes(t: TFunction) {
     noCollapse: true,
   },
 
-  // ═══════════ GRUP 4 — SISTEM ═══════════
+  // ═══════════ GRUP 4 — SİSTEM ═══════════
   { type: "divider", key: "divider-system" },
   { type: "title", title: t("nav.system"), key: "title-system" },
   {
@@ -144,7 +144,7 @@ export function createRoutes(t: TFunction) {
     noCollapse: true,
   },
 
-  // ═══════════ GRUP 5 — YONETIM ═══════════
+  // ═══════════ GRUP 5 — YÖNETİM ═══════════
   { type: "title", title: t("nav.administration"), key: "title-management" },
   {
     type: "collapse",
@@ -174,7 +174,7 @@ export function createRoutes(t: TFunction) {
     route: "/admin/supervisor/customer-detail",
     component: <CustomerDetailPage />,
   },
-  // Sidenav'da GORUNMEZ — login "Sifremi unuttum" / AuthGate.
+  // Sidenav'da GORUNMEZ — login "Şifremi unuttum" / AuthGate.
   {
     type: "route",
     key: "forgot-password",

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 
-// Desen: src/hooks/useTasks.ts'ten kanitli (fetch + Authorization header +
+// Desen: src/hooks/useTasks.ts'ten kanıtlı (fetch + Authorization header +
 // enterprise-api.tulipfleet.com sabit base URL + useAuthStore token).
 
 export type MailClient = "native" | "web";

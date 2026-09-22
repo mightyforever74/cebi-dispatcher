@@ -2,10 +2,12 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "App";
+import theme from "assets/theme";
 import themeDark from "assets/theme-dark";
-import { MaterialUIControllerProvider } from "context";
+import { MaterialUIControllerProvider, THEME_STORAGE_KEY, useMaterialUIController } from "context";
 import ForgotPassword from "layouts/authentication/forgot-password";
 import Basic from "layouts/authentication/sign-in/basic";
+import { ReactNode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
 
@@ -22,6 +24,41 @@ if (!container) {
 }
 
 const root = createRoot(container);
+
+/**
+ * D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 1.2-1.3): önceden burada
+ * `themeDark` sabit olarak geçiliyordu (Configurator'daki dark-mode switch'i
+ * etkisiz kılıyordu). Artık seçim `MaterialUIController` context'indeki
+ * `darkMode` state'inden türetilir: `darkMode ? themeDark : theme`.
+ * Bu bileşen `MaterialUIControllerProvider` İÇİNDE render edilmelidir.
+ */
+function ThemedApp({ children }: { children: ReactNode }) {
+  const [controller] = useMaterialUIController();
+  const { darkMode } = controller;
+
+  // Context'ten gelen darkMode her değiştiğinde (Configurator switch dahil)
+  // `data-theme` / `color-scheme` DOM'da senkron tutulur. Bu, index.html'deki
+  // FOUC-önleyici script ile aynı sözleşmeyi (aynı localStorage anahtarı)
+  // paylaşır; ilk mount'ta script zaten doğru değeri yazmış olur, bu effect
+  // yalnızca sonraki değişiklikleri (toggle) yansıtan güvenlik ağıdır.
+  useEffect(() => {
+    const value = darkMode ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", value);
+    document.documentElement.style.colorScheme = value;
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, value);
+    } catch {
+      // localStorage erişilemez (gizli sekme/kota) — sessizce yok say.
+    }
+  }, [darkMode]);
+
+  return (
+    <ThemeProvider theme={darkMode ? themeDark : theme}>
+      <CssBaseline />
+      {children}
+    </ThemeProvider>
+  );
+}
 
 function AuthGate() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -47,14 +84,13 @@ function AuthGate() {
 root.render(
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
-      <ThemeProvider theme={themeDark}>
-        <CssBaseline />
-        <MaterialUIControllerProvider>
+      <MaterialUIControllerProvider>
+        <ThemedApp>
           <LanguageProvider>
             <AuthGate />
           </LanguageProvider>
-        </MaterialUIControllerProvider>
-      </ThemeProvider>
+        </ThemedApp>
+      </MaterialUIControllerProvider>
     </BrowserRouter>
   </QueryClientProvider>
 );

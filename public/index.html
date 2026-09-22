@@ -16,6 +16,33 @@ Coded by www.creative-tim.com
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!--
+      D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 1.1):
+      FOUC (flash-of-unstyled-content / yanlış-tema-parlaması) önleyici.
+      İlk boyamadan ÖNCE `data-theme` ve `color-scheme` atanır; böylece
+      global.css'teki `[data-theme="dark"]` / `[data-theme="light"]` CSS
+      Custom Property blokları ilk paint'te doğru değerlerle hazır olur.
+      Anahtar `tf.theme`, src/context/index.tsx (THEME_STORAGE_KEY) ve
+      src/examples/Configurator/index.tsx ile BİREBİR aynı tutulmalıdır.
+    -->
+    <script>
+      (function () {
+        var KEY = "tf.theme";
+        var theme = "dark";
+        try {
+          var stored = window.localStorage.getItem(KEY);
+          if (stored === "dark" || stored === "light") {
+            theme = stored;
+          } else if (window.matchMedia && !window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            theme = "light";
+          }
+        } catch (e) {
+          // localStorage erişilemez (gizli sekme/kota) — varsayılan "dark" kalır.
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#1A73E8" />

@@ -32,6 +32,7 @@ import {
   setMiniSidenav,
   setFixedNavbar,
   setDarkMode,
+  THEME_STORAGE_KEY,
 } from "context";
 import { useT } from "i18n";
 
@@ -74,7 +75,22 @@ function Configurator(): JSX.Element {
   };
   const handleMiniSidenav = () => setMiniSidenav(dispatch, !miniSidenav);
   const handleFixedNavbar = () => setFixedNavbar(dispatch, !fixedNavbar);
-  const handleDarkMode = () => setDarkMode(dispatch, !darkMode);
+  // D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 1.4): switch tetiklendiğinde
+  // localStorage (`tf.theme`) ve `data-theme`/`color-scheme` DOM özniteliği
+  // senkron güncellenir — index.html'deki FOUC-önleyici script ve
+  // index.tsx'teki ThemedApp effect'i ile aynı sözleşmeyi paylaşır.
+  const handleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(dispatch, next);
+    const value = next ? "dark" : "light";
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, value);
+    } catch {
+      // localStorage erişilemez (gizli sekme/kota) — sessizce yok say.
+    }
+    document.documentElement.setAttribute("data-theme", value);
+    document.documentElement.style.colorScheme = value;
+  };
 
   // sidenav type buttons styles
   const sidenavTypeButtonsStyles = ({

@@ -27,6 +27,7 @@ function Footer(): JSX.Element {
 
   return (
     <MDBox
+      component="footer"
       width="100%"
       display="flex"
       flexDirection={{ xs: "column", lg: "row" }}

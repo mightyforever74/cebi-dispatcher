@@ -60,10 +60,12 @@ function ComplexStatisticsCard({ color, title, count, percentage, icon }: Props)
           </Icon>
         </MDBox>
         <MDBox textAlign="right" lineHeight={1.25}>
-          <MDTypography variant="button" fontWeight="light" color="text">
+          <MDTypography variant="button" fontWeight="light" color="text" component="p">
             {title}
           </MDTypography>
-          <MDTypography variant="h4">{count}</MDTypography>
+          <MDTypography variant="h4" component="p">
+            {count}
+          </MDTypography>
         </MDBox>
       </MDBox>
       <Divider />

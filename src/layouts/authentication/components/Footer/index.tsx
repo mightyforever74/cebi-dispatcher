@@ -25,7 +25,7 @@ function Footer(): JSX.Element {
   const year = new Date().getFullYear();
 
   return (
-    <MDBox position="absolute" width="100%" bottom={0} py={3}>
+    <MDBox component="footer" position="absolute" width="100%" bottom={0} py={3}>
       <Container>
         <MDBox
           width="100%"

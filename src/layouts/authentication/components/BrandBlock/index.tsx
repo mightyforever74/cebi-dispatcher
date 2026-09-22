@@ -24,6 +24,7 @@ function BrandBlock(): JSX.Element {
       />
       <MDTypography
         variant="h4"
+        component="h1"
         fontWeight="medium"
         sx={(theme: { typography: { h1: { fontFamily: string } } }) => ({
           fontFamily: theme.typography.h1.fontFamily,

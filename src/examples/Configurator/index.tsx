@@ -119,7 +119,11 @@ function Configurator(): JSX.Element {
   }
 
   return (
-    <ConfiguratorRoot variant="permanent" ownerState={{ openConfigurator }}>
+    <ConfiguratorRoot
+      variant="permanent"
+      ownerState={{ openConfigurator }}
+      aria-hidden={!openConfigurator}
+    >
       <MDBox
         display="flex"
         justifyContent="space-between"
@@ -129,7 +133,9 @@ function Configurator(): JSX.Element {
         px={3}
       >
         <MDBox>
-          <MDTypography variant="h5">{t("configurator.title")}</MDTypography>
+          <MDTypography variant="h5" component="p">
+            {t("configurator.title")}
+          </MDTypography>
           <MDTypography variant="body2" color="text">
             {t("configurator.options")}
           </MDTypography>
@@ -154,7 +160,9 @@ function Configurator(): JSX.Element {
 
       <MDBox pt={0.5} pb={3} px={3}>
         <MDBox lineHeight={1}>
-          <MDTypography variant="h6">{t("configurator.sidenavType")}</MDTypography>
+          <MDTypography variant="h6" component="p">
+            {t("configurator.sidenavType")}
+          </MDTypography>
           <MDTypography variant="button" color="text">
             {t("configurator.sidenavTypeHint")}
           </MDTypography>
@@ -219,13 +227,17 @@ function Configurator(): JSX.Element {
           mt={3}
           lineHeight={1}
         >
-          <MDTypography variant="h6">{t("configurator.navbarFixed")}</MDTypography>
+          <MDTypography variant="h6" component="p">
+            {t("configurator.navbarFixed")}
+          </MDTypography>
 
           <Switch checked={fixedNavbar} onChange={handleFixedNavbar} />
         </MDBox>
         <Divider />
         <MDBox display="flex" justifyContent="space-between" alignItems="center" lineHeight={1}>
-          <MDTypography variant="h6">{t("configurator.sidenavMini")}</MDTypography>
+          <MDTypography variant="h6" component="p">
+            {t("configurator.sidenavMini")}
+          </MDTypography>
 
           <Switch checked={miniSidenav} onChange={handleMiniSidenav} />
         </MDBox>

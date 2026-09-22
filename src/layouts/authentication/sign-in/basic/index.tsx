@@ -27,7 +27,9 @@ import BrandBlock from "layouts/authentication/components/BrandBlock";
 import { Link, useNavigate } from "react-router-dom";
 import { useT } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
+import { landing } from "assets/theme/tokens";
 import LanguageSwitcher from "components/LanguageSwitcher";
+
 function Basic(): JSX.Element {
   const { t } = useT();
   const [rememberMe, setRememberMe] = useState<boolean>(false);
@@ -61,7 +63,7 @@ function Basic(): JSX.Element {
       <Card>
         <BrandBlock />
         <MDBox px={3} pt={1} textAlign="center">
-          <MDTypography variant="h6" fontWeight="medium">
+          <MDTypography variant="h6" component="p" fontWeight="medium">
             {t("login.title")}
           </MDTypography>
         </MDBox>
@@ -74,6 +76,15 @@ function Basic(): JSX.Element {
                 fullWidth
                 value={email}
                 onChange={(e: any) => setEmail(e.target.value)}
+                InputLabelProps={{
+                  sx: (theme: { palette: { mode: string } }) => ({
+                    color: theme.palette.mode === "dark" ? landing.offwhite : landing.navyInk,
+                    opacity: 1,
+                    "&.Mui-focused": {
+                      color: theme.palette.mode === "dark" ? landing.offwhite : landing.navyInk,
+                    },
+                  }),
+                }}
               />
             </MDBox>
             <MDBox mb={2}>
@@ -83,6 +94,15 @@ function Basic(): JSX.Element {
                 fullWidth
                 value={password}
                 onChange={(e: any) => setPassword(e.target.value)}
+                InputLabelProps={{
+                  sx: (theme: { palette: { mode: string } }) => ({
+                    color: theme.palette.mode === "dark" ? landing.offwhite : landing.navyInk,
+                    opacity: 1,
+                    "&.Mui-focused": {
+                      color: theme.palette.mode === "dark" ? landing.offwhite : landing.navyInk,
+                    },
+                  }),
+                }}
               />
             </MDBox>
             <MDBox mb={2} display="flex" justifyContent="flex-end">
@@ -90,15 +110,21 @@ function Basic(): JSX.Element {
                 component={Link}
                 to="/authentication/forgot-password"
                 variant="button"
-                color="info"
+                color="inherit"
                 fontWeight="medium"
+                sx={{ color: landing.emerald }}
               >
                 {t("login.forgotPassword")}
               </MDTypography>
             </MDBox>
             <MDBox display="flex" alignItems="center" ml={-1}>
-              <Switch checked={rememberMe} onChange={handleSetRememberMe} />
+              <Switch
+                checked={rememberMe}
+                onChange={handleSetRememberMe}
+                inputProps={{ "aria-labelledby": "login-remember-me" }}
+              />
               <MDTypography
+                id="login-remember-me"
                 variant="button"
                 fontWeight="regular"
                 color="text"
@@ -117,11 +143,16 @@ function Basic(): JSX.Element {
                 </MDBox>
               ) : null}
               <MDButton
-                variant="gradient"
-                color="info"
+                variant="contained"
                 fullWidth
                 onClick={handleSignIn}
                 disabled={loading}
+                sx={{
+                  backgroundColor: `${landing.emerald} !important`,
+                  color: `${landing.navyInk} !important`,
+                  "&:hover": { backgroundColor: `${landing.emerald} !important` },
+                  "&:disabled": { color: `${landing.navyInk} !important`, opacity: 0.7 },
+                }}
               >
                 {loading ? t("login.submitting") : t("login.submit")}
               </MDButton>

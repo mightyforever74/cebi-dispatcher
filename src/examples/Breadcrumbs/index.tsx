@@ -79,7 +79,7 @@ function Breadcrumbs({ icon, title, route, light }: Props): JSX.Element {
           },
         }}
       >
-        <Link to="/">
+        <Link to="/" aria-label={t("nav.home")}>
           <MDTypography
             component="span"
             variant="body2"
@@ -107,9 +107,15 @@ function Breadcrumbs({ icon, title, route, light }: Props): JSX.Element {
           {pageTitle}
         </MDTypography>
       </MuiBreadcrumbs>
-      <MDTypography fontWeight="bold" variant="h6" color={light ? "white" : "dark"} noWrap>
-        {pageTitle}
-      </MDTypography>
+        <MDTypography
+          component="h1"
+          fontWeight="bold"
+          variant="h6"
+          color={light ? "white" : "dark"}
+          noWrap
+        >
+          {pageTitle}
+        </MDTypography>
     </MDBox>
   );
 }

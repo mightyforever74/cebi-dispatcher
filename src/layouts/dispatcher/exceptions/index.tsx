@@ -180,7 +180,7 @@ export default function Exceptions(): JSX.Element {
         <Card>
           <MDBox p={3} display="flex" alignItems="center" justifyContent="space-between">
             <MDBox>
-              <MDTypography variant="h5" component="h3">{t("exceptions.title")}</MDTypography>
+              <MDTypography variant="h5" component="h2">{t("exceptions.title")}</MDTypography>
               <MDTypography variant="caption" color="text">
                 {t("exceptions.subtitle")}
               </MDTypography>
@@ -210,7 +210,7 @@ export default function Exceptions(): JSX.Element {
             }}
             emptyMessage={t("dataState.emptyExceptions")}
             emptyIcon="check_circle"
-            errorMessage={error ? t("common.errorWithMessage", { message: error }) : undefined}
+            errorMessage={error ?? undefined}
           >
             <DataTable
               table={table}

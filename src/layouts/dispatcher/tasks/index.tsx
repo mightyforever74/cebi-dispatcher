@@ -141,7 +141,7 @@ function TasksLayout(): JSX.Element {
       <DashboardNavbar />
       <MDBox p={3}>
         <MDBox display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-          <MDTypography variant="h5" component="h3" gutterBottom>
+          <MDTypography variant="h5" component="h2" gutterBottom>
             {t("tasks.title")}
           </MDTypography>
           <MDButton
@@ -179,7 +179,7 @@ function TasksLayout(): JSX.Element {
           emptyIcon="assignment"
           emptyCtaLabel={t("dataState.emptyTasksCta")}
           emptyCtaTo="/dispatcher/tasks/optimize"
-          errorMessage={error ? t("common.errorWithMessage", { message: error.message }) : undefined}
+          errorMessage={error?.message}
         >
           <DataTable
             table={table}

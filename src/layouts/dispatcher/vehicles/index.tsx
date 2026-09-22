@@ -193,7 +193,7 @@ function VehiclesLayout(): JSX.Element {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
-        <MDTypography variant="h5" component="h3" gutterBottom>
+        <MDTypography variant="h5" component="h2" gutterBottom>
           {t("vehicles.title")}
         </MDTypography>
         <Grid container spacing={3} mb={3}>
@@ -234,7 +234,7 @@ function VehiclesLayout(): JSX.Element {
           }}
           emptyMessage={t("dataState.emptyVehicles")}
           emptyIcon="local_shipping"
-          errorMessage={error ? t("common.errorWithMessage", { message: error.message }) : undefined}
+          errorMessage={error?.message}
         >
           <DataTable
             table={table}

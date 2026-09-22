@@ -142,3 +142,19 @@ Ham değer yalnız sözlükte olmayanlarda. **Hâlâ ham (kapsam dışı / rapor
 
 Hedef: axe Tasks/Vehicles color-contrast 0, Lighthouse a11y ≥ 95 (canlı oturum).
 
+### 7.6 D4-fix-2 (preview sonrası)
+
+- **Error kopyası:** dört listede başlık `dataState.error.title` (“Could not load data”); `error.message` yalnız caption + “Ayrıntı” toggle (`dataState.error.detail`; prod kapalı, dev açık). Ham `Error: Failed to fetch` başlık değil.
+- **Light kontrast** (`tokens.ts`; `paletteDark` dokunulmadı):
+
+  | Token | Eski → yeni | Zemin | Oran (WCAG 2.1) |
+  | --- | --- | --- | --- |
+  | `badgeColors.info.text` (status mavi çip `fg`) | `#095bc6` → `#074a9e` | `#aecef7` | 3.90 → **5.23:1** |
+  | `badgeColors.error.text` (critical banner `fg`) | `#f61200` → `#c1170a` | `#fcd3d0` | 3.07 → **4.53:1** |
+  | `landing.navyFog700` (input label / ikincil metin) | `#64748b` → `#5b6577` | `#f0f2f5` | 4.24 → **5.24:1** |
+  | `paletteLight.infoMain` (link caption) | `#1a73e8` → `#155fc0` | `#f0f2f5` | 4.02 → **5.46:1** |
+
+  Dark kanıt: `paletteDark.badgeColors.info/error.text` hâlâ `#095bc6` / `#f61200`; `paletteDark.infoMain` hâlâ `#1A73E8`.
+- **heading-order ×1:** navbar `h1` sonrası sayfa başlığı `h3` idi (h2 atlanıyordu). Dört listede `component="h2"` (görsel `variant="h5"` aynı).
+- Build gzip **523.17 kB** (+158 B).
+

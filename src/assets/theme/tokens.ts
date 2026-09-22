@@ -34,10 +34,10 @@ export const landing = {
   navyInk: "#070b18",
   navyFog: "#c5cde3",
   /**
-   * Light-theme secondary text on offwhite/white. Landing `--color-roadmap`
-   * (#64748b) — no navyFog-700 in landing; this is the ≥4.5:1 counterpart.
+   * Light-theme secondary text / input labels on `#f0f2f5`. Landing
+   * `--color-roadmap` (#64748b) is 4.24:1 on page bg; this is the ≥4.5:1 step.
    */
-  navyFog700: "#64748b",
+  navyFog700: "#5b6577",
   /**
    * Landing'in `color-mix(in srgb, var(--color-navy-elevated) 62%, white 16%)`
    * (global.css:9) ifadesinin JS/MUI tarafı için statik yaklaşık karşılığı
@@ -87,7 +87,7 @@ export const paletteLight = {
   primaryFocus: "#6D28D9",
   secondaryMain: landing.navyFog700,
   secondaryFocus: landing.navyFog700,
-  infoMain: "#1A73E8",
+  infoMain: "#155fc0",
   infoFocus: "#1662C4",
   successMain: "#4CAF50",
   successFocus: "#67bb6a",
@@ -138,10 +138,10 @@ export const paletteLight = {
   badgeColors: {
     primary: { background: "#f8b3ca", text: "#cc084b" },
     secondary: { background: "#d7d9e1", text: "#6c757d" },
-    info: { background: "#aecef7", text: "#095bc6" },
+    info: { background: "#aecef7", text: "#074a9e" },
     success: { background: "#bce2be", text: "#339537" },
     warning: { background: "#ffd59f", text: "#c87000" },
-    error: { background: "#fcd3d0", text: "#f61200" },
+    error: { background: "#fcd3d0", text: "#c1170a" },
     light: { background: "#ffffff", text: "#c7d3de" },
     dark: { background: "#8097bf", text: "#1e2e4a" },
   },

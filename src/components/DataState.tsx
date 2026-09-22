@@ -4,7 +4,7 @@ import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import MDTypography from "components/MDTypography";
 import { formatRelative, useT } from "i18n";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 export type DataStateKind = "loading" | "empty" | "error" | "ready";
@@ -74,6 +74,8 @@ function DataState({
 }: DataStateProps): JSX.Element {
   const { t, lang } = useT();
   const showStale = Boolean(stale ?? isDataStale(staleWhen)) && (status === "ready" || status === "loading");
+  const detail = (errorMessage ?? "").trim();
+  const [detailOpen, setDetailOpen] = useState(process.env.NODE_ENV !== "production");
 
   return (
     <MDBox>
@@ -87,12 +89,30 @@ function DataState({
 
       {status === "error" && (
         <MDBox textAlign="center" py={6} role="alert">
-          <Icon color="error" sx={{ fontSize: 40, mb: 1 }}>
+          <Icon color="error" aria-hidden sx={{ fontSize: 40, mb: 1 }}>
             error_outline
           </Icon>
-          <MDTypography variant="body2" mb={2}>
-            {errorMessage || t("dataState.error")}
+          <MDTypography variant="body2" mb={detail ? 0.5 : 2}>
+            {t("dataState.error.title")}
           </MDTypography>
+          {detail && (
+            <MDBox mb={2}>
+              <MDButton
+                variant="text"
+                color="secondary"
+                size="small"
+                onClick={() => setDetailOpen((open) => !open)}
+                aria-expanded={detailOpen}
+              >
+                {t("dataState.error.detail")}
+              </MDButton>
+              {detailOpen && (
+                <MDTypography variant="caption" color="text" display="block" mt={0.5}>
+                  {detail}
+                </MDTypography>
+              )}
+            </MDBox>
+          )}
           {onRetry && (
             <MDButton variant="outlined" color="info" size="small" onClick={onRetry}>
               {t("dataState.retry")}
@@ -103,7 +123,7 @@ function DataState({
 
       {status === "empty" && (
         <MDBox textAlign="center" py={6} role="status">
-          <Icon color="disabled" sx={{ fontSize: 40, mb: 1 }}>
+          <Icon color="disabled" aria-hidden sx={{ fontSize: 40, mb: 1 }}>
             {emptyIcon}
           </Icon>
           <MDTypography variant="body2" mb={2}>

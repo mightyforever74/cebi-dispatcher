@@ -267,7 +267,10 @@ export const tr = {
   dataState: {
     loading: "Yükleniyor…",
     empty: "Gösterilecek kayıt yok",
-    error: "Veri yüklenemedi",
+    error: {
+      title: "Veri yüklenemedi",
+      detail: "Ayrıntı",
+    },
     retry: "Yeniden dene",
     stale: "Son güncelleme {when}",
     emptyTasks: "Bu filtrede görev yok",

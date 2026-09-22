@@ -126,7 +126,7 @@ function DriversLayout(): JSX.Element {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
-        <MDTypography variant="h5" component="h3" gutterBottom>
+        <MDTypography variant="h5" component="h2" gutterBottom>
           {t("drivers.title")}
         </MDTypography>
 
@@ -139,7 +139,7 @@ function DriversLayout(): JSX.Element {
           }}
           emptyMessage={t("dataState.emptyDrivers")}
           emptyIcon="badge"
-          errorMessage={error ? t("common.errorWithMessage", { message: error.message }) : undefined}
+          errorMessage={error?.message}
         >
           <DataTable
             table={table}

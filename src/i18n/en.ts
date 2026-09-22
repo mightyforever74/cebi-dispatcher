@@ -269,7 +269,10 @@ export const en = {
   dataState: {
     loading: "Loading…",
     empty: "Nothing to show",
-    error: "Could not load data",
+    error: {
+      title: "Could not load data",
+      detail: "Details",
+    },
     retry: "Retry",
     stale: "Last update {when}",
     emptyTasks: "No tasks in this filter",

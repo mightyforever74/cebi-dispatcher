@@ -267,7 +267,10 @@ export const nl = {
   dataState: {
     loading: "Laden…",
     empty: "Niets te tonen",
-    error: "Gegevens laden mislukt",
+    error: {
+      title: "Gegevens laden mislukt",
+      detail: "Details",
+    },
     retry: "Opnieuw",
     stale: "Laatste update {when}",
     emptyTasks: "Geen taken in dit filter",

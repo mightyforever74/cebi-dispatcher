@@ -23,6 +23,7 @@ import MDBox from "components/MDBox";
 
 // Material Dashboard 2 PRO React context
 import { useMaterialUIController, setLayout } from "context";
+import NotificationHost from "components/Notifications";
 
 function DashboardLayout({ children }: { children: ReactNode }): JSX.Element {
   const [controller, dispatch] = useMaterialUIController();
@@ -50,6 +51,7 @@ function DashboardLayout({ children }: { children: ReactNode }): JSX.Element {
       })}
     >
       {children}
+      <NotificationHost />
     </MDBox>
   );
 }

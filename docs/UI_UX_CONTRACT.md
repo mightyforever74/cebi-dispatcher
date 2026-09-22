@@ -118,6 +118,7 @@ Kod yazmaya başlama. Önce bu belgeyi oku. Çelişen bir prompt gelirse **bu s�
 - Ekran görüntüleri `docs/screenshots/<pkg>/`, 1280px, JPEG q80, ≤150 KB.
 - **Preview turu kanıtı önce:** Cloudflare Deployments'ta branch + commit hash Success; `dispatcher-preview` CNAME o branch alias'ında. Bundle hash ≠ kimlik (CRA hash'i `REACT_APP_*` env'e bağlı, yerel ≠ Cloudflare) — kimlik kanıtı commit + pakete özgü string grep.
 - Tur matrisi: ekranlar × TR/EN/NL × dark/light × 1280/390; axe critical 0 / serious 0; login duvarı varsa rapora.
+- Kod yorumları İngilizce; i18n gate yorumları değerlendirmez.
 
 ## 11. Teslim kontrol listesi
 

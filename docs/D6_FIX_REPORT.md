@@ -56,14 +56,16 @@ Cip kendi bg/fg ciftinde; her iki temada ayni cift ≥4.5.
 - Subscription "Mevcut filo kotanizi goruntule…" → `plan.subtitle` (tum sayfa `plan.*` / `connect.*`).
 - Supervisor / Toll placeholder / `conflict.fallback` sozluge cekildi.
 
-**Kapi:** `src/**/*.ts(x)` icinde `src/i18n/` haric Turkce harf sifir.
+**Kapi:** `npm run i18n:gate` — `src` ts/tsx (`src/i18n/` haric), `//` ve `/* */` yorumlari dusulur, kalan metinde `[ğüşıöçĞÜŞİÖÇ]` sifir.
 
 ```
-rg -n -g "*.ts" -g "*.tsx" -g "!src/i18n/**" "[ğüşıöçĞÜŞİÖÇ]" src
-# (no matches; exit 1 from ripgrep)
+> material-dashboard-2-pro-react-ts@1.0.2 i18n:gate
+> node scripts/i18n-gate.mjs
+
+# (no matches; exit 0)
 ```
 
-Yorumlardaki harfler ASCII'ye cevrildi; UI metni sozlukte.
+UI metni sozlukte. Yorumlar degerlendirilmez.
 
 ---
 
@@ -175,7 +177,7 @@ Once: pending `#6c757d`/`#d7d9e1` = 3.33; in_progress `#cc084b`/`#f8b3ca` = 3.32
 
 ### (c) Yalniz yorum ASCII — dosya listesi
 
-`a6ccd24` **icinde** (commit'ten cikarilmadi). Runtime / sozluk degismeyen, yalniz `ğüşıöçĞÜŞİÖÇ` → ASCII (yorum / JSDoc / dosya basligi). Gate yorumlari haric tutmaz; harfler ASCII oldugu icin gecer. 45 dosya:
+45 yorum-only dosya geri alindi; gate yorumlari haric tutar. `a6ccd24` icindeki ASCII yorumlar `0633dca` (a6ccd24^) haline dondu — yedi dosyada D6 islevi (`index.tsx` skip-link, Sidenav/hooks/Configurator/exceptions) `main` checkout ile silinmesin diye. `decisionLog` icinde 2 `console.warn` dizesi yorum degil; gate yakaladi, Ingilizceye cekildi. Liste (geri alinan 45):
 
 ```
 src/assets/theme/base/borders.ts

@@ -12,7 +12,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
-import DataState, { dataStateOf, isDataStale } from "components/DataState";
+import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -166,10 +166,11 @@ export default function Exceptions(): JSX.Element {
     return { columns, rows };
   }, [exceptions, newIds, t, lang, doAcknowledge]);
 
-  const state = dataStateOf({
+  const state = listFetchState({
     isLoading: loading,
     isError: Boolean(error),
-    isEmpty: !loading && !error && exceptions.length === 0,
+    data: loading ? undefined : exceptions,
+    error,
   });
 
   return (
@@ -179,7 +180,7 @@ export default function Exceptions(): JSX.Element {
         <Card>
           <MDBox p={3} display="flex" alignItems="center" justifyContent="space-between">
             <MDBox>
-              <MDTypography variant="h5">{t("exceptions.title")}</MDTypography>
+              <MDTypography variant="h5" component="h3">{t("exceptions.title")}</MDTypography>
               <MDTypography variant="caption" color="text">
                 {t("exceptions.subtitle")}
               </MDTypography>

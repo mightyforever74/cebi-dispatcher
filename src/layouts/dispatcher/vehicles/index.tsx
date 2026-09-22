@@ -1,12 +1,12 @@
 import { Chip } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import DataState, { dataStateOf, isDataStale } from "components/DataState";
+import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import FuelGaugeMini from "components/FuelGaugeMini";
 import MDBadge from "components/MDBadge";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-import StatusChip from "components/StatusChip";
+import StatusChip, { enumLabel } from "components/StatusChip";
 import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatisticsCard";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -31,9 +31,9 @@ function emissionClassColor(emissionClass?: string): "success" | "info" | "warni
 
 function VehiclesLayout(): JSX.Element {
   const { t, lang } = useT();
-  const { data: vehiclesData, isLoading, isError, error, dataUpdatedAt, refetch } = useVehicles();
+  const { data, isLoading, isError, isPaused, error, dataUpdatedAt, refetch } = useVehicles();
   const { data: driversData } = useDrivers();
-  const vehicles = vehiclesData ?? EMPTY_VEHICLES;
+  const vehicles = data ?? EMPTY_VEHICLES;
   const drivers = driversData ?? EMPTY_DRIVERS;
   const navigate = useNavigate();
 
@@ -63,36 +63,30 @@ function VehiclesLayout(): JSX.Element {
 
     const rows: DataRow[] = vehicles.map((v: Vehicle) => {
       const plate = v.plate_no || "—";
+      const modelLine = [v.brand, v.model].filter(Boolean).join(" ") || "—";
+      const vehicleLine = modelLine !== "—" ? `${plate} · ${modelLine}` : plate;
       const vehicleInfo = (
-        <MDBox
-          display="flex"
-          alignItems="center"
-          gap={1}
+        <MDTypography
+          variant="body2"
+          fontWeight="medium"
+          noWrap
+          title={vehicleLine}
           onClick={() =>
             v.plate_no &&
             navigate(`/dashboards/live-fleet-map?focusPlate=${encodeURIComponent(v.plate_no)}`)
           }
-          sx={{ cursor: v.plate_no ? "pointer" : "default" }}
-          title={plate}
+          sx={{
+            cursor: v.plate_no ? "pointer" : "default",
+            color: "info.main",
+            "&:hover": { textDecoration: v.plate_no ? "underline" : "none" },
+          }}
         >
-          <MDBox display="flex" flexDirection="column">
-            <MDTypography
-              variant="body2"
-              fontWeight="medium"
-              noWrap
-              sx={{ color: "info.main", "&:hover": { textDecoration: "underline" } }}
-            >
-              {plate}
-            </MDTypography>
-            <MDTypography variant="caption" color="dark" noWrap>
-              {[v.brand, v.model].filter(Boolean).join(" ") || "—"}
-            </MDTypography>
-          </MDBox>
-        </MDBox>
+          {vehicleLine}
+        </MDTypography>
       );
 
       const categoryBadge = v.vehicle_category ? (
-        <Chip label={v.vehicle_category} size="small" variant="outlined" />
+        <Chip label={enumLabel("vehicle.category", v.vehicle_category, t)} size="small" variant="outlined" />
       ) : (
         "—"
       );
@@ -117,7 +111,7 @@ function VehiclesLayout(): JSX.Element {
         );
 
       const fuelTypeBadge = v.fuel_type ? (
-        <Chip label={v.fuel_type} size="small" variant="outlined" />
+        <Chip label={enumLabel("vehicle.fuel", v.fuel_type, t)} size="small" variant="outlined" />
       ) : (
         "—"
       );
@@ -144,15 +138,15 @@ function VehiclesLayout(): JSX.Element {
         );
 
       const nextKm = toNum(v.next_maintenance_km);
+      const maintDate = formatDate(v.last_maintenance_date, lang);
+      const maintTitle =
+        nextKm != null
+          ? `${maintDate} · ${t("common.distanceKm", { value: formatNumber(nextKm, lang) })}`
+          : maintDate;
       const maintenanceInfo = (
-        <MDBox display="flex" flexDirection="column" gap={0.5}>
-          <MDTypography variant="caption">{formatDate(v.last_maintenance_date, lang)}</MDTypography>
-          {nextKm != null && (
-            <MDTypography variant="caption" color="dark">
-              {t("common.distanceKm", { value: formatNumber(nextKm, lang) })}
-            </MDTypography>
-          )}
-        </MDBox>
+        <MDTypography variant="caption" noWrap title={maintTitle} sx={{ fontVariantNumeric: "tabular-nums" }}>
+          {maintDate}
+        </MDTypography>
       );
 
       const emissionBadge = v.emission_class ? (
@@ -187,17 +181,19 @@ function VehiclesLayout(): JSX.Element {
     return { columns, rows };
   }, [vehicles, driverNameByVehicleId, navigate, t, lang]);
 
-  const status = dataStateOf({
+  const status = listFetchState({
     isLoading,
     isError,
-    isEmpty: !isLoading && !isError && vehicles.length === 0,
+    isPaused,
+    data,
+    error,
   });
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
-        <MDTypography variant="h5" component="h2" gutterBottom>
+        <MDTypography variant="h5" component="h3" gutterBottom>
           {t("vehicles.title")}
         </MDTypography>
         <Grid container spacing={3} mb={3}>

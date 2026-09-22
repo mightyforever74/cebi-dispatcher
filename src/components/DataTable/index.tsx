@@ -106,6 +106,21 @@ function columnWidthSx(column: DataColumn): CSSProperties {
   return style;
 }
 
+function rowCellSx(rowPx: number, column?: DataColumn): object {
+  return {
+    ...columnWidthSx(column ?? { Header: "", accessor: "" }),
+    height: rowPx,
+    maxHeight: rowPx,
+    py: 0,
+    px: 1.5,
+    boxSizing: "border-box",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    verticalAlign: "middle",
+    lineHeight: 1.25,
+  };
+}
+
 function DataTable({
   entriesPerPage = { defaultValue: 10, entries: [5, 10, 25, 50] },
   canSearch = false,
@@ -293,8 +308,10 @@ function DataTable({
       {pageOptions.length > 1 && (
         <MDPagination variant={pagination.variant} color={pagination.color}>
           {canPreviousPage && (
-            <MDPagination item onClick={() => previousPage()}>
-              <Icon sx={{ fontWeight: "bold" }}>chevron_left</Icon>
+            <MDPagination item onClick={() => previousPage()} aria-label={t("table.prevPage")}>
+              <Icon aria-hidden sx={{ fontWeight: "bold" }}>
+                chevron_left
+              </Icon>
             </MDPagination>
           )}
           {renderPagination.length > 6 ? (
@@ -322,8 +339,10 @@ function DataTable({
             renderPagination
           )}
           {canNextPage && (
-            <MDPagination item onClick={() => nextPage()}>
-              <Icon sx={{ fontWeight: "bold" }}>chevron_right</Icon>
+            <MDPagination item onClick={() => nextPage()} aria-label={t("table.nextPage")}>
+              <Icon aria-hidden sx={{ fontWeight: "bold" }}>
+                chevron_right
+              </Icon>
             </MDPagination>
           )}
         </MDPagination>
@@ -388,6 +407,9 @@ function DataTable({
       <MDBox
         ref={scrollerRef}
         onScroll={onScroll}
+        tabIndex={0}
+        role="region"
+        aria-label={ariaLabel ?? t("table.scrollHint")}
         sx={{
           overflowX: "auto",
           position: "relative",
@@ -449,10 +471,7 @@ function DataTable({
                         aria-sort={sort === false || sort === "none" ? undefined : sort}
                         align={colDef?.numeric ? "right" : colDef?.align ?? "left"}
                         sx={{
-                          ...columnWidthSx(colDef ?? { Header: "", accessor: column.id }),
-                          height: rowPx,
-                          py: 0,
-                          px: 1.5,
+                          ...rowCellSx(rowPx, colDef ?? { Header: "", accessor: column.id }),
                           fontSize: "0.65rem",
                           fontWeight: 700,
                           textTransform: "uppercase",
@@ -472,12 +491,12 @@ function DataTable({
           <TableBody {...getTableBodyProps()}>
             {loading
               ? Array.from({ length: 8 }).map((_, i) => (
-                  <TableRow key={`sk-${i}`} role="row">
+                    <TableRow key={`sk-${i}`} role="row" sx={{ height: rowPx, maxHeight: rowPx }}>
                     {table.columns.map((col) => (
                       <TableCell
                         key={col.accessor}
                         role="cell"
-                        sx={{ ...columnWidthSx(col), height: rowPx, py: 0, px: 1.5 }}
+                        sx={rowCellSx(rowPx, col)}
                       >
                         <Skeleton height={18} />
                       </TableCell>
@@ -496,6 +515,7 @@ function DataTable({
                       {...rRest}
                       role="row"
                       aria-label={rowLabel ? String(rowLabel) : undefined}
+                      sx={{ height: rowPx, maxHeight: rowPx }}
                     >
                       {row.cells.map((cell) => {
                         const colDef = table.columns.find((c) => c.accessor === cell.column.id);
@@ -514,21 +534,16 @@ function DataTable({
                             align={colDef?.numeric ? "right" : colDef?.align ?? "left"}
                             title={title}
                             sx={{
-                              ...columnWidthSx(colDef ?? { Header: "", accessor: cell.column.id }),
-                              height: rowPx,
-                              py: 0,
-                              px: 1.5,
+                              ...rowCellSx(rowPx, colDef ?? { Header: "", accessor: cell.column.id }),
                               borderBottom: noEndBorder ? "none" : undefined,
                               fontVariantNumeric: colDef?.numeric ? "tabular-nums" : undefined,
-                              "& > *": colDef?.truncate
-                                ? {
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    maxWidth: "100%",
-                                    display: "block",
-                                  }
-                                : undefined,
+                              "& > *": {
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                maxWidth: "100%",
+                                display: "block",
+                              },
                             }}
                           >
                             {cellContent(raw, dash)}

@@ -1,5 +1,5 @@
 import { Box, Chip, LinearProgress } from "@mui/material";
-import DataState, { dataStateOf, isDataStale } from "components/DataState";
+import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -11,6 +11,8 @@ import useVehicles, { type Vehicle } from "hooks/useVehicles";
 import { formatDate, formatNumber, useT } from "i18n";
 import { useMemo } from "react";
 import { toNum } from "utils/toNum";
+
+const EMPTY_DRIVERS_LIST: Driver[] = [];
 
 function safetyScorePercent(score?: number): number {
   if (score == null) return 0;
@@ -29,7 +31,8 @@ function safetyScoreColor(
 
 function DriversLayout(): JSX.Element {
   const { t, lang } = useT();
-  const { data: drivers = [], isLoading, isError, error, dataUpdatedAt, refetch } = useDrivers();
+  const { data, isLoading, isError, isPaused, error, dataUpdatedAt, refetch } = useDrivers();
+  const drivers = data ?? EMPTY_DRIVERS_LIST;
   const { data: vehicles = [] } = useVehicles();
 
   const plateByVehicleId = useMemo(() => {
@@ -54,32 +57,24 @@ function DriversLayout(): JSX.Element {
       const email = d.email || "";
 
       const driverName = (
-        <MDBox title={fullName}>
-          <MDTypography variant="body2" fontWeight="medium" noWrap>
-            {fullName}
-          </MDTypography>
-          {email ? (
-            <MDTypography variant="caption" color="dark" noWrap>
-              {email}
-            </MDTypography>
-          ) : null}
-        </MDBox>
+        <MDTypography variant="body2" fontWeight="medium" noWrap title={email ? `${fullName} · ${email}` : fullName}>
+          {fullName}
+        </MDTypography>
       );
 
+      const licenseBit = d.license_no
+        ? d.license_expiry
+          ? t("drivers.licenseWithExpiry", {
+              license: d.license_no,
+              expiry: formatDate(d.license_expiry, lang),
+            })
+          : d.license_no
+        : "";
+      const contactLine = [d.phone, licenseBit].filter(Boolean).join(" · ") || "—";
       const contactInfo = (
-        <MDBox display="flex" flexDirection="column" gap={0.5}>
-          {d.phone ? <MDTypography variant="body2">{d.phone}</MDTypography> : null}
-          {d.license_no ? (
-            <MDTypography variant="caption" color="dark">
-              {d.license_expiry
-                ? t("drivers.licenseWithExpiry", {
-                    license: d.license_no,
-                    expiry: formatDate(d.license_expiry, lang),
-                  })
-                : d.license_no}
-            </MDTypography>
-          ) : null}
-        </MDBox>
+        <MDTypography variant="caption" noWrap title={contactLine}>
+          {contactLine}
+        </MDTypography>
       );
 
       const score = toNum(d.safety_score);
@@ -119,17 +114,19 @@ function DriversLayout(): JSX.Element {
     return { columns, rows };
   }, [drivers, plateByVehicleId, t, lang]);
 
-  const status = dataStateOf({
+  const status = listFetchState({
     isLoading,
     isError,
-    isEmpty: !isLoading && !isError && drivers.length === 0,
+    isPaused,
+    data,
+    error,
   });
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
-        <MDTypography variant="h5" gutterBottom>
+        <MDTypography variant="h5" component="h3" gutterBottom>
           {t("drivers.title")}
         </MDTypography>
 

@@ -34,10 +34,30 @@ export function dataStateOf(opts: {
   isError: boolean;
   isEmpty: boolean;
 }): DataStateKind {
-  if (opts.isLoading) return "loading";
   if (opts.isError) return "error";
+  if (opts.isLoading) return "loading";
   if (opts.isEmpty) return "empty";
   return "ready";
+}
+
+/** Empty only when the query succeeded with zero rows — never on fetch failure / pause. */
+export function listFetchState(q: {
+  isLoading: boolean;
+  isError: boolean;
+  isPaused?: boolean;
+  data: readonly unknown[] | undefined;
+  error?: Error | string | null;
+}): DataStateKind {
+  const hasData = q.data !== undefined;
+  const isError =
+    Boolean(q.isError) ||
+    Boolean(q.error) ||
+    Boolean(q.isPaused && !hasData && !q.isLoading);
+  return dataStateOf({
+    isLoading: q.isLoading && !isError,
+    isError,
+    isEmpty: hasData && q.data.length === 0 && !isError,
+  });
 }
 
 function DataState({

@@ -1,5 +1,5 @@
-import { Chip, Tab, Tabs } from "@mui/material";
-import DataState, { dataStateOf, isDataStale } from "components/DataState";
+import { Tab, Tabs } from "@mui/material";
+import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
@@ -15,11 +15,22 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toNum } from "utils/toNum";
 
+const EMPTY_TASKS: Task[] = [];
+
 function TasksLayout(): JSX.Element {
   const { t, lang } = useT();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<TaskFilter>("all");
-  const { data: tasks = [], isLoading, isError, error, dataUpdatedAt, refetch } = useTasks(filter);
+  const {
+    data,
+    isLoading,
+    isError,
+    isPaused,
+    error,
+    dataUpdatedAt,
+    refetch,
+  } = useTasks(filter);
+  const tasks = data ?? EMPTY_TASKS;
   const { data: drivers = [] } = useDrivers();
   const { data: vehicles = [] } = useVehicles();
 
@@ -55,56 +66,40 @@ function TasksLayout(): JSX.Element {
     const rows: DataRow[] = tasks.map((task: Task) => {
       const taskNo = task.task_no || "—";
       const taskTitle = task.title || "";
+      const taskLine = taskTitle ? `${taskNo} — ${taskTitle}` : taskNo;
       const taskInfo = (
-        <MDBox display="flex" flexDirection="column" title={taskTitle ? `${taskNo} — ${taskTitle}` : taskNo}>
-          <MDTypography variant="body2" fontWeight="medium" noWrap>
-            {taskNo}
-          </MDTypography>
-          {taskTitle ? (
-            <MDTypography variant="caption" color="dark" noWrap>
-              {taskTitle}
-            </MDTypography>
-          ) : null}
-        </MDBox>
+        <MDTypography variant="body2" fontWeight="medium" noWrap title={taskLine}>
+          {taskLine}
+        </MDTypography>
       );
 
+      const routeLine = `${task.start_location || "—"} → ${task.end_location || "—"}`;
       const routeInfo = (
-        <MDBox display="flex" flexDirection="column" title={`${task.start_location || "—"} → ${task.end_location || "—"}`}>
-          <MDTypography variant="caption" noWrap>
-            {task.start_location || "—"}
-          </MDTypography>
-          <MDTypography variant="caption" color="dark" noWrap>
-            → {task.end_location || "—"}
-          </MDTypography>
-        </MDBox>
+        <MDTypography variant="caption" noWrap title={routeLine}>
+          {routeLine}
+        </MDTypography>
       );
 
       const driverName = task.driver_id ? driverNameById.get(task.driver_id) ?? "—" : "—";
       const plate = task.vehicle_id ? plateById.get(task.vehicle_id) ?? null : null;
+      const driverLine = plate ? `${driverName} · ${plate}` : driverName;
       const driverVehicle = (
-        <MDBox display="flex" flexDirection="column" gap={0.5}>
-          <MDTypography variant="body2" noWrap>
-            {driverName}
-          </MDTypography>
-          {plate ? (
-            <Chip label={plate} size="small" variant="outlined" />
-          ) : (
-            <MDTypography variant="caption" color="dark">
-              —
-            </MDTypography>
-          )}
-        </MDBox>
+        <MDTypography variant="body2" noWrap title={driverLine}>
+          {driverLine}
+        </MDTypography>
       );
 
+      const start = formatDateTime(task.scheduled_start, lang);
+      const end = task.scheduled_end ? formatDateTime(task.scheduled_end, lang) : "";
       const scheduledInfo = (
-        <MDBox display="flex" flexDirection="column">
-          <MDTypography variant="caption">{formatDateTime(task.scheduled_start, lang)}</MDTypography>
-          {task.scheduled_end ? (
-            <MDTypography variant="caption" color="dark">
-              {formatDateTime(task.scheduled_end, lang)}
-            </MDTypography>
-          ) : null}
-        </MDBox>
+        <MDTypography
+          variant="caption"
+          noWrap
+          title={end ? `${start} – ${end}` : start}
+          sx={{ fontVariantNumeric: "tabular-nums" }}
+        >
+          {start}
+        </MDTypography>
       );
 
       const km = toNum(task.total_distance_km);
@@ -133,10 +128,12 @@ function TasksLayout(): JSX.Element {
     return { columns, rows };
   }, [tasks, driverNameById, plateById, t, lang]);
 
-  const status = dataStateOf({
+  const status = listFetchState({
     isLoading,
     isError,
-    isEmpty: !isLoading && !isError && tasks.length === 0,
+    isPaused,
+    data,
+    error,
   });
 
   return (
@@ -144,7 +141,7 @@ function TasksLayout(): JSX.Element {
       <DashboardNavbar />
       <MDBox p={3}>
         <MDBox display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-          <MDTypography variant="h5" gutterBottom>
+          <MDTypography variant="h5" component="h3" gutterBottom>
             {t("tasks.title")}
           </MDTypography>
           <MDButton

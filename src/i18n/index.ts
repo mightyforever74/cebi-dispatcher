@@ -132,6 +132,7 @@ const DATETIME_OPTS: Intl.DateTimeFormatOptions = {
   ...DATE_OPTS,
   hour: "2-digit",
   minute: "2-digit",
+  hourCycle: "h23",
 };
 
 function toEpoch(value: Date | number | string | null | undefined): number | null {

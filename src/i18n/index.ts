@@ -182,17 +182,29 @@ export function formatDurationMinutes(totalMin: number, lang: Lang = currentLang
   return translate(lang, "optimize.minutesOnly", { m });
 }
 
+export type ParseLocaleNumberResult =
+  | { ok: true; value: number | null }
+  | { ok: false };
+
 /**
- * Parse a user-typed decimal. NL/TR treat `,` as the decimal mark;
- * EN treats `.` as decimal and strips grouping commas.
+ * Locale-strict decimal parser. EN accepts only `.`; TR/NL accept only `,`.
+ * Any other separator is rejected (`1,5` in EN is invalid, not 15).
  */
-export function parseDecimal(raw: string, lang: Lang = currentLang): number | null {
+export function parseLocaleNumber(
+  raw: string,
+  locale: Locale = LOCALE_BY_LANG[currentLang]
+): ParseLocaleNumberResult {
   const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const normalized =
-    lang === "en" ? trimmed.replace(/,/g, "") : trimmed.replace(/\./g, "").replace(",", ".");
-  const n = Number(normalized);
-  return Number.isFinite(n) ? n : null;
+  if (!trimmed) return { ok: true, value: null };
+  const isEn = locale.startsWith("en");
+  if (isEn) {
+    if (!/^-?\d+(\.\d+)?$/.test(trimmed)) return { ok: false };
+    const n = Number(trimmed);
+    return Number.isFinite(n) ? { ok: true, value: n } : { ok: false };
+  }
+  if (!/^-?\d+(,\d+)?$/.test(trimmed)) return { ok: false };
+  const n = Number(trimmed.replace(",", "."));
+  return Number.isFinite(n) ? { ok: true, value: n } : { ok: false };
 }
 
 /** Empty-cell renderer — never print `null` / `undefined`. */

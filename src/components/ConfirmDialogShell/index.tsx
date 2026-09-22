@@ -245,6 +245,7 @@ function ConfirmDialogShell({
       disableEscapeKeyDown={submitting}
       aria-labelledby={titleId}
       aria-describedby={subtitle ? descId : undefined}
+      aria-modal="true"
       onKeyDown={onKeyDown}
       PaperProps={{
         sx: {

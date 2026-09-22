@@ -432,6 +432,12 @@ export const dialog = {
   },
 } as const;
 
+/** Form field error text — ≥4.5:1 on page/panel backgrounds. */
+export const form = {
+  errorFgLight: "#B71C1C",
+  errorFgDark: "#FF8A80",
+} as const;
+
 // =========================================================================
 // 5b) LIVE MAP — D3 (basemap, chrome, eşikler). Hex yalnız burada.
 //     Marker renkleri `status.vehicle.*` (online/stale/offline); bu nesne

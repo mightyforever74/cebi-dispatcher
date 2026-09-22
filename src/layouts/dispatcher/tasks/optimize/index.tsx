@@ -145,7 +145,7 @@ import {
 } from "types/metadata";
 
 // FEAT-010:FN-18/FN-20 - karar logu (ML-analiz veri temeli; best-effort, approve'u bloke etmez)
-import { formatDateTime, formatDurationMinutes, formatNumber, parseDecimal, useT, type TFunction, type TranslationKey } from "i18n";
+import { formatDateTime, formatDurationMinutes, formatNumber, parseLocaleNumber, useT, type TFunction, type TranslationKey } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 import { postDecisionLog } from "services/dispatch/decisionLog";
 import OverrideReasonDialog from "components/OverrideReasonDialog";
@@ -499,7 +499,7 @@ function VehicleRowHeader({
 }
 
 function OptimizeTask(): JSX.Element {
-  const { t, lang } = useT();
+  const { t, lang, locale } = useT();
   const { notifyToast } = useNotifications();
   const navigate = useNavigate();
   const { data: vehicles = [], isLoading: loadingVehicles } = useVehicles();
@@ -511,7 +511,13 @@ function OptimizeTask(): JSX.Element {
   const [pickup, setPickup] = useState<LocationValue>(emptyLocation);
   const [dropoff, setDropoff] = useState<LocationValue>(emptyLocation);
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
-  const [fieldError, setFieldError] = useState<{ pickup?: string; dropoff?: string; vehicles?: string }>({});
+  const [fieldError, setFieldError] = useState<{
+    pickup?: string;
+    dropoff?: string;
+    vehicles?: string;
+    volume?: string;
+    weight?: string;
+  }>({});
   const [jobId, setJobId] = useState<string | null>(null);
   // BUG-2: conflicts alani eklendi — kismi basari ozeti bu state'ten beslenir.
   const [approveSuccess, setApproveSuccess] = useState<{
@@ -595,20 +601,27 @@ function OptimizeTask(): JSX.Element {
     p.address.trim() !== "" && p.latitude !== null && p.longitude !== null;
 
   // Form state'inden StrictTaskConstraints uretir (tek kontrat).
-  const collectConstraints = (): StrictTaskConstraints => ({
-    capacity_required: {
-      volume_m3: volumeM3.trim() === "" ? null : parseDecimal(volumeM3, lang),
-      weight_kg: weightKg.trim() === "" ? null : parseDecimal(weightKg, lang),
-      hazmat_classes: hazmatClasses,
-    },
-    skill_required: skills,
-    extended: {
-      direction,
-      location_type: locationType,
-      time_window_start: dateToIso(timeWindowStart),
-      time_window_end: dateToIso(timeWindowEnd),
-    },
-  });
+  const decimalError = () =>
+    t(locale.startsWith("en") ? "optimize.errorDecimalDot" : "optimize.errorDecimalComma");
+
+  const collectConstraints = (): StrictTaskConstraints => {
+    const volume = parseLocaleNumber(volumeM3, locale);
+    const weight = parseLocaleNumber(weightKg, locale);
+    return {
+      capacity_required: {
+        volume_m3: volume.ok ? volume.value : null,
+        weight_kg: weight.ok ? weight.value : null,
+        hazmat_classes: hazmatClasses,
+      },
+      skill_required: skills,
+      extended: {
+        direction,
+        location_type: locationType,
+        time_window_start: dateToIso(timeWindowStart),
+        time_window_end: dateToIso(timeWindowEnd),
+      },
+    };
+  };
 
   // BUG-2: gercek submit — fan-out ile arac basina 1 gorev kopyasi.
   // N=1'de fanout.map tek elemanli dizi uretir: eski payload BIT-BIT ayni.
@@ -658,11 +671,21 @@ function OptimizeTask(): JSX.Element {
     setFieldError({});
     setApproveSuccess(null);
 
-    const next: { pickup?: string; dropoff?: string; vehicles?: string } = {};
+    const next: {
+      pickup?: string;
+      dropoff?: string;
+      vehicles?: string;
+      volume?: string;
+      weight?: string;
+    } = {};
     if (!validLocation(pickup)) next.pickup = t("optimize.errorPickupDropoff");
     if (!validLocation(dropoff)) next.dropoff = t("optimize.errorPickupDropoff");
     if (selectedVehicleIds.length === 0) next.vehicles = t("optimize.errorVehicles");
-    if (next.pickup || next.dropoff || next.vehicles) {
+    const volume = parseLocaleNumber(volumeM3, locale);
+    const weight = parseLocaleNumber(weightKg, locale);
+    if (!volume.ok) next.volume = decimalError();
+    if (!weight.ok) next.weight = decimalError();
+    if (next.pickup || next.dropoff || next.vehicles || next.volume || next.weight) {
       setFieldError(next);
       return;
     }
@@ -1193,7 +1216,9 @@ function OptimizeTask(): JSX.Element {
                   label={t("optimize.volume")}
                   value={volumeM3}
                   onChange={(e) => setVolumeM3(e.target.value)}
-                  inputProps={{ inputMode: "decimal", min: 0 }}
+                  error={Boolean(fieldError.volume)}
+                  helperText={fieldError.volume}
+                  inputProps={{ inputMode: "decimal", min: 0, "aria-invalid": Boolean(fieldError.volume) || undefined }}
                   sx={{ "& input": { fontVariantNumeric: "tabular-nums" } }}
                 />
               </Grid>
@@ -1204,7 +1229,9 @@ function OptimizeTask(): JSX.Element {
                   label={t("optimize.weight")}
                   value={weightKg}
                   onChange={(e) => setWeightKg(e.target.value)}
-                  inputProps={{ inputMode: "decimal", min: 0 }}
+                  error={Boolean(fieldError.weight)}
+                  helperText={fieldError.weight}
+                  inputProps={{ inputMode: "decimal", min: 0, "aria-invalid": Boolean(fieldError.weight) || undefined }}
                   sx={{ "& input": { fontVariantNumeric: "tabular-nums" } }}
                 />
               </Grid>

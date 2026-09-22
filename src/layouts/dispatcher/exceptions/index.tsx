@@ -6,8 +6,11 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import Card from "@mui/material/Card";
+import Icon from "@mui/material/Icon";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 import ConfirmDialogShell from "components/ConfirmDialogShell";
 import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
@@ -59,6 +62,8 @@ function statusLabel(status: string, translate: (key: TranslationKey) => string)
 
 export default function Exceptions(): JSX.Element {
   const { t, lang } = useT();
+  const theme = useTheme();
+  const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
   const {
     exceptions,
     loading,
@@ -148,14 +153,32 @@ export default function Exceptions(): JSX.Element {
           </MDTypography>
         ),
         actions: (
-          <MDBox display="flex" gap={1}>
+          <MDBox display="flex" gap={0.5} flexWrap="nowrap">
             {e.status === "open" && (
-              <MDButton size="small" variant="outlined" color="info" onClick={() => void doAcknowledge(e)}>
-                {t("exceptions.acknowledge")}
+              <MDButton
+                size="small"
+                variant="outlined"
+                color="info"
+                onClick={() => void doAcknowledge(e)}
+                aria-label={t("exceptions.acknowledge")}
+              >
+                <Icon fontSize="small" aria-hidden>
+                  done
+                </Icon>
+                {isMdUp ? t("exceptions.acknowledge") : null}
               </MDButton>
             )}
-            <MDButton size="small" variant="gradient" color="success" onClick={() => setDialogFor(e)}>
-              {t("exceptions.resolve")}
+            <MDButton
+              size="small"
+              variant="gradient"
+              color="success"
+              onClick={() => setDialogFor(e)}
+              aria-label={t("exceptions.resolve")}
+            >
+              <Icon fontSize="small" aria-hidden>
+                task_alt
+              </Icon>
+              {isMdUp ? t("exceptions.resolve") : null}
             </MDButton>
           </MDBox>
         ),
@@ -165,7 +188,7 @@ export default function Exceptions(): JSX.Element {
     });
 
     return { columns, rows };
-  }, [exceptions, newIds, t, lang, doAcknowledge]);
+  }, [exceptions, newIds, t, lang, doAcknowledge, isMdUp]);
 
   const state = listFetchState({
     isLoading: loading,
@@ -233,7 +256,11 @@ export default function Exceptions(): JSX.Element {
         submitting={busy}
         confirmLabel={t("exceptions.resolveClose")}
         submittingLabel={t("exceptions.saving")}
-        onCancel={() => setDialogFor(null)}
+        onCancel={() => {
+          setDialogFor(null);
+          setComment("");
+          setAction("dismiss");
+        }}
         onConfirm={() => {
           void doResolve();
         }}
@@ -241,6 +268,7 @@ export default function Exceptions(): JSX.Element {
           value: comment,
           onChange: setComment,
           label: t("exceptions.commentLabel"),
+          helperText: t("exceptions.commentHint"),
         }}
       >
         <MDTypography variant="body2" mb={2}>
@@ -253,6 +281,7 @@ export default function Exceptions(): JSX.Element {
           label={t("exceptions.actionLabel")}
           value={action}
           onChange={(ev) => setAction(ev.target.value as ResolveAction)}
+          InputLabelProps={{ shrink: true }}
           sx={{ mb: 2 }}
         >
           {RESOLVE_OPTIONS.map((value) => (

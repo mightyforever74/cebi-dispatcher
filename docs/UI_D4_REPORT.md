@@ -92,3 +92,53 @@ Yerel CRA (`localhost:3000`) ayaktaydı; dispatcher oturumu süresi dolmuştu (l
 5. Bu rapor
 
 Kapsam dışı bırakıldı: `scripts/sim-portxl.js`, `docs/UI_D0_DISCOVERY.md`, Optimize/task detail/modallar.
+
+---
+
+## 7. Preview turu + fix (bundle 4f90f648)
+
+Kaynak: D4 preview. Yeni paket yok. Push yok.
+
+### 7.1 Error yolu (gerçek bug)
+
+React Query `networkMode: "online"` (varsayılan) DevTools Offline’da sorguyu **pause** eder: `isError=false`, `isLoading=false`, `data=undefined` → `[]` → `DataState.empty`.
+
+Düzeltme:
+- `dataStateOf`: **önce `isError`**, sonra loading, sonra empty.
+- `listFetchState`: `isError || error || (isPaused && data yok)`.
+- Empty yalnız `data !== undefined && data.length === 0 && !isError`.
+- `useTasks` / `useVehicles` / `useDrivers`: `networkMode: "always"` — offline fetch hata verir; Retry online’da `refetch()` çalışır.
+
+Kanıt (Cem oturumu): DevTools Offline → “Could not load data” + Retry; Online → Retry listeyi getirir.
+
+### 7.2 Banner
+
+- DOM: `DashboardNavbar` içinde AppBar **altında** (`<main>` başı, sayfa sonu değil).
+- Aynı `family` birleşir (`Driver offline ×3`).
+- En fazla **2** banner + `{n} daha → Exceptions`.
+- Her banner: Kapat (oturum `dismissed` + `family:*`) ve Onayla (exception `resolve` + telemetry `useResolveAlert`).
+- SOS metni `notifications.sos.*` (TR “Görev”, ham “Gorev” yok).
+- Live map: `position:fixed; top: 64px` opak şerit — harita flex yüksekliği değişmez.
+
+### 7.3 Yoğunluk
+
+Hücreler tek satır: görev `no — title` ellipsis + `title`; rota tek satır tooltip; tarih `formatDateTime` (`hourCycle: h23` → `dd-mm-yyyy HH:mm`). `tr` / `td` `height` + `maxHeight` = `rowPx` (compact 40 / comfortable 56).
+
+### 7.4 Enum etiketleri
+
+- `vehicle.category.{truck_heavy,truck_medium,van}`
+- `vehicle.fuel.{diesel,gasoline,electric,hybrid,lpg}`
+- `status.exception.rule_violation` (+ mevcut 6 tip)
+
+Ham değer yalnız sözlükte olmayanlarda. **Hâlâ ham (kapsam dışı / rapora):** `emission_class` (`zero_emission`, `euro_6*`, …), Optimize/dialog çözüm aksiyonları (D5).
+
+### 7.5 Light kontrast + a11y küçükler
+
+- `landing.navyFog700 = #64748b` (landing `--color-roadmap`; landing’de navyFog-700 yok). `paletteLight.textMain` / `secondaryMain` buradan — offwhite üstü ≥ 4.5:1.
+- Navbar `h1` 390px: `nav.short.*` + `font-size: 1rem`.
+- Liste başlıkları `component="h3"` (önce h5).
+- Tablo sarmalayıcı `tabIndex={0}` `role="region"` `aria-label`.
+- Pagination / navbar / breadcrumb `Icon aria-hidden`; `table.prevPage` / `nextPage`.
+
+Hedef: axe Tasks/Vehicles color-contrast 0, Lighthouse a11y ≥ 95 (canlı oturum).
+

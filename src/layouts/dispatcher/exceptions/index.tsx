@@ -2,16 +2,16 @@
  * FEAT-010 Dilim 4 - Istisna Yonetimi sayfasi (FN-13 ExceptionStatusPanel
  * + FN-14 ResolutionActionPanel MVP + FN-12 MVP sayfa-ici "yeni olay" vurgusu).
  * D4: StatusChip + DataTable + DataState; toast/banner `useNotifications`.
- * Dialog (çöz modal) D5 kapsamındadır — buradaki Dialog olduğu gibi bırakıldı.
+ * D5: çöz modalı ConfirmDialogShell.
  */
 import { useCallback, useMemo, useState } from "react";
 import Card from "@mui/material/Card";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
+import Icon from "@mui/material/Icon";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
+import ConfirmDialogShell from "components/ConfirmDialogShell";
 import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import MDBox from "components/MDBox";
@@ -22,24 +22,28 @@ import { useNotifications } from "components/Notifications";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { ExceptionEvent, ResolveAction } from "hooks/useExceptions";
-import { formatDateTime, useT, type TranslationKey } from "i18n";
+import { formatDateTime, useT, type TFunction, type TranslationKey } from "i18n";
 
-const RESOLVE_OPTIONS: { value: ResolveAction; label: string }[] = [
-  { value: "manual_replan", label: "Yeniden planlandı (manuel)" },
-  { value: "manual_reassign", label: "Yeniden atandı (manuel)" },
-  { value: "dismiss", label: "Kapat (aksiyon gerekmiyor)" },
-];
+const RESOLVE_OPTIONS: ResolveAction[] = ["manual_replan", "manual_reassign", "dismiss"];
 
-function payloadSummary(e: ExceptionEvent): string {
+function payloadSummary(e: ExceptionEvent, translate: TFunction): string {
   const p = e.detection_payload || {};
   const parts: string[] = [];
   if (p.task_no) parts.push(String(p.task_no));
   if (p.vehicle_plate) parts.push(String(p.vehicle_plate));
-  if (p.eta_deviation_minutes) parts.push(`sapma ~${p.eta_deviation_minutes} dk`);
-  if (p.remaining_km) parts.push(`kalan ${p.remaining_km} km`);
-  if (p.distance_from_pickup_m) parts.push(`pickup'a ${p.distance_from_pickup_m} m`);
-  if (p.silence_minutes_after_debounce) parts.push(`${p.silence_minutes_after_debounce} dk sessiz`);
-  if (p.city) parts.push(`bölge: ${p.city}`);
+  if (p.eta_deviation_minutes) {
+    parts.push(translate("exceptions.payloadDeviation", { n: Number(p.eta_deviation_minutes) }));
+  }
+  if (p.remaining_km) {
+    parts.push(translate("exceptions.payloadRemaining", { n: Number(p.remaining_km) }));
+  }
+  if (p.distance_from_pickup_m) {
+    parts.push(translate("exceptions.payloadPickup", { n: Number(p.distance_from_pickup_m) }));
+  }
+  if (p.silence_minutes_after_debounce) {
+    parts.push(translate("exceptions.payloadSilent", { n: Number(p.silence_minutes_after_debounce) }));
+  }
+  if (p.city) parts.push(translate("exceptions.payloadRegion", { city: String(p.city) }));
   return parts.join(" · ") || "—";
 }
 
@@ -58,6 +62,10 @@ function statusLabel(status: string, translate: (key: TranslationKey) => string)
 
 export default function Exceptions(): JSX.Element {
   const { t, lang } = useT();
+  const theme = useTheme();
+  // MD2 breakpoints: lg=992, xl=1200. Preview 1045 still showed labels because
+  // `up("lg")` is min-width 992 — not MUI's default lg (1200).
+  const iconOnly = useMediaQuery(theme.breakpoints.down(1200));
   const {
     exceptions,
     loading,
@@ -114,11 +122,11 @@ export default function Exceptions(): JSX.Element {
       { Header: t("exceptions.colStatus"), accessor: "status", minWidth: 88, maxWidth: 110 },
       { Header: t("exceptions.colSummary"), accessor: "summary", minWidth: 160, flex: 1, truncate: true, primary: true },
       { Header: t("exceptions.colTime"), accessor: "time", minWidth: 120, maxWidth: 160 },
-      { Header: t("exceptions.colActions"), accessor: "actions", minWidth: 140, maxWidth: 180 },
+      { Header: t("exceptions.colActions"), accessor: "actions", minWidth: 230, maxWidth: 280 },
     ];
 
     const rows: DataRow[] = exceptions.map((e) => {
-      const summary = payloadSummary(e);
+      const summary = payloadSummary(e, t);
       return {
         type: (
           <MDBox display="flex" alignItems="center" gap={0.75} title={exceptionTypeLabel(e.exception_type, t)}>
@@ -147,15 +155,59 @@ export default function Exceptions(): JSX.Element {
           </MDTypography>
         ),
         actions: (
-          <MDBox display="flex" gap={1}>
+          <MDBox display="flex" gap={0.5} flexWrap="nowrap">
             {e.status === "open" && (
-              <MDButton size="small" variant="outlined" color="info" onClick={() => void doAcknowledge(e)}>
-                {t("exceptions.acknowledge")}
+              <MDButton
+                size="small"
+                variant="outlined"
+                color="info"
+                onClick={() => void doAcknowledge(e)}
+                aria-label={t("exceptions.acknowledge")}
+                sx={{
+                  textTransform: "none",
+                  whiteSpace: "nowrap",
+                  minWidth: 0,
+                  ...(!iconOnly
+                    ? {
+                        px: "10px",
+                        py: "6px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }
+                    : {}),
+                }}
+              >
+                <Icon fontSize="small" aria-hidden>
+                  done
+                </Icon>
+                {iconOnly ? null : t("exceptions.acknowledge")}
               </MDButton>
             )}
-            <MDButton size="small" variant="gradient" color="success" onClick={() => setDialogFor(e)}>
-              {t("exceptions.resolve")}
-            </MDButton>
+            <MDButton
+              size="small"
+              variant="gradient"
+              color="success"
+              onClick={() => setDialogFor(e)}
+              aria-label={t("exceptions.resolve")}
+              sx={{
+                textTransform: "none",
+                whiteSpace: "nowrap",
+                minWidth: 0,
+                ...(!iconOnly
+                  ? {
+                      px: "10px",
+                      py: "6px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }
+                  : {}),
+              }}
+            >
+                <Icon fontSize="small" aria-hidden>
+                  task_alt
+                </Icon>
+                {iconOnly ? null : t("exceptions.resolve")}
+              </MDButton>
           </MDBox>
         ),
         id: e.id,
@@ -164,7 +216,7 @@ export default function Exceptions(): JSX.Element {
     });
 
     return { columns, rows };
-  }, [exceptions, newIds, t, lang, doAcknowledge]);
+  }, [exceptions, newIds, t, lang, doAcknowledge, iconOnly]);
 
   const state = listFetchState({
     isLoading: loading,
@@ -224,45 +276,50 @@ export default function Exceptions(): JSX.Element {
         </Card>
       </MDBox>
 
-      <Dialog open={dialogFor !== null} onClose={() => setDialogFor(null)} fullWidth maxWidth="xs">
-        <DialogTitle>İstisnayı çöz</DialogTitle>
-        <DialogContent>
-          <MDTypography variant="body2" mb={2}>
-            {dialogFor ? exceptionTypeLabel(dialogFor.exception_type, t) : ""} —{" "}
-            {dialogFor ? payloadSummary(dialogFor) : ""}
-          </MDTypography>
-          <TextField
-            select
-            fullWidth
-            label="Çözüm aksiyonu"
-            value={action}
-            onChange={(ev) => setAction(ev.target.value as ResolveAction)}
-            sx={{ mb: 2 }}
-          >
-            {RESOLVE_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
-            label="Yorum (opsiyonel)"
-            value={comment}
-            onChange={(ev) => setComment(ev.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <MDButton variant="text" color="secondary" onClick={() => setDialogFor(null)}>
-            Vazgeç
-          </MDButton>
-          <MDButton variant="gradient" color="success" onClick={() => void doResolve()} disabled={busy}>
-            {busy ? "Kaydediliyor…" : "Çöz ve Kapat"}
-          </MDButton>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialogShell
+        open={dialogFor !== null}
+        severity="accent"
+        icon="task_alt"
+        title={t("exceptions.resolveTitle")}
+        submitting={busy}
+        confirmLabel={t("exceptions.resolveClose")}
+        submittingLabel={t("exceptions.saving")}
+        onCancel={() => {
+          setDialogFor(null);
+          setComment("");
+          setAction("dismiss");
+        }}
+        onConfirm={() => {
+          void doResolve();
+        }}
+        reason={{
+          value: comment,
+          onChange: setComment,
+          label: t("exceptions.commentLabel"),
+          helperText: t("exceptions.commentHint"),
+        }}
+      >
+        <MDTypography variant="body2" mb={2}>
+          {dialogFor ? exceptionTypeLabel(dialogFor.exception_type, t) : ""} —{" "}
+          {dialogFor ? payloadSummary(dialogFor, t) : ""}
+        </MDTypography>
+        <TextField
+          select
+          fullWidth
+          size="small"
+          label={t("exceptions.actionLabel")}
+          value={action}
+          onChange={(ev) => setAction(ev.target.value as ResolveAction)}
+          InputLabelProps={{ shrink: true }}
+          sx={{ mb: 2 }}
+        >
+          {RESOLVE_OPTIONS.map((value) => (
+            <MenuItem key={value} value={value}>
+              {t(`exceptions.action.${value}` as TranslationKey)}
+            </MenuItem>
+          ))}
+        </TextField>
+      </ConfirmDialogShell>
     </DashboardLayout>
   );
 }

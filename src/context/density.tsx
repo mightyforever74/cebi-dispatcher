@@ -69,13 +69,14 @@ export function DensityProvider({ children }: { children: ReactNode }) {
   return createElement(DensityContext.Provider, { value }, children);
 }
 
+const FALLBACK_DENSITY: DensityApi = {
+  density: "comfortable",
+  rowPx: DENSITY_ROW_PX.comfortable,
+  setDensity: persistDensity,
+  toggleDensity: () => persistDensity("compact"),
+};
+
 export function useDensity(): DensityApi {
   const ctx = useContext(DensityContext);
-  if (ctx) return ctx;
-  return {
-    density: "comfortable",
-    rowPx: DENSITY_ROW_PX.comfortable,
-    setDensity: persistDensity,
-    toggleDensity: () => persistDensity("compact"),
-  };
+  return ctx ?? FALLBACK_DENSITY;
 }

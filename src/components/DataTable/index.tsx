@@ -187,8 +187,12 @@ function DataTable({
   } = tableInstance;
 
   useEffect(() => {
-    setPageSize(defaultValue || 10);
-  }, [defaultValue, setPageSize]);
+    const next = defaultValue || 10;
+    if (pageSize !== next) setPageSize(next);
+    // setPageSize from react-table is not referentially stable — listing it
+    // in deps re-fires this effect every render and trips React #185.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultValue]);
 
   const measureOverflow = useCallback(() => {
     const el = scrollerRef.current;
@@ -296,7 +300,7 @@ function DataTable({
     >
       {showTotalEntries && (
         <MDBox mb={{ xs: 3, sm: 0 }}>
-          <MDTypography variant="button" color="secondary" fontWeight="regular">
+          <MDTypography variant="button" color="text" fontWeight="regular">
             {t("table.showing", {
               start: entriesStart,
               end: entriesEnd,
@@ -445,7 +449,7 @@ function DataTable({
         }}
       >
         {overflow.right || overflow.left ? (
-          <MDTypography variant="caption" color="secondary" sx={{ px: 2, display: "block" }}>
+          <MDTypography variant="caption" color="text" sx={{ px: 2, display: "block" }}>
             {t("table.scrollHint")}
           </MDTypography>
         ) : null}
@@ -543,6 +547,11 @@ function DataTable({
                                 whiteSpace: "nowrap",
                                 maxWidth: "100%",
                                 display: "block",
+                              },
+                              "& > .MuiChip-root": {
+                                display: "inline-flex",
+                                width: "max-content",
+                                maxWidth: "100%",
                               },
                             }}
                           >

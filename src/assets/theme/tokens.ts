@@ -89,11 +89,11 @@ export const paletteLight = {
   secondaryFocus: landing.navyFog700,
   infoMain: "#155fc0",
   infoFocus: "#1662C4",
-  successMain: "#4CAF50",
+  successMain: "#1B7A3D",
   successFocus: "#67bb6a",
   warningMain: "#fb8c00",
   warningFocus: "#fc9d26",
-  errorMain: "#F44335",
+  errorMain: "#d32f2f",
   errorFocus: "#f65f53",
   lightMain: "#f0f2f5",
   lightFocus: "#f0f2f5",
@@ -139,8 +139,8 @@ export const paletteLight = {
     primary: { background: "#f8b3ca", text: "#cc084b" },
     secondary: { background: "#d7d9e1", text: "#6c757d" },
     info: { background: "#aecef7", text: "#074a9e" },
-    success: { background: "#bce2be", text: "#339537" },
-    warning: { background: "#ffd59f", text: "#c87000" },
+    success: { background: "#bce2be", text: "#1B5E20" },
+    warning: { background: "#ffd59f", text: "#7a4400" },
     error: { background: "#fcd3d0", text: "#c1170a" },
     light: { background: "#ffffff", text: "#c7d3de" },
     dark: { background: "#8097bf", text: "#1e2e4a" },
@@ -184,7 +184,7 @@ export const paletteDark = {
   successFocus: "#67bb6a",
   warningMain: "#fb8c00",
   warningFocus: "#fc9d26",
-  errorMain: "#F44335",
+  errorMain: "#ff6b6b",
   errorFocus: "#f65f53",
   lightMain: "#f0f2f566",
   lightFocus: "#f0f2f566",
@@ -230,8 +230,8 @@ export const paletteDark = {
     primary: { background: "#f8b3ca", text: "#cc084b" },
     secondary: { background: "#d7d9e1", text: "#6c757d" },
     info: { background: "#aecef7", text: "#095bc6" },
-    success: { background: "#bce2be", text: "#339537" },
-    warning: { background: "#ffd59f", text: "#c87000" },
+    success: { background: "#bce2be", text: "#1B5E20" },
+    warning: { background: "#ffd59f", text: "#7a4400" },
     error: { background: "#fcd3d0", text: "#f61200" },
     light: { background: "#ffffff", text: "#c7d3de" },
     dark: { background: "#8097bf", text: "#1e2e4a" },
@@ -398,6 +398,51 @@ export const status: {
   },
   unknown: fromBadge("secondary", main.secondary),
 };
+
+/** ConfirmDialogShell — D5. Hex yalnız burada; light/dark chrome + severity. */
+export const dialog = {
+  danger: "#f44336",
+  dangerDark: "#b71c1c",
+  dangerBg: "rgba(244,67,54,0.08)",
+  warning: "#ff9800",
+  warningDark: "#e65100",
+  warningBg: "rgba(255,152,0,0.10)",
+  accent: brand.primary,
+  accentDark: "#5b21b6",
+  accentBg: "rgba(124,58,237,0.10)",
+  onAccent: paletteLight.white,
+  radiusPx: 16,
+  dark: {
+    panelBg: paletteDark.backgroundDefault,
+    border: "#2c3454",
+    inputBg: "#131826",
+    textMuted: "#B0BEC5",
+    textFaint: "#8f9bb3",
+    text: paletteDark.white,
+    cardWash: "rgba(255,255,255,0.03)",
+  },
+  light: {
+    panelBg: paletteLight.white,
+    border: paletteLight.grey[300],
+    inputBg: paletteLight.grey[100],
+    textMuted: landing.navyFog700,
+    textFaint: paletteLight.grey[600],
+    text: paletteLight.darkMain,
+    cardWash: paletteLight.grey[100],
+  },
+} as const;
+
+/** Form field error text — same as `error.main` (single color per theme). */
+export const form = {
+  errorFgLight: paletteLight.errorMain,
+  errorFgDark: paletteDark.errorMain,
+} as const;
+
+/** Text links that must stay ≥4.5:1 on page backgrounds. */
+export const a11y = {
+  linkLight: "#155fc0",
+  linkDark: "#8EC8F8",
+} as const;
 
 // =========================================================================
 // 5b) LIVE MAP — D3 (basemap, chrome, eşikler). Hex yalnız burada.

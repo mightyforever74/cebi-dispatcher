@@ -1,5 +1,6 @@
 import Icon from "@mui/material/Icon";
-import { density, status } from "assets/theme/tokens";
+import { a11y, density, status } from "assets/theme/tokens";
+import { useMaterialUIController } from "context";
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import MDSnackbar from "components/MDSnackbar";
@@ -21,8 +22,9 @@ function Banner({ item }: { item: NotifyItem }) {
     item.severity === "critical" || item.family === "driver_offline" || item.family === "sos"
       ? status.alert.critical
       : status.alert.high;
+  const baseTitle = item.titleKey ? t(item.titleKey) : item.title;
   const title =
-    item.count > 1 ? `${item.title} ${t("notify.toastCount", { count: item.count })}` : item.title;
+    item.count > 1 ? `${baseTitle} ${t("notify.toastCount", { count: item.count })}` : baseTitle;
 
   return (
     <MDBox
@@ -78,6 +80,8 @@ function NotificationHost(): JSX.Element | null {
   const { t } = useT();
   const { pathname } = useLocation();
   const { banners, toasts, dismissToast } = useNotifications();
+  const [controller] = useMaterialUIController();
+  const moreLinkColor = controller.darkMode ? a11y.linkDark : a11y.linkLight;
   const reduced = useMemo(() => prefersReducedMotion(), []);
   const overlay = pathname.includes("live-fleet-map");
   const visible = banners.slice(0, MAX_VISIBLE_BANNERS);
@@ -115,7 +119,7 @@ function NotificationHost(): JSX.Element | null {
               fontWeight="medium"
               component={Link}
               to="/dispatcher/exceptions"
-              sx={{ display: "inline-block", px: 2, pb: 1, color: "info.main" }}
+              sx={{ display: "inline-block", px: 2, pb: 1, color: moreLinkColor }}
             >
               {t("notifications.moreToExceptions", { count: overflow })}
             </MDTypography>
@@ -127,13 +131,17 @@ function NotificationHost(): JSX.Element | null {
           key={item.id}
           open
           color={colorFor(item)}
+          role="status"
+          aria-live="polite"
           icon={
             <Icon aria-hidden>notifications</Icon>
           }
           title={
             item.count > 1
-              ? `${item.title} ${t("notify.toastCount", { count: item.count })}`
-              : item.title
+              ? `${item.titleKey ? t(item.titleKey) : item.title} ${t("notify.toastCount", { count: item.count })}`
+              : item.titleKey
+                ? t(item.titleKey)
+                : item.title
           }
           dateTime=""
           content={item.body}

@@ -1,14 +1,10 @@
 /**
- * BulkConfirmDialog — BUG-2 Bulk Guard + UI Modernizasyonu (04.08.2026).
- *
- * Fan-out sözleşmesi DEĞİŞMEDİ: N>1 seçimde onay kapısı; onaylanırsa her
- * araca aynı görevin 1 kopyası (draft[i] → araç[i]); N=1 akışı buraya uğramaz.
- * Yenilik: gövde ortak ConfirmDialogShell'den (accent severity), plakalar
- * taranabilir pill rozetler halinde.
+ * BulkConfirmDialog — BUG-2 Bulk Guard. Fan-out sözleşmesi değişmedi.
  */
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-import ConfirmDialogShell, { SHELL_C } from "components/ConfirmDialogShell";
+import ConfirmDialogShell, { useDialogChrome } from "components/ConfirmDialogShell";
+import { useT } from "i18n";
 
 interface BulkVehicle {
   id: string;
@@ -17,12 +13,9 @@ interface BulkVehicle {
 
 interface Props {
   open: boolean;
-  /** Seçili araçlar (plaka etiketiyle) — fan-out hedef listesi. */
   vehicles: BulkVehicle[];
-  /** Submit isteği uçarken buton kilidi. */
   submitting?: boolean;
   onCancel: () => void;
-  /** Onay — çağıran doSubmit() ile fan-out'u fırlatır. */
   onConfirm: () => void;
 }
 
@@ -33,45 +26,45 @@ function BulkConfirmDialog({
   onCancel,
   onConfirm,
 }: Props): JSX.Element {
+  const { t } = useT();
+  const chrome = useDialogChrome();
+  const count = vehicles.length;
   return (
     <ConfirmDialogShell
       open={open}
       severity="accent"
       icon="library_add"
-      title="Toplu Görev Oluşturma"
-      subtitle={`${vehicles.length} araç seçili — toplu oluşturma onayı`}
+      title={t("bulk.title")}
+      subtitle={t("bulk.subtitle", { count })}
       submitting={submitting}
-      confirmLabel={`${vehicles.length} Araca Oluştur`}
-      submittingLabel="Gönderiliyor..."
+      confirmLabel={t("bulk.confirm", { count })}
+      submittingLabel={t("bulk.submitting")}
       onCancel={onCancel}
       onConfirm={onConfirm}
     >
-      {/* Sözleşme açıklaması */}
       <MDBox
         sx={{
-          bgcolor: SHELL_C.accentBg,
-          border: `1px solid ${SHELL_C.border}`,
+          bgcolor: chrome.accentBg,
+          border: `1px solid ${chrome.border}`,
           borderRadius: "12px",
           p: 1.5,
           mb: 1.5,
         }}
       >
-        <MDTypography variant="button" color="white" sx={{ display: "block" }}>
-          Seçili <b>{vehicles.length} araca</b> aynı görevin{" "}
-          <b>1&apos;er kopyası</b> oluşturulacak.
+        <MDTypography variant="button" sx={{ display: "block", color: chrome.text }}>
+          {t("bulk.body", { count })}
         </MDTypography>
-        <MDTypography variant="caption" sx={{ color: SHELL_C.textMuted, display: "block", mt: 0.5 }}>
-          Atamalar onay ekranında (Kanban) sürüklenerek değiştirilebilir.
+        <MDTypography variant="caption" sx={{ color: chrome.textMuted, display: "block", mt: 0.5 }}>
+          {t("bulk.bodyHint")}
         </MDTypography>
       </MDBox>
 
-      {/* Plaka rozetleri — taranabilir pill formu */}
       <MDBox
         display="flex"
         flexWrap="wrap"
         gap={0.7}
         sx={{
-          border: `1px solid ${SHELL_C.border}`,
+          border: `1px solid ${chrome.border}`,
           borderRadius: "12px",
           p: 1.5,
           mb: 0.5,
@@ -83,9 +76,9 @@ function BulkConfirmDialog({
           <MDBox
             key={v.id}
             sx={{
-              border: `1px solid ${SHELL_C.accent}`,
-              bgcolor: SHELL_C.accentBg,
-              color: "#fff",
+              border: `1px solid ${chrome.accent}`,
+              bgcolor: chrome.accentBg,
+              color: chrome.onAccent,
               borderRadius: "999px",
               px: 1.2,
               py: 0.3,

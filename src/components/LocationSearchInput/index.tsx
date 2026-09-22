@@ -37,9 +37,19 @@ interface LocationSearchInputProps {
   label: string;
   value: LocationValue;
   onValueChange: (value: LocationValue) => void;
+  required?: boolean;
+  error?: boolean;
+  helperText?: string;
 }
 
-function LocationSearchInput({ label, value, onValueChange }: LocationSearchInputProps): JSX.Element {
+function LocationSearchInput({
+  label,
+  value,
+  onValueChange,
+  required,
+  error,
+  helperText,
+}: LocationSearchInputProps): JSX.Element {
   // inputText: kullanicinin YAZDIGI ham metin (arama sorgusu).
   // value.address: SECILMIS/onaylanmis adres (parent state).
   const [inputText, setInputText] = useState(value.address || "");
@@ -92,6 +102,17 @@ function LocationSearchInput({ label, value, onValueChange }: LocationSearchInpu
           {...params}
           label={label}
           fullWidth
+          error={error}
+          helperText={helperText}
+          required={required}
+          inputProps={{
+            ...params.inputProps,
+            "aria-required": required || undefined,
+            "aria-invalid": error || undefined,
+          }}
+          FormHelperTextProps={{
+            sx: { color: error ? "error.main" : undefined },
+          }}
           InputProps={{
             ...params.InputProps,
             endAdornment: (

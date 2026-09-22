@@ -1,43 +1,29 @@
 /**
- * ConflictOverrideModal — BUG-1 Faz C çekirdeği + UI Modernizasyonu
- * (04.08.2026, Cem onaylı plan: jargonsuz microcopy, KV kartı, K1 severity).
- *
- * Davranış sözleşmesi DEĞİŞMEDİ: zorunlu ≥5 karakter gerekçe, Vazgeç /
- * Gerekçeli Onay yolları, çağıran approve'u override:true ile yeniden fırlatır.
- * Yenilikler:
- *  - HTTP 409 kullanıcıya gösterilmez — altbaşlık operasyonel dilde.
- *  - Çakışma detayı Structured KV kartı: kopyalanabilir görev rozeti + süre.
- *  - K1 (Cem onaylı): overlap < 15 dk → turuncu (warning), ≥ 15 dk → kırmızı
- *    (danger); modal çerçevesi, halka ve rozet birlikte döner.
- *  - K2: onay butonu "Riski Onayla ve Görevi Ata".
- *  - Gövde ortak ConfirmDialogShell'den gelir (tek standart, tüm ikaz kutuları).
+ * ConflictOverrideModal — BUG-1 Faz C çekirdeği.
+ * Davranış sözleşmesi DEĞİŞMEDİ: zorunlu ≥5 karakter gerekçe.
  */
 import { useEffect, useState } from "react";
-
-import TextField from "@mui/material/TextField";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import ConfirmDialogShell, {
   CopyChip,
   DetailRow,
-  SHELL_C,
   ShellSeverity,
+  useDialogChrome,
 } from "components/ConfirmDialogShell";
+import { useT } from "i18n";
 
 import { ConflictMetadata } from "hooks/useTaskOptimization";
 
-/** K1 eşiği: bu dakikanın altı "dikkat" (turuncu), üstü "kritik" (kırmızı). */
 const SEVERITY_THRESHOLD_MIN = 15;
+const REASON_MIN = 5;
 
 interface Props {
   open: boolean;
-  /** Köprünün 409 gövdesindeki mühür; null ise genel mesaj gösterilir. */
   conflict: ConflictMetadata | null;
-  /** Override isteği uçarken buton kilidi. */
   submitting?: boolean;
   onCancel: () => void;
-  /** Zorunlu gerekçeyle "Gerekçeli Onay" — çağıran approve'u override ile yeniden atar. */
   onConfirm: (reason: string) => void;
 }
 
@@ -48,16 +34,15 @@ function ConflictOverrideModal({
   onCancel,
   onConfirm,
 }: Props): JSX.Element {
+  const { t } = useT();
+  const chrome = useDialogChrome();
   const [reason, setReason] = useState("");
 
-  // Her açılışta temiz gerekçe kutusu
   useEffect(() => {
     if (open) setReason("");
   }, [open]);
 
-  const reasonOk = reason.trim().length >= 5;
-
-  // K1: metadata yoksa temkinli davran — kritik (danger) varsay.
+  const reasonOk = reason.trim().length >= REASON_MIN;
   const severity: ShellSeverity =
     conflict && conflict.overlap_minutes < SEVERITY_THRESHOLD_MIN ? "warning" : "danger";
 
@@ -66,20 +51,28 @@ function ConflictOverrideModal({
       open={open}
       severity={severity}
       icon="warning_amber"
-      title="Zaman Penceresi Çakışması"
-      subtitle="Zaman pencereleri birbiriyle çakışıyor."
+      title={t("conflict.title")}
+      subtitle={t("conflict.subtitle")}
       submitting={submitting}
-      confirmLabel="Riski Onayla ve Görevi Ata"
-      submittingLabel="Atanıyor..."
+      confirmLabel={t("conflict.confirm")}
+      submittingLabel={t("conflict.submitting")}
       confirmDisabled={!reasonOk}
       onCancel={onCancel}
       onConfirm={() => reasonOk && onConfirm(reason.trim())}
+      reason={{
+        value: reason,
+        onChange: setReason,
+        label: t("conflict.reasonLabel"),
+        placeholder: t("conflict.reasonPlaceholder"),
+        helperText: reasonOk ? t("conflict.auditNote") : t("dialog.reasonMin", { n: REASON_MIN }),
+        required: true,
+        minLength: REASON_MIN,
+      }}
     >
-      {/* Structured KV kartı — taranabilir çakışma detayı */}
       <MDBox
         sx={{
-          bgcolor: "rgba(255,255,255,0.03)",
-          border: `1px solid ${SHELL_C.border}`,
+          bgcolor: chrome.cardWash,
+          border: `1px solid ${chrome.border}`,
           borderRadius: "12px",
           p: 1.5,
           mb: 1.5,
@@ -88,48 +81,20 @@ function ConflictOverrideModal({
         {conflict ? (
           <>
             <DetailRow
-              label="Çakışan Görev"
+              label={t("conflict.task")}
               value={<CopyChip text={conflict.conflicting_task_no} color={severity} />}
             />
-            <DetailRow label="Çakışma Süresi" value={`~${conflict.overlap_minutes} dakika`} />
+            <DetailRow
+              label={t("conflict.duration")}
+              value={t("conflict.durationValue", { n: conflict.overlap_minutes })}
+            />
           </>
         ) : (
-          <MDTypography variant="caption" color="white">
-            Bu araca belirtilen aralıkta atanmış görev var.
+          <MDTypography variant="caption" sx={{ color: chrome.text }}>
+            {t("conflict.fallback")}
           </MDTypography>
         )}
       </MDBox>
-
-      {/* Zorunlu gerekçe (Mode 1 Advisory — Gerekçeli Onay) */}
-      <TextField
-        fullWidth
-        multiline
-        minRows={2}
-        size="small"
-        label="Manuel Onay Gerekçesi *"
-        InputLabelProps={{ shrink: true }}
-        placeholder="Örn: Operasyonel aciliyet / Müşteri zaman esnekliği sağladı..."
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        disabled={submitting}
-        sx={{
-          mt: 0.5,
-          "& .MuiInputLabel-root": { color: SHELL_C.textMuted, fontSize: "13px" },
-          "& .MuiInputLabel-root.Mui-focused": { color: SHELL_C.accent },
-          "& .MuiOutlinedInput-root": {
-            color: "white",
-            fontSize: "13px",
-            bgcolor: SHELL_C.inputBg,
-            "& fieldset": { borderColor: SHELL_C.border },
-            "&:hover fieldset": { borderColor: SHELL_C.accent },
-            "&.Mui-focused fieldset": { borderColor: SHELL_C.accent },
-          },
-          "& .MuiInputBase-input::placeholder": { color: SHELL_C.textFaint, opacity: 1 },
-        }}
-      />
-      <MDTypography variant="caption" sx={{ color: SHELL_C.textFaint, display: "block", mt: 0.5 }}>
-        ℹ️ Bu işlem sistem denetim kaydına (Audit Log) kaydedilecektir.
-      </MDTypography>
     </ConfirmDialogShell>
   );
 }

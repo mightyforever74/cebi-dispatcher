@@ -1,4 +1,5 @@
 import { Chip } from "@mui/material";
+import { paletteLight } from "assets/theme/tokens";
 import Grid from "@mui/material/Grid";
 import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
@@ -77,7 +78,7 @@ function VehiclesLayout(): JSX.Element {
           }
           sx={{
             cursor: v.plate_no ? "pointer" : "default",
-            color: "info.main",
+            color: "text.main",
             "&:hover": { textDecoration: v.plate_no ? "underline" : "none" },
           }}
         >
@@ -86,7 +87,12 @@ function VehiclesLayout(): JSX.Element {
       );
 
       const categoryBadge = v.vehicle_category ? (
-        <Chip label={enumLabel("vehicle.category", v.vehicle_category, t)} size="small" variant="outlined" />
+        <Chip
+          label={enumLabel("vehicle.category", v.vehicle_category, t)}
+          size="small"
+          variant="outlined"
+          sx={{ color: "text.primary", "& .MuiChip-label": { color: "inherit" } }}
+        />
       ) : (
         "—"
       );
@@ -96,22 +102,41 @@ function VehiclesLayout(): JSX.Element {
           <Chip
             label={t("vehicles.rentedOwner", { name: v.owner_name || "—" })}
             size="small"
-            color="warning"
-            variant="outlined"
+            sx={{
+              bgcolor: paletteLight.badgeColors.warning.background,
+              color: paletteLight.badgeColors.warning.text,
+              "& .MuiChip-label": { color: paletteLight.badgeColors.warning.text, whiteSpace: "nowrap" },
+            }}
           />
         ) : v.ownership_type === "leased" ? (
           <Chip
             label={t("vehicles.leasedOwner", { name: v.owner_name || "—" })}
             size="small"
-            color="info"
-            variant="outlined"
+            sx={{
+              bgcolor: paletteLight.badgeColors.info.background,
+              color: paletteLight.badgeColors.info.text,
+              "& .MuiChip-label": { color: paletteLight.badgeColors.info.text, whiteSpace: "nowrap" },
+            }}
           />
         ) : (
-          <Chip label={t("vehicles.owned")} size="small" color="success" variant="outlined" />
+          <Chip
+            label={t("vehicles.owned")}
+            size="small"
+            sx={{
+              bgcolor: paletteLight.badgeColors.success.background,
+              color: paletteLight.badgeColors.success.text,
+              "& .MuiChip-label": { color: paletteLight.badgeColors.success.text },
+            }}
+          />
         );
 
       const fuelTypeBadge = v.fuel_type ? (
-        <Chip label={enumLabel("vehicle.fuel", v.fuel_type, t)} size="small" variant="outlined" />
+        <Chip
+          label={enumLabel("vehicle.fuel", v.fuel_type, t)}
+          size="small"
+          variant="outlined"
+          sx={{ color: "text.primary", "& .MuiChip-label": { color: "inherit" } }}
+        />
       ) : (
         "—"
       );
@@ -151,7 +176,7 @@ function VehiclesLayout(): JSX.Element {
 
       const emissionBadge = v.emission_class ? (
         <MDBadge
-          badgeContent={v.emission_class}
+          badgeContent={enumLabel("vehicle.emission", v.emission_class, t)}
           color={emissionClassColor(v.emission_class)}
           variant="gradient"
           size="sm"

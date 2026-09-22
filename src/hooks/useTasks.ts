@@ -22,6 +22,8 @@ export interface Task {
   [key: string]: any;
 }
 
+const EMPTY_TASKS: Task[] = [];
+
 export function useTasks(filter: TaskFilter = "all") {
   const token = useAuthStore((s) => s.token);
   return useQuery<Task[], Error>({
@@ -45,6 +47,7 @@ export function useTasks(filter: TaskFilter = "all") {
     staleTime: 1000 * 60 * 2,
     retry: 1,
     networkMode: "always",
+    placeholderData: EMPTY_TASKS,
   });
 }
 

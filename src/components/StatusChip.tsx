@@ -74,6 +74,9 @@ function StatusChip({ kind, value, size = "sm" }: StatusChipProps): JSX.Element 
       label={label}
       title={raw}
       sx={{
+        display: "inline-flex",
+        width: "max-content",
+        maxWidth: "100%",
         height: size === "sm" ? 20 : 24,
         fontSize: size === "sm" ? "10px" : "12px",
         fontWeight: 700,
@@ -98,6 +101,9 @@ export function PriorityChip({ value }: { value: string | null | undefined }): J
       label={known ? t(key) : raw}
       title={raw}
       sx={{
+        display: "inline-flex",
+        width: "max-content",
+        maxWidth: "100%",
         height: 20,
         fontSize: "10px",
         fontWeight: 700,

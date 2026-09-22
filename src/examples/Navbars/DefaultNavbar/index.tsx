@@ -529,11 +529,11 @@ function DefaultNavbar({ routes, brand, transparent, light, action }: Props): JS
         zIndex={3}
         sx={({
           palette: { transparent: transparentColor, white, background },
-          functions: { rgba },
+          functions: { rgba: withAlpha },
         }: any) => ({
           backgroundColor: transparent
             ? transparentColor.main
-            : rgba(darkMode ? background.sidenav : white.main, 0.8),
+            : withAlpha(darkMode ? background.sidenav : white.main, 0.8),
           backdropFilter: transparent ? "none" : `saturate(200%) blur(30px)`,
         })}
       >
@@ -601,8 +601,12 @@ function DefaultNavbar({ routes, brand, transparent, light, action }: Props): JS
 }
 
 // Declaring default props for DefaultNavbar
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 4): "Material Dashboard PRO" marka
+// kalıntısı kaldırıldı — login/forgot-password ekranlarının tek kullanıcısı
+// olduğu için i18n `login.brand` ile BİREBİR aynı değer (üç dilde de
+// "TulipFleet Dispatcher" — marka adı çevrilmez).
 DefaultNavbar.defaultProps = {
-  brand: "Material Dashboard PRO",
+  brand: "TulipFleet Dispatcher",
   transparent: false,
   light: false,
   action: false,

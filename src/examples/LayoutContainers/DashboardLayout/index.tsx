@@ -35,6 +35,7 @@ function DashboardLayout({ children }: { children: ReactNode }): JSX.Element {
 
   return (
     <MDBox
+      component="main"
       sx={({ breakpoints, transitions, functions: { pxToRem } }) => ({
         p: 3,
         position: "relative",

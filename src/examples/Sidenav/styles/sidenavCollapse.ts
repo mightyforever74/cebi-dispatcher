@@ -16,32 +16,37 @@ Coded by www.creative-tim.com
 // @mui material components
 import { Theme } from "@mui/material/styles";
 
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 2): varsayılan (dark) sidenav artık
+// jenerik `palette[color].main` dolgu yerine landing köprüsü `emerald` şerit +
+// `offwhite`/`navyFog` metin renklerini kullanıyor — tek kaynak `tokens.ts`.
+import { landing } from "assets/theme/tokens";
+
 function collapseItem(theme: Theme, ownerState: any) {
-  const { palette, transitions, breakpoints, boxShadows, borders, functions } = theme;
+  const { palette, transitions, breakpoints, borders, functions } = theme;
   const { active, transparentSidenav, whiteSidenav, darkMode } = ownerState;
 
   const { white, transparent, dark, grey } = palette;
-  const { md } = boxShadows;
   const { borderRadius } = borders;
-  const { pxToRem, rgba } = functions;
+  const { rgba: withAlpha, pxToRem } = functions;
 
   return {
     background: () => {
       let backgroundValue;
 
       if (transparentSidenav && darkMode) {
-        backgroundValue = active ? rgba(white.main, 0.2) : transparent.main;
+        backgroundValue = active ? withAlpha(white.main, 0.2) : transparent.main;
       } else if (transparentSidenav && !darkMode) {
         backgroundValue = active ? grey[300] : transparent.main;
       } else if (whiteSidenav) {
         backgroundValue = active ? grey[200] : transparent.main;
       } else {
-        backgroundValue = active ? rgba(white.main, 0.2) : transparent.main;
+        // Varsayılan (dark) sidenav: emerald şerit + düşük opaklı dolgu.
+        backgroundValue = active ? withAlpha(landing.emerald, 0.16) : transparent.main;
       }
 
       return backgroundValue;
     },
-    color: (transparentSidenav && !darkMode) || whiteSidenav ? dark.main : white.main,
+    color: (transparentSidenav && !darkMode) || whiteSidenav ? dark.main : landing.offwhite,
     display: "flex",
     alignItems: "center",
     width: "100%",
@@ -52,9 +57,13 @@ function collapseItem(theme: Theme, ownerState: any) {
     userSelect: "none",
     whiteSpace: "nowrap",
     overflow: "hidden",
-    boxShadow: active && !whiteSidenav && !darkMode && !transparentSidenav ? md : "none",
+    borderLeft:
+      active && !whiteSidenav && !transparentSidenav
+        ? `3px solid ${landing.emerald}`
+        : "3px solid transparent",
+    boxShadow: "none",
     [breakpoints.up("xl")]: {
-      transition: transitions.create(["box-shadow", "background-color"], {
+      transition: transitions.create(["box-shadow", "background-color", "border-color"], {
         easing: transitions.easing.easeInOut,
         duration: transitions.duration.shorter,
       }),
@@ -64,47 +73,53 @@ function collapseItem(theme: Theme, ownerState: any) {
       backgroundColor:
         transparentSidenav && !darkMode
           ? grey[300]
-          : rgba(whiteSidenav ? grey[400] : white.main, 0.2),
+          : whiteSidenav
+          ? withAlpha(grey[400], 0.2)
+          : withAlpha(landing.emerald, 0.1),
     },
   };
 }
 
 function collapseIconBox(theme: Theme, ownerState: any) {
   const { palette, transitions, borders, functions } = theme;
-  const { transparentSidenav, whiteSidenav, darkMode } = ownerState;
+  const { transparentSidenav, whiteSidenav, darkMode, active } = ownerState;
 
-  const { white, dark } = palette;
+  const { dark } = palette;
   const { borderRadius } = borders;
   const { pxToRem } = functions;
+
+  const defaultColor = active ? landing.emerald : landing.navyFog;
 
   return {
     minWidth: pxToRem(32),
     minHeight: pxToRem(32),
-    color: (transparentSidenav && !darkMode) || whiteSidenav ? dark.main : white.main,
+    color: (transparentSidenav && !darkMode) || whiteSidenav ? dark.main : defaultColor,
     borderRadius: borderRadius.md,
     display: "grid",
     placeItems: "center",
-    transition: transitions.create("margin", {
+    transition: transitions.create(["margin", "color"], {
       easing: transitions.easing.easeInOut,
       duration: transitions.duration.standard,
     }),
 
     "& svg, svg g": {
-      color: transparentSidenav || whiteSidenav ? dark.main : white.main,
+      color: transparentSidenav || whiteSidenav ? dark.main : defaultColor,
     },
   };
 }
 
-const collapseIcon = ({ palette: { white, gradients } }: Theme, { active }: any) => ({
-  color: active ? white.main : gradients.dark.state,
+const collapseIcon = (theme: Theme, { active }: any) => ({
+  color: active ? landing.emerald : landing.navyFog,
 });
 
 function collapseText(theme: any, ownerState: any) {
   const { typography, transitions, breakpoints, functions } = theme;
-  const { miniSidenav, transparentSidenav, active } = ownerState;
+  const { miniSidenav, transparentSidenav, whiteSidenav, active, darkMode } = ownerState;
 
   const { size, fontWeightRegular, fontWeightLight } = typography;
   const { pxToRem } = functions;
+  const { palette } = theme as Theme;
+  const { dark } = palette as any;
 
   return {
     marginLeft: pxToRem(10),
@@ -123,6 +138,12 @@ function collapseText(theme: any, ownerState: any) {
     },
 
     "& span": {
+      color:
+        (transparentSidenav && !darkMode) || whiteSidenav
+          ? dark.main
+          : active
+          ? landing.offwhite
+          : landing.navyFog,
       fontWeight: active ? fontWeightRegular : fontWeightLight,
       fontSize: size.sm,
       lineHeight: 1.5,
@@ -130,6 +151,10 @@ function collapseText(theme: any, ownerState: any) {
       overflow: "hidden",
       textOverflow: "ellipsis",
       whiteSpace: "nowrap",
+      transition: transitions.create("color", {
+        easing: transitions.easing.easeInOut,
+        duration: transitions.duration.standard,
+      }),
     },
   };
 }
@@ -141,7 +166,7 @@ function collapseArrow(theme: Theme, ownerState: any) {
 
   const { white, dark } = palette;
   const { size } = typography;
-  const { pxToRem, rgba } = functions;
+  const { pxToRem, rgba: withAlpha } = functions;
 
   return {
     fontSize: `${size.lg} !important`,
@@ -152,11 +177,11 @@ function collapseArrow(theme: Theme, ownerState: any) {
       let colorValue;
 
       if (transparentSidenav && darkMode) {
-        colorValue = open || active ? white.main : rgba(white.main, 0.25);
+        colorValue = open || active ? white.main : withAlpha(white.main, 0.25);
       } else if (transparentSidenav || whiteSidenav) {
-        colorValue = open || active ? dark.main : rgba(dark.main, 0.25);
+        colorValue = open || active ? dark.main : withAlpha(dark.main, 0.25);
       } else {
-        colorValue = open || active ? white.main : rgba(white.main, 0.5);
+        colorValue = open || active ? white.main : withAlpha(white.main, 0.5);
       }
 
       return colorValue;

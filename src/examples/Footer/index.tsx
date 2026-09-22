@@ -2,103 +2,81 @@
 =========================================================
 * TulipFleet Dispatcher — Dashboard Footer
 =========================================================
+* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 3): tek satır, navyInk/navyFog;
+* sol "© {year} TulipFleet B.V.", sağ Gizlilik/Şartlar + uygulama sürümü.
+* Creative Tim/MD2 metinleri ve linkleri (Site/Abonelik/İletişim) kaldırıldı.
 */
 
 import Link from "@mui/material/Link";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-import { useT } from "i18n";
 import typography from "assets/theme/base/typography";
+import { landing } from "assets/theme/tokens";
+import { useT } from "i18n";
+// package.json version — tek kaynak (build-time; `resolveJsonModule`).
+// eslint-disable-next-line import/extensions
+import packageJson from "../../../package.json";
 
-interface Props {
-  company?: {
-    href: string;
-    name: string;
-  };
-  links?: {
-    href: string;
-    name: string;
-  }[];
-  [key: string]: unknown;
-}
+const appVersion = packageJson.version;
 
-function Footer({ company, links }: Props): JSX.Element {
-  const { t } = useT();
-  const { href, name } = company;
+function Footer(): JSX.Element {
+  const { t, lang } = useT();
   const { size } = typography;
-  const resolvedLinks =
-    links ??
-    [
-      { href: "https://tulipfleet.com", name: t("footer.site") },
-      { href: "/subscription", name: t("footer.subscription") },
-      { href: "mailto:info@tulipfleet.com", name: t("footer.contact") },
-    ];
-
-  const renderLinks = () =>
-    resolvedLinks.map((link) => (
-      <MDBox key={link.name} component="li" px={2} lineHeight={1}>
-        <Link
-          href={link.href}
-          target={link.href.startsWith("http") ? "_blank" : undefined}
-          rel={link.href.startsWith("http") ? "noreferrer" : undefined}
-        >
-          <MDTypography variant="button" fontWeight="regular" color="text">
-            {link.name}
-          </MDTypography>
-        </Link>
-      </MDBox>
-    ));
+  const year = new Date().getFullYear();
 
   return (
     <MDBox
+      component="footer"
       width="100%"
       display="flex"
       flexDirection={{ xs: "column", lg: "row" }}
       justifyContent="space-between"
       alignItems="center"
-      px={1.5}
+      gap={1}
+      px={2.5}
+      py={1.25}
+      mt={2}
+      borderRadius="lg"
+      sx={{ backgroundColor: landing.navyInk }}
     >
-      <MDBox
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        flexWrap="wrap"
-        color="text"
-        fontSize={size.sm}
-        px={1.5}
-      >
-        <Link href={href} target="_blank" rel="noreferrer">
-          <MDTypography variant="button" fontWeight="medium">
-            © 2026 {name}
-          </MDTypography>
-        </Link>
-      </MDBox>
+      <MDTypography variant="button" fontWeight="medium" sx={{ color: landing.offwhite }}>
+        © {year} TulipFleet B.V.
+      </MDTypography>
       <MDBox
         component="ul"
-        sx={({ breakpoints }) => ({
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "center",
-          listStyle: "none",
-          mt: 3,
-          mb: 0,
-          p: 0,
-
-          [breakpoints.up("lg")]: {
-            mt: 0,
-          },
-        })}
+        display="flex"
+        flexWrap="wrap"
+        alignItems="center"
+        gap={2.5}
+        m={0}
+        p={0}
+        sx={{ listStyle: "none", fontSize: size.sm }}
       >
-        {renderLinks()}
+        <MDBox component="li" lineHeight={1}>
+          <Link href={`https://tulipfleet.com/${lang}/privacy/`} target="_blank" rel="noreferrer">
+            <MDTypography variant="button" fontWeight="regular" sx={{ color: landing.navyFog }}>
+              {t("footer.privacy")}
+            </MDTypography>
+          </Link>
+        </MDBox>
+        <MDBox component="li" lineHeight={1}>
+          <Link href={`https://tulipfleet.com/${lang}/terms/`} target="_blank" rel="noreferrer">
+            <MDTypography variant="button" fontWeight="regular" sx={{ color: landing.navyFog }}>
+              {t("footer.terms")}
+            </MDTypography>
+          </Link>
+        </MDBox>
+        <MDBox component="li" lineHeight={1}>
+          <MDTypography variant="caption" fontWeight="regular" sx={{ color: landing.navyFog }}>
+            v{appVersion}
+          </MDTypography>
+        </MDBox>
       </MDBox>
     </MDBox>
   );
 }
 
-Footer.defaultProps = {
-  company: { href: "https://tulipfleet.com", name: "TulipFleet" },
-};
+Footer.defaultProps = {};
 
 export default Footer;

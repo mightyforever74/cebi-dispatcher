@@ -20,6 +20,7 @@ import { useLocation, NavLink } from "react-router-dom";
 
 // @mui material components
 import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
 import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
 import Icon from "@mui/material/Icon";
@@ -45,7 +46,8 @@ import {
   setWhiteSidenav,
 } from "context";
 
-// Declaring props types for Sidenav
+import { useT } from "i18n";
+
 interface Props {
   color?: "primary" | "secondary" | "info" | "success" | "warning" | "error" | "dark";
   brand?: string;
@@ -67,16 +69,25 @@ interface Props {
 }
 
 function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Element {
+  const { t } = useT();
   const [openCollapse, setOpenCollapse] = useState<boolean | string>(false);
   const [openNestedCollapse, setOpenNestedCollapse] = useState<boolean | string>(false);
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, transparentSidenav, whiteSidenav, darkMode } = controller;
-  const location = useLocation();
-  const { pathname } = location;
+  const { pathname } = useLocation();
   const collapseName = pathname.split("/").slice(1)[0];
   const items = pathname.split("/").slice(1);
   const itemParentName = items[1];
   const itemName = items[items.length - 1];
+
+  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 2): D0/D1 öncesi `key === collapseName`
+  // karşılaştırması yalnızca pathname'in İLK segmentine bakıyordu — bu, çok
+  // segmentli route'larda (örn. `/dashboards/live-fleet-map`, `/dispatcher/tasks`)
+  // aktif öğe HİÇBİR ZAMAN eşleşmiyordu (emerald şerit görünmez kalırdı).
+  // Artık doğrudan tam route path'i ile karşılaştırılıyor.
+  const isRouteActive = (candidateRoute?: string) =>
+    Boolean(candidateRoute) &&
+    (pathname === candidateRoute || pathname.startsWith(`${candidateRoute}/`));
 
   let textColor:
     | "primary"
@@ -122,7 +133,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
 
     // Remove event listener on cleanup
     return () => window.removeEventListener("resize", handleMiniSidenav);
-  }, [dispatch, location]);
+  }, [dispatch, pathname]);
 
   // Render all the nested collapse items from the routes.js
   const renderNestedCollapse = (collapse: any) => {
@@ -196,33 +207,27 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
       if (type === "collapse") {
         if (href) {
           returnValue = (
-            <Link
-              href={href}
+            <SidenavCollapse
               key={key}
-              target="_blank"
-              rel="noreferrer"
-              sx={{ textDecoration: "none" }}
-            >
-              <SidenavCollapse
-                name={name}
-                icon={icon}
-                active={key === collapseName}
-                noCollapse={noCollapse}
-              />
-            </Link>
+              name={name}
+              icon={icon}
+              active={key === collapseName}
+              noCollapse={noCollapse}
+              href={href}
+            />
           );
         } else if (noCollapse && route) {
           returnValue = (
-            <NavLink to={route} key={key}>
-              <SidenavCollapse
-                name={name}
-                icon={icon}
-                noCollapse={noCollapse}
-                active={key === collapseName}
-              >
-                {collapse ? renderCollapse(collapse) : null}
-              </SidenavCollapse>
-            </NavLink>
+            <SidenavCollapse
+              key={key}
+              name={name}
+              icon={icon}
+              noCollapse={noCollapse}
+              active={isRouteActive(route)}
+              to={route}
+            >
+              {collapse ? renderCollapse(collapse) : null}
+            </SidenavCollapse>
           );
         } else {
           returnValue = (
@@ -240,33 +245,36 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
         }
       } else if (type === "title") {
         returnValue = (
-          <MDTypography
-            key={key}
-            color={textColor}
-            display="block"
-            variant="caption"
-            fontWeight="bold"
-            textTransform="uppercase"
-            pl={3}
-            mt={2}
-            mb={1}
-            ml={1}
-            pr={2}
-            title={title}
-            sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-          >
-            {title}
-          </MDTypography>
+          <ListItem key={key} component="li" disablePadding sx={{ display: "block" }}>
+            <MDTypography
+              color={textColor}
+              display="block"
+              variant="caption"
+              component="p"
+              fontWeight="bold"
+              textTransform="uppercase"
+              pl={3}
+              mt={2}
+              mb={1}
+              ml={1}
+              pr={2}
+              title={title}
+              sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+            >
+              {title}
+            </MDTypography>
+          </ListItem>
         );
       } else if (type === "divider") {
         returnValue = (
-          <Divider
-            key={key}
-            light={
-              (!darkMode && !whiteSidenav && !transparentSidenav) ||
-              (darkMode && !transparentSidenav && whiteSidenav)
-            }
-          />
+          <ListItem key={key} component="li" disablePadding sx={{ display: "block" }}>
+            <Divider
+              light={
+                (!darkMode && !whiteSidenav && !transparentSidenav) ||
+                (darkMode && !transparentSidenav && whiteSidenav)
+              }
+            />
+          </ListItem>
         );
       }
 
@@ -280,6 +288,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
       variant="permanent"
       ownerState={{ transparentSidenav, whiteSidenav, miniSidenav, darkMode }}
     >
+      <MDBox component="nav" aria-label={t("nav.sidenav")} height="100%" display="flex" flexDirection="column">
       <MDBox pt={3} pb={1} px={4} textAlign="center">
         <MDBox
           display={{ xs: "block", xl: "none" }}
@@ -290,17 +299,23 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
           onClick={closeSidenav}
           sx={{ cursor: "pointer" }}
         >
-          <MDTypography variant="h6" color="secondary">
+          <MDTypography variant="h6" component="span" color="secondary">
             <Icon sx={{ fontWeight: "bold" }}>close</Icon>
           </MDTypography>
         </MDBox>
         <MDBox component={NavLink} to="/" display="flex" alignItems="center">
-          {brand && <MDBox component="img" src={brand} alt="Brand" width="2rem" />}
+          {brand && <MDBox component="img" src={brand} alt="" width="2rem" />}
           <MDBox
             width={!brandName && "100%"}
             sx={(theme: any) => sidenavLogoLabel(theme, { miniSidenav })}
           >
-            <MDTypography component="h6" variant="button" fontWeight="medium" color={textColor}>
+            <MDTypography
+              component="p"
+              variant="button"
+              fontWeight="bold"
+              color={textColor}
+              sx={(theme: any) => ({ fontFamily: theme.typography.h1.fontFamily, margin: 0 })}
+            >
               {brandName}
             </MDTypography>
           </MDBox>
@@ -312,7 +327,10 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
           (darkMode && !transparentSidenav && whiteSidenav)
         }
       />
-      <List>{renderRoutes}</List>
+      <List component="ul" sx={{ py: 0, flex: 1 }}>
+        {renderRoutes}
+      </List>
+      </MDBox>
     </SidenavRoot>
   );
 }

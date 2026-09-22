@@ -13,10 +13,10 @@ Coded by www.creative-tim.com
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, MouseEvent } from "react";
 
 // react-router components
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 
 // @material-ui core components
 import AppBar from "@mui/material/AppBar";
@@ -52,12 +52,17 @@ import {
   setTransparentNavbar,
   setMiniSidenav,
   setOpenConfigurator,
+  setDarkMode,
+  THEME_STORAGE_KEY,
 } from "context";
 
 // Real API — GET/PUT /api/alerts (api.tulipfleet.com)
 import { useAlerts, useResolveAlert, Alert } from "hooks/useAlerts";
 import { useT } from "i18n";
 import LanguageSwitcher from "components/LanguageSwitcher";
+import { useAuthStore } from "store/useAuthStore";
+
+const isDev = process.env.NODE_ENV === "development";
 
 // Declaring prop types for DashboardNavbar
 interface Props {
@@ -108,6 +113,9 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, transparentNavbar, fixedNavbar, openConfigurator, darkMode } = controller;
   const [openMenu, setOpenMenu] = useState<any>(false);
+  const [accountMenu, setAccountMenu] = useState<HTMLElement | null>(null);
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
   const route = useLocation().pathname.split("/").slice(1);
 
   useEffect(() => {
@@ -140,6 +148,30 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const handleConfiguratorOpen = () => setOpenConfigurator(dispatch, !openConfigurator);
   const handleOpenMenu = (event: any) => setOpenMenu(event.currentTarget);
   const handleCloseMenu = () => setOpenMenu(false);
+  const handleOpenAccount = (event: MouseEvent<HTMLElement>) =>
+    setAccountMenu(event.currentTarget);
+  const handleCloseAccount = () => setAccountMenu(null);
+  const handleLogout = () => {
+    handleCloseAccount();
+    logout();
+    navigate("/authentication/sign-in/basic");
+  };
+
+  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1.2): tema anahtarı Configurator'dan
+  // navbar'a taşındı. D1'deki Configurator handleDarkMode ile BİREBİR aynı
+  // sözleşme (localStorage `tf.theme` + `data-theme`/`color-scheme` DOM özniteliği).
+  const handleToggleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(dispatch, next);
+    const value = next ? "dark" : "light";
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, value);
+    } catch {
+      // localStorage erişilemez (gizli sekme/kota) — sessizce yok say.
+    }
+    document.documentElement.setAttribute("data-theme", value);
+    document.documentElement.style.colorScheme = value;
+  };
 
   // ── TulipFleet Hot Alert Station ────────────────────────────────────────
   // Gercek API'ye baglandi (2026-07-03, Faz 2): GET /api/alerts (api.tulipfleet.com,
@@ -253,7 +285,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   // Styles for the navbar icons
   const iconsStyle = ({
     palette: { dark, white, text },
-    functions: { rgba },
+    functions: { rgba: withAlpha },
   }: {
     palette: any;
     functions: any;
@@ -262,7 +294,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
       let colorValue = light || darkMode ? white.main : dark.main;
 
       if (transparentNavbar && !light) {
-        colorValue = darkMode ? rgba(text.main, 0.6) : text.main;
+        colorValue = darkMode ? withAlpha(text.main, 0.6) : text.main;
       }
 
       return colorValue;
@@ -276,51 +308,104 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
       sx={(theme) => navbar(theme, { transparentNavbar, absolute, light, darkMode })}
     >
       <Toolbar sx={navbarContainer}>
-        <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
+        <MDBox color="inherit" sx={(theme) => navbarRow(theme, { isMini, variant: "start" })}>
           <Breadcrumbs icon="home" title={route[route.length - 1]} route={route} light={light} />
-          <IconButton sx={navbarDesktopMenu} onClick={handleMiniSidenav} size="small" disableRipple>
+          <IconButton
+            sx={navbarDesktopMenu}
+            onClick={handleMiniSidenav}
+            size="small"
+            disableRipple
+            aria-label={t("nav.toggleSidenav")}
+          >
             <Icon fontSize="medium" sx={iconsStyle}>
               {miniSidenav ? "menu_open" : "menu"}
             </Icon>
           </IconButton>
         </MDBox>
         {isMini ? null : (
-          <MDBox sx={(theme) => navbarRow(theme, { isMini })}>
-            <MDBox pr={1}>
+          <MDBox sx={(theme) => navbarRow(theme, { isMini, variant: "end" })}>
+            {/* D2 Adım 1: arama kutusu 5 icon-buton listesinde değil; <sm
+                genişlikte navbar'ı tek satırda tutmak için gizlenir (taşan
+                öğe — spec: "taşanlar hesap menüsüne"; burada basitçe saklanıyor,
+                ekran içeriği/arama işlevine dokunulmadı). */}
+            <MDBox pr={1} sx={{ display: { xs: "none", sm: "block" } }}>
               <MDInput label={t("navbar.search")} />
             </MDBox>
             <MDBox color={light ? "white" : "inherit"}>
               <LanguageSwitcher variant="navbar" />
-              <Link to="/authentication/sign-in/basic">
-                <IconButton sx={navbarIconButton} size="small" disableRipple>
-                  <Icon sx={iconsStyle}>account_circle</Icon>
-                </IconButton>
-              </Link>
+              <IconButton
+                size="small"
+                disableRipple
+                color="inherit"
+                sx={navbarIconButton}
+                onClick={handleToggleDarkMode}
+                aria-label={darkMode ? t("nav.themeToggleToLight") : t("nav.themeToggleToDark")}
+              >
+                <Icon sx={iconsStyle}>{darkMode ? "light_mode" : "dark_mode"}</Icon>
+              </IconButton>
+              <IconButton
+                sx={navbarIconButton}
+                size="small"
+                disableRipple
+                color="inherit"
+                onClick={handleOpenAccount}
+                aria-label={t("nav.account")}
+                aria-haspopup="menu"
+                aria-expanded={Boolean(accountMenu)}
+              >
+                <Icon sx={iconsStyle}>account_circle</Icon>
+              </IconButton>
+              <Menu
+                anchorEl={accountMenu}
+                open={Boolean(accountMenu)}
+                onClose={handleCloseAccount}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+                sx={{ mt: 1.5 }}
+              >
+                <NotificationItem
+                  icon={<Icon fontSize="small">settings</Icon>}
+                  title={t("nav.tenantSettings")}
+                  component={Link}
+                  to="/system/settings"
+                  onClick={handleCloseAccount}
+                />
+                <NotificationItem
+                  icon={<Icon fontSize="small">logout</Icon>}
+                  title={t("nav.logout")}
+                  onClick={handleLogout}
+                />
+              </Menu>
               <IconButton
                 size="small"
                 disableRipple
                 color="inherit"
                 sx={navbarMobileMenu}
                 onClick={handleMiniSidenav}
+                aria-label={t("nav.toggleSidenav")}
               >
                 <Icon sx={iconsStyle} fontSize="medium">
                   {miniSidenav ? "menu_open" : "menu"}
                 </Icon>
               </IconButton>
-              <IconButton
-                size="small"
-                disableRipple
-                color="inherit"
-                sx={navbarIconButton}
-                onClick={handleConfiguratorOpen}
-              >
-                <Icon sx={iconsStyle}>settings</Icon>
-              </IconButton>
+              {isDev ? (
+                <IconButton
+                  size="small"
+                  disableRipple
+                  color="inherit"
+                  sx={navbarIconButton}
+                  onClick={handleConfiguratorOpen}
+                  aria-label={t("nav.settings")}
+                >
+                  <Icon sx={iconsStyle}>settings</Icon>
+                </IconButton>
+              ) : null}
               <IconButton
                 size="small"
                 color="inherit"
                 sx={navbarIconButton}
                 onClick={handleOpenMenu}
+                aria-label={t("nav.notifications")}
               >
                 <MDBadge badgeContent={unreadCount} color="error" size="xs" circular>
                   <Icon sx={iconsStyle}>notifications</Icon>

@@ -33,10 +33,12 @@ function Sidenav(): JSX.Element {
   // kaldirildi. "notifications" -> "email-integration" duzeltildi: eski href
   // hicbir Card id'sine karsilik gelmiyordu (kirik link, gercek EmailIntegration
   // bileseninin id'si "email-integration").
+  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 5): "2FA" facet-nav girdisi kaldırıldı
+  // — karşılık geldiği Authentication kartı (backend'e bağlı olmayan "Yakında"
+  // placeholder) settings/index.tsx'ten çıkarıldı.
   const sidenavItems = [
     { icon: "receipt_long", label: "basic info", href: "basic-info" },
     { icon: "lock", label: "change password", href: "change-password" },
-    { icon: "security", label: "2FA", href: "2fa" },
     { icon: "campaign", label: "email integration", href: "email-integration" },
     { icon: "delete", label: "delete account", href: "delete-account" },
   ];

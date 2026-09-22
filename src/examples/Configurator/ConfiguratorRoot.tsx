@@ -30,16 +30,19 @@ export default styled(Drawer)(({ theme, ownerState }: { theme?: Theme; ownerStat
     width: configuratorWidth,
     left: "initial",
     right: 0,
+    visibility: "visible",
+    pointerEvents: "auto",
     transition: transitions.create("right", {
       easing: transitions.easing.sharp,
       duration: transitions.duration.short,
     }),
   });
 
-  // drawer styles when openConfigurator={false}
   const drawerCloseStyles = () => ({
     left: "initial",
     right: pxToRem(-350),
+    visibility: "hidden",
+    pointerEvents: "none",
     transition: transitions.create("all", {
       easing: transitions.easing.sharp,
       duration: transitions.duration.short,

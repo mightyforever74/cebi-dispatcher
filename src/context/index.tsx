@@ -90,36 +90,51 @@ interface ActionTypes {
 }
 
 // Material Dashboard 2 PRO React reducer
+// D2-fix: same-value dispatch must return the *same* state object.
+// Sidenav resize + navbar scroll + DashboardLayout pathname effects all
+// dispatch on every navigation; `{ ...state }` without this bailout forces
+// every context consumer (Vehicles DataTable included) to re-render and can
+// close a Maximum update depth loop (React #185).
 function reducer(state: StateTypes, action: ActionTypes) {
   switch (action.type) {
     case "MINI_SIDENAV": {
+      if (state.miniSidenav === action.value) return state;
       return { ...state, miniSidenav: action.value };
     }
     case "TRANSPARENT_SIDENAV": {
+      if (state.transparentSidenav === action.value) return state;
       return { ...state, transparentSidenav: action.value };
     }
     case "WHITE_SIDENAV": {
+      if (state.whiteSidenav === action.value) return state;
       return { ...state, whiteSidenav: action.value };
     }
     case "SIDENAV_COLOR": {
+      if (state.sidenavColor === action.value) return state;
       return { ...state, sidenavColor: action.value };
     }
     case "TRANSPARENT_NAVBAR": {
+      if (state.transparentNavbar === action.value) return state;
       return { ...state, transparentNavbar: action.value };
     }
     case "FIXED_NAVBAR": {
+      if (state.fixedNavbar === action.value) return state;
       return { ...state, fixedNavbar: action.value };
     }
     case "OPEN_CONFIGURATOR": {
+      if (state.openConfigurator === action.value) return state;
       return { ...state, openConfigurator: action.value };
     }
     case "DIRECTION": {
+      if (state.direction === action.value) return state;
       return { ...state, direction: action.value };
     }
     case "LAYOUT": {
+      if (state.layout === action.value) return state;
       return { ...state, layout: action.value };
     }
     case "DARKMODE": {
+      if (state.darkMode === action.value) return state;
       return { ...state, darkMode: action.value };
     }
     default: {

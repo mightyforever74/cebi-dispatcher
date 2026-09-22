@@ -40,6 +40,7 @@ import rtlPlugin from "stylis-plugin-rtl";
 
 // Material Dashboard 2 PRO React TS routes
 import { createRoutes } from "routes";
+import ErrorBoundary from "components/ErrorBoundary";
 
 // Material Dashboard 2 PRO React TS contexts
 import { setMiniSidenav, setOpenConfigurator, useMaterialUIController } from "context";
@@ -110,7 +111,13 @@ export default function App() {
         }
 
         if (route.route) {
-          return <Route path={route.route} element={route.component} key={route.key} />;
+          return (
+            <Route
+              path={route.route}
+              element={<ErrorBoundary>{route.component}</ErrorBoundary>}
+              key={route.key}
+            />
+          );
         }
 
         return null;

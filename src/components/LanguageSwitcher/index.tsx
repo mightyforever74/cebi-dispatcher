@@ -19,10 +19,11 @@ interface Props {
 }
 
 function LanguageSwitcher({ variant = "navbar" }: Props): JSX.Element {
-  const { lang, setLang } = useT();
+  const { t, lang, setLang } = useT();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const current = OPTIONS.find((opt) => opt.code === lang) ?? OPTIONS[0];
   const open = Boolean(anchorEl);
+  const languageLabel = t("nav.language", { code: current.label });
 
   const handleOpen = (event: MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
@@ -39,7 +40,7 @@ function LanguageSwitcher({ variant = "navbar" }: Props): JSX.Element {
         onClick={handleOpen}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Language"
+        aria-label={languageLabel}
         sx={{
           display: "inline-flex",
           alignItems: "center",
@@ -67,7 +68,7 @@ function LanguageSwitcher({ variant = "navbar" }: Props): JSX.Element {
         onClick={handleOpen}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Language"
+        aria-label={languageLabel}
         sx={{
           px: 1,
           borderRadius: "8px",
@@ -90,7 +91,7 @@ function LanguageSwitcher({ variant = "navbar" }: Props): JSX.Element {
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
         sx={{ mt: 1 }}
-        MenuListProps={{ dense: true, "aria-label": "Language" }}
+        MenuListProps={{ dense: true, "aria-label": languageLabel }}
       >
         {OPTIONS.map((opt) => (
           <MenuItem key={opt.code} selected={opt.code === lang} onClick={() => handleChoose(opt.code)}>

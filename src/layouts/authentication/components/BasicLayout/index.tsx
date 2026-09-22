@@ -1,74 +1,47 @@
 /**
 =========================================================
-* Material Dashboard 2 PRO React TS - v1.0.2
+* TulipFleet Dispatcher — Auth BasicLayout
 =========================================================
-
-* Product Page: https://www.creative-tim.com/product/material-dashboard-2-pro-react-ts
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 4): "Material Dashboard PRO"
+* fotoğraf-arkaplanı ve DefaultNavbar kromu yerine landing hero dili —
+* navyInk gradient + glow token'ı (D1 tokens.ts `landing`). Sahte pencere yok.
+* Form yüzeyi (Card) opak kalır; dil seçici sayfada ayrı olarak durur.
 */
 
 import { ReactNode } from "react";
 
-// @mui material components
 import Grid from "@mui/material/Grid";
-import { Theme } from "@mui/material/styles";
 
-// Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
-
-// Material Dashboard 2 PRO React TS examples components
-import DefaultNavbar from "examples/Navbars/DefaultNavbar";
 import PageLayout from "examples/LayoutContainers/PageLayout";
-
-// Material Dashboard 2 PRO React page layout routes
-import pageRoutes from "page.routes";
-
-// Authentication pages components
 import Footer from "layouts/authentication/components/Footer";
+import { landing } from "assets/theme/tokens";
 
-// Declaring props types for BasicLayout
 interface Props {
-  image: string;
   children: ReactNode;
 }
 
-function BasicLayout({ image, children }: Props): JSX.Element {
+function BasicLayout({ children }: Props): JSX.Element {
   return (
     <PageLayout>
-      <DefaultNavbar routes={pageRoutes} transparent light />
       <MDBox
-        position="absolute"
-        width="100%"
-        minHeight="100vh"
+        position="fixed"
+        top={0}
+        right={0}
+        bottom={0}
+        left={0}
         sx={{
-          backgroundImage: ({
-            functions: { linearGradient, rgba },
-            palette: { gradients },
-          }: Theme) =>
-            image &&
-            `${linearGradient(
-              rgba(gradients.dark.main, 0.6),
-              rgba(gradients.dark.state, 0.6)
-            )}, url(${image})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
+          background: `radial-gradient(circle at 12% 18%, ${landing.navyElevated} 0%, transparent 42%), linear-gradient(160deg, ${landing.navy} 0%, ${landing.navyDeep} 45%, ${landing.navyInk} 100%)`,
         }}
       />
-      <MDBox px={1} width="100%" height="100vh" mx="auto">
+      <MDBox px={1} width="100%" height="100vh" mx="auto" position="relative" zIndex={1}>
         <Grid container spacing={1} justifyContent="center" alignItems="center" height="100%">
-          <Grid item xs={11} sm={9} md={5} lg={4} xl={3}>
+          <Grid item xs={11} sm={9} md={5} lg={4} xl={3} component="main">
             {children}
           </Grid>
         </Grid>
       </MDBox>
-      <Footer light />
+      <Footer />
     </PageLayout>
   );
 }

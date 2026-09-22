@@ -17,6 +17,20 @@ export const nl = {
     administration: "Beheer",
     subscription: "Abonnement",
     supervisor: "Supervisor",
+    toggleSidenav: "Zijbalk in-/uitklappen",
+    account: "Account",
+    settings: "Dashboardopties",
+    notifications: "Meldingen",
+    themeToggleToDark: "Overschakelen naar donkere modus",
+    themeToggleToLight: "Overschakelen naar lichte modus",
+    logout: "Afmelden",
+    home: "Home",
+    sidenav: "Hoofdnavigatie",
+    language: "Taal: {code}",
+  },
+  error: {
+    title: "Er is iets misgegaan",
+    retry: "Opnieuw proberen",
   },
   crumb: {
     dashboards: "Dashboards",
@@ -30,6 +44,7 @@ export const nl = {
   login: {
     title: "Inloggen",
     brand: "TulipFleet Dispatcher",
+    tagline: "Wagenpark commandocentrum",
     email: "E-mail",
     password: "Wachtwoord",
     forgotPassword: "Wachtwoord vergeten",
@@ -42,6 +57,8 @@ export const nl = {
     site: "Site",
     subscription: "Abonnement",
     contact: "Contact",
+    privacy: "Privacy",
+    terms: "Voorwaarden",
   },
   dialog: {
     copyToClipboard: "Kopiëren naar klembord",

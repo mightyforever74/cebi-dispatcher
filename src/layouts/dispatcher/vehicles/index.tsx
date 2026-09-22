@@ -8,17 +8,23 @@ import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatist
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import DataTable from "examples/Tables/DataTable";
-import useDrivers from "hooks/useDrivers";
-import useVehicles from "hooks/useVehicles";
+import useDrivers, { Driver } from "hooks/useDrivers";
+import useVehicles, { Vehicle } from "hooks/useVehicles";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useT } from "i18n";
 import { toNum } from "utils/toNum";
 
+const EMPTY_VEHICLES: Vehicle[] = [];
+const EMPTY_DRIVERS: Driver[] = [];
+const VEHICLES_PAGE_SIZE = { defaultValue: 10, entries: [5, 10, 25, 50] };
+
 function VehiclesLayout(): JSX.Element {
   const { t, locale } = useT();
-  const { data: vehicles = [], isLoading, error } = useVehicles();
-  const { data: drivers = [] } = useDrivers(); // YENİ
+  const { data: vehiclesData, isLoading, error } = useVehicles();
+  const { data: driversData } = useDrivers();
+  const vehicles = vehiclesData ?? EMPTY_VEHICLES;
+  const drivers = driversData ?? EMPTY_DRIVERS;
   const navigate = useNavigate();
 
   // assigned_vehicle_id -> driver_name ters haritası
@@ -225,7 +231,7 @@ function VehiclesLayout(): JSX.Element {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
-        <MDTypography variant="h5" gutterBottom>
+        <MDTypography variant="h5" component="h2" gutterBottom>
           {t("vehicles.title")}
         </MDTypography>
         <Grid container spacing={3} mb={3}>
@@ -260,7 +266,7 @@ function VehiclesLayout(): JSX.Element {
         <DataTable
           table={table}
           canSearch
-          entriesPerPage={{ defaultValue: 10, entries: [5, 10, 25, 50] }}
+          entriesPerPage={VEHICLES_PAGE_SIZE}
         />
 
         {isLoading && (

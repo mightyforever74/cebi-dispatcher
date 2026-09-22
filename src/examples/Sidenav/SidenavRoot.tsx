@@ -17,18 +17,24 @@ Coded by www.creative-tim.com
 import Drawer from "@mui/material/Drawer";
 import { styled, Theme } from "@mui/material/styles";
 
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 2): sidenav yüzeyi artık MD2'nin
+// jenerik `background.sidenav`/`gradients.dark` değerleri yerine landing
+// köprüsü `navyInk` token'ından besleniyor — tek kaynak `tokens.ts`.
+import { landing } from "assets/theme/tokens";
+
 export default styled(Drawer)(({ theme, ownerState }: { theme?: Theme | any; ownerState: any }) => {
   const { palette, boxShadows, transitions, breakpoints, functions } = theme;
   const { transparentSidenav, whiteSidenav, miniSidenav, darkMode } = ownerState;
 
   const sidebarWidth = 250;
-  const { transparent, gradients, white, background } = palette;
+  const { transparent, white } = palette;
   const { xxl } = boxShadows;
-  const { pxToRem, linearGradient } = functions;
+  const { pxToRem, rgba: withAlpha } = functions;
 
-  let backgroundValue = darkMode
-    ? functions.rgba(background.sidenav, 0.72)
-    : linearGradient(gradients.dark.main, gradients.dark.state);
+  // Sidenav her iki MUI tema modunda da (light/dark) markaya sabit koyu-lacivert
+  // (navyInk) yüzey — bu davranış D1 öncesinde de zaten böyleydi (bkz.
+  // docs/UI_D0_DISCOVERY.md), yalnızca tam hex değeri artık tokens.ts'ten.
+  let backgroundValue = withAlpha(landing.navyInk, darkMode ? 0.92 : 1);
 
   if (transparentSidenav) {
     backgroundValue = transparent.main;
@@ -86,7 +92,9 @@ export default styled(Drawer)(({ theme, ownerState }: { theme?: Theme | any; own
       boxShadow: xxl,
       border: "none",
       backdropFilter:
-        darkMode && !transparentSidenav && !whiteSidenav ? "saturate(140%) blur(18px)" : "none",
+        darkMode && !transparentSidenav && !whiteSidenav
+          ? "saturate(var(--tf-glass-saturate, 140%)) blur(var(--tf-glass-blur, 18px))"
+          : "none",
 
       ...(miniSidenav ? drawerCloseStyles() : drawerOpenStyles()),
     },

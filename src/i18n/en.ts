@@ -19,6 +19,20 @@ export const en = {
     administration: "Administration",
     subscription: "Subscription",
     supervisor: "Supervisor",
+    toggleSidenav: "Toggle sidebar",
+    account: "Account",
+    settings: "Dashboard options",
+    notifications: "Notifications",
+    themeToggleToDark: "Switch to dark mode",
+    themeToggleToLight: "Switch to light mode",
+    logout: "Sign out",
+    home: "Home",
+    sidenav: "Main navigation",
+    language: "Language: {code}",
+  },
+  error: {
+    title: "Something went wrong",
+    retry: "Try again",
   },
   crumb: {
     dashboards: "Dashboards",
@@ -32,6 +46,7 @@ export const en = {
   login: {
     title: "Sign in",
     brand: "TulipFleet Dispatcher",
+    tagline: "Fleet Command Center",
     email: "Email",
     password: "Password",
     forgotPassword: "Forgot password",
@@ -44,6 +59,8 @@ export const en = {
     site: "Site",
     subscription: "Subscription",
     contact: "Contact",
+    privacy: "Privacy",
+    terms: "Terms",
   },
   dialog: {
     copyToClipboard: "Copy to clipboard",

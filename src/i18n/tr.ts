@@ -17,6 +17,20 @@ export const tr = {
     administration: "Yönetim",
     subscription: "Abonelik",
     supervisor: "Supervisor",
+    toggleSidenav: "Kenar menüsünü aç/kapat",
+    account: "Hesap",
+    settings: "Pano seçenekleri",
+    notifications: "Bildirimler",
+    themeToggleToDark: "Koyu temaya geç",
+    themeToggleToLight: "Açık temaya geç",
+    logout: "Çıkış yap",
+    home: "Ana sayfa",
+    sidenav: "Ana menü",
+    language: "Dil: {code}",
+  },
+  error: {
+    title: "Bir şeyler ters gitti",
+    retry: "Yeniden dene",
   },
   crumb: {
     dashboards: "Panolar",
@@ -30,6 +44,7 @@ export const tr = {
   login: {
     title: "Giriş",
     brand: "TulipFleet Dispatcher",
+    tagline: "Filo Komuta Merkezi",
     email: "E-posta",
     password: "Şifre",
     forgotPassword: "Şifremi unuttum",
@@ -42,6 +57,8 @@ export const tr = {
     site: "Site",
     subscription: "Abonelik",
     contact: "İletişim",
+    privacy: "Gizlilik",
+    terms: "Şartlar",
   },
   dialog: {
     copyToClipboard: "Panoya kopyala",

@@ -1,5 +1,7 @@
 # TulipFleet Dispatcher — UI serisi özeti (D0 → D7)
 
+**Yeni UI/UX işi:** önce [`docs/UI_UX_CONTRACT.md`](./UI_UX_CONTRACT.md) (Cursor kuralı `.cursor/rules/ui-ux-contract.mdc`).
+
 **Kapanış branch:** `ui-d6-closeout` (`main` `424aef1`).
 **Yeni özellik yok.** Hex yalnız `src/assets/theme/tokens.ts`. Push Cem.
 

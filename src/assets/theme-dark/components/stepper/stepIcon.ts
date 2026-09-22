@@ -20,6 +20,9 @@ import colors from "assets/theme-dark/base/colors";
 import pxToRem from "assets/theme-dark/functions/pxToRem";
 import boxShadow from "assets/theme-dark/functions/boxShadow";
 
+// Design tokens (single source of truth) — D1 "Tema Köprüsü"
+import { misc } from "assets/theme/tokens";
+
 const { white } = colors;
 
 // types
@@ -28,9 +31,9 @@ type Types = any;
 const stepIcon: Types = {
   styleOverrides: {
     root: {
-      background: "#9fc9ff",
-      fill: "#9fc9ff",
-      stroke: "#9fc9ff",
+      background: misc.stepperInactive,
+      fill: misc.stepperInactive,
+      stroke: misc.stepperInactive,
       strokeWidth: pxToRem(10),
       width: pxToRem(13),
       height: pxToRem(13),

@@ -25,6 +25,30 @@ import { createContext, ReactNode, useContext, useMemo, useReducer } from "react
 // The Material Dashboard 2 PRO React TSUI Dashboard PRO Material main context
 const MaterialUI = createContext<any>(null);
 
+/**
+ * D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 1): tema tercihi için
+ * localStorage anahtarı. `public/index.html`'deki FOUC-önleyici inline
+ * script ve `examples/Configurator/index.tsx`'teki switch ile BİREBİR
+ * aynı tutulmalıdır.
+ */
+export const THEME_STORAGE_KEY = "tf.theme";
+
+/** İlk `darkMode` değerini localStorage → `prefers-color-scheme` sırasıyla
+ * çözer. SSR/test ortamlarında `window` yoksa güvenli varsayılan (dark) döner. */
+function resolveInitialDarkMode(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "dark") return true;
+    if (stored === "light") return false;
+  } catch {
+    // localStorage erişilemez (gizli sekme/kota) — sistem tercihine düş.
+  }
+  return typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-color-scheme: dark)").matches
+    : true;
+}
+
 // Setting custom name for the context which is visible on react dev tools
 MaterialUI.displayName = "MaterialUIContext";
 
@@ -116,7 +140,7 @@ function MaterialUIControllerProvider({ children }: { children: ReactNode }): JS
     openConfigurator: false,
     direction: "ltr",
     layout: "dashboard",
-    darkMode: true,
+    darkMode: resolveInitialDarkMode(),
   };
 
   const [controller, dispatch] = useReducer(reducer, initialState);

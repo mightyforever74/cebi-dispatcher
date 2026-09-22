@@ -1,0 +1,107 @@
+/**
+=========================================================
+* TulipFleet Dispatcher — Global CSS Custom Properties & A11y
+=========================================================
+* D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md).
+*
+* Bu dosya YALNIZCA şunları içerir:
+*  1) Landing + ürün markası token'larının CSS Custom Property
+*     (`:root` / `[data-theme="dark|light"]`) karşılıkları (Adım 2.5).
+*     TEK hex kaynağı `src/assets/theme/tokens.ts`'tir; CSS bir TS
+*     dosyasını import edemediğinden buradaki değerler o dosya ile
+*     BİREBİR senkron tutulmalıdır (bkz. tokens.ts `landing`/`brand`/`glass`).
+*  2) Global A11y davranışları (Adım 4): prefers-reduced-motion,
+*     prefers-reduced-transparency, :focus-visible.
+*
+* Ekran/bileşen dosyaları bu D1 paketinde bu değişkenleri TÜKETMİYOR
+* (D2 kapsamı) — bu dosya yalnızca alt yapıyı kurar.
+* ========================================================= */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- Landing köprüsü (tokens.ts `landing`) ---- */
+  --tf-navy: #0a0f24;
+  --tf-navy-deep: #0d1427;
+  --tf-navy-elevated: #121a32;
+  --tf-navy-ink: #070b18;
+  --tf-navy-fog: #c5cde3;
+  /* Landing global.css:9 ile birebir aynı color-mix() ifadesi. */
+  --tf-navy-line: color-mix(in srgb, var(--tf-navy-elevated) 62%, white 16%);
+  --tf-offwhite: #f8fafc;
+  --tf-emerald: #10b981;
+  --tf-emerald-dim: rgba(16, 185, 129, 0.1);
+  --tf-accent: #ff5722;
+  --tf-accent-soft: #ff7043;
+  --tf-accent-dim: rgba(255, 87, 34, 0.14);
+  --tf-glow-accent: 0 0 24px rgba(255, 87, 34, 0.35);
+  --tf-glow-accent-soft: 0 0 16px rgba(255, 87, 34, 0.2);
+
+  /* ---- Ürün markası (tokens.ts `brand`, ADR-0001) ---- */
+  --tf-brand-primary: #7c3aed;
+  --tf-brand-primary-focus: #6d28d9;
+  --tf-brand-gradient-from: #7c3aed;
+  --tf-brand-gradient-to: #fb7a1e;
+
+  /* ---- Glass token (tokens.ts `glass`) — light mod varsayılanı ---- */
+  --tf-glass-blur: 16px;
+  --tf-glass-saturate: 140%;
+  --tf-glass-opacity: 0.7;
+
+  /* ---- Odak halkası (landing rengi + kalınlığı) — Adım 4.3 ---- */
+  --tf-focus-ring-color: var(--tf-accent);
+  --tf-focus-ring-width: 2px;
+  --tf-focus-ring-offset: 2px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --tf-glass-opacity: 0.62;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --tf-glass-opacity: 0.7;
+}
+
+/* =========================================================
+   Adım 4.2 — prefers-reduced-transparency: glass token'ları opak
+   fallback değerlerine düşürür (tokens.ts `glass.reducedOpacity`
+   ile birebir). Tüketim D2'de (GlassPanel vb.) bu değişkenler
+   üzerinden olacaktır.
+   ========================================================= */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --tf-glass-blur: 0px;
+    --tf-glass-saturate: 100%;
+    --tf-glass-opacity: 0.96;
+  }
+}
+
+/* =========================================================
+   Adım 4.1 — prefers-reduced-motion. MUI `theme.transitions.duration`
+   zaten `tokens.ts::motionDurationOverrides()` ile sıfırlanıyor
+   (assets/theme/index.ts, assets/theme-dark/index.ts). Bu blok, MUI
+   transition sistemi DIŞINDA ham CSS transition/animation kullanan
+   öğeler için güvenlik ağıdır.
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================
+   Adım 4.3 — Global :focus-visible konturu (landing renk/kalınlık).
+   Klavye ile gezinirken tüm etkileşimli öğelerde tutarlı, görünür
+   bir odak halkası sağlar (D0 §7 A5 bulgusu: odak stili tutarsızdı).
+   ========================================================= */
+:focus-visible {
+  outline: var(--tf-focus-ring-width) solid var(--tf-focus-ring-color);
+  outline-offset: var(--tf-focus-ring-offset);
+}

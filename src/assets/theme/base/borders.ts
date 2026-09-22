@@ -25,6 +25,9 @@ import colors from "assets/theme/base/colors";
 // Material Dashboard 2 PRO React TS Helper Functions
 import pxToRem from "assets/theme/functions/pxToRem";
 
+// Design tokens (single source of truth) — D1 "Tema Köprüsü"
+import { radius } from "assets/theme/tokens";
+
 const { grey } = colors;
 
 // types
@@ -62,13 +65,13 @@ const borders: Types = {
   },
 
   borderRadius: {
-    xs: pxToRem(1.6),
-    sm: pxToRem(2),
-    md: pxToRem(6),
-    lg: pxToRem(8),
-    xl: pxToRem(12),
-    xxl: pxToRem(16),
-    section: pxToRem(160),
+    xs: pxToRem(radius.xs),
+    sm: pxToRem(radius.sm),
+    md: pxToRem(radius.md),
+    lg: pxToRem(radius.lg),
+    xl: pxToRem(radius.xl),
+    xxl: pxToRem(radius.xxl),
+    section: pxToRem(radius.section),
   },
 };
 

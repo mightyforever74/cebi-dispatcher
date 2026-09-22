@@ -16,15 +16,50 @@ Coded by www.creative-tim.com
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!--
+      D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 1.1):
+      FOUC (flash-of-unstyled-content / yanlış-tema-parlaması) önleyici.
+      İlk boyamadan ÖNCE `data-theme` ve `color-scheme` atanır; böylece
+      global.css'teki `[data-theme="dark"]` / `[data-theme="light"]` CSS
+      Custom Property blokları ilk paint'te doğru değerlerle hazır olur.
+      Anahtar `tf.theme`, src/context/index.tsx (THEME_STORAGE_KEY) ve
+      src/examples/Configurator/index.tsx ile BİREBİR aynı tutulmalıdır.
+    -->
+    <script>
+      (function () {
+        var KEY = "tf.theme";
+        var theme = "dark";
+        try {
+          var stored = window.localStorage.getItem(KEY);
+          if (stored === "dark" || stored === "light") {
+            theme = stored;
+          } else if (window.matchMedia && !window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            theme = "light";
+          }
+        } catch (e) {
+          // localStorage erişilemez (gizli sekme/kota) — varsayılan "dark" kalır.
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#1A73E8" />
     <link rel="apple-touch-icon" sizes="76x76" href="%PUBLIC_URL%/apple-icon.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>TulipFleet — Fleet Command Center</title>
+    <!--
+      D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 3.1): Roboto yerine
+      landing ile hizalı tipografi — Display: Space Grotesk (h1-h4/d1-d6),
+      Body: Manrope (gövde metinleri). Ağırlıklar: 400, 500, 600, 700.
+      Kaynak: C:\tulipfleet-landing (marka fontları).
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap"
     />
     <link
       href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp"

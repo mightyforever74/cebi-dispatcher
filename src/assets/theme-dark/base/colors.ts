@@ -14,10 +14,13 @@ Coded by www.creative-tim.com
 */
 
 /**
- * The base colors for the Material Dashboard 2 PRO React TSUI Dashboard PRO Material.
- * You can add new color using this file.
- * You can customized the colors for the entire Material Dashboard 2 PRO React TSUI Dashboard PRO Material using thie file.
+ * D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md): bu dosya artık hiçbir hex/rgba
+ * literal İÇERMİYOR — tüm değerler `assets/theme/tokens.ts`'ten (single
+ * source of truth) okunur. Görsel çıktı D1 öncesi ile BİREBİR AYNIDIR.
  */
+
+// Design tokens (single source of truth)
+import { paletteDark } from "assets/theme/tokens";
 
 // types
 interface ColorsTypes {
@@ -149,17 +152,17 @@ interface Types {
 const colors: Types = {
   mode: "dark",
   background: {
-    default: "#1a2035",
-    sidenav: "#1f283e",
-    card: "#202940",
+    default: paletteDark.backgroundDefault,
+    sidenav: paletteDark.backgroundSidenav,
+    card: paletteDark.backgroundCard,
   },
 
   text: {
-    main: "#ffffffcc",
-    focus: "#ffffffcc",
-    primary: "#ECEEF7",
-    secondary: "#8f9bb3",
-    disabled: "#65718c",
+    main: paletteDark.textMain,
+    focus: paletteDark.textFocus,
+    primary: paletteDark.textPrimary,
+    secondary: paletteDark.textSecondary,
+    disabled: paletteDark.textDisabled,
   },
 
   transparent: {
@@ -167,234 +170,70 @@ const colors: Types = {
   },
 
   white: {
-    main: "#ffffff",
-    focus: "#ffffff",
+    main: paletteDark.white,
+    focus: paletteDark.white,
   },
 
   black: {
-    light: "#000000",
-    main: "#000000",
-    focus: "#000000",
+    light: paletteDark.black,
+    main: paletteDark.black,
+    focus: paletteDark.black,
   },
 
   primary: {
-    main: "#7C3AED",
-    focus: "#6D28D9",
+    main: paletteDark.primaryMain,
+    focus: paletteDark.primaryFocus,
   },
 
   secondary: {
-    main: "#7b809a",
-    focus: "#8f93a9",
+    main: paletteDark.secondaryMain,
+    focus: paletteDark.secondaryFocus,
   },
 
   info: {
-    main: "#1A73E8",
-    focus: "#1662C4",
+    main: paletteDark.infoMain,
+    focus: paletteDark.infoFocus,
   },
 
   success: {
-    main: "#4CAF50",
-    focus: "#67bb6a",
+    main: paletteDark.successMain,
+    focus: paletteDark.successFocus,
   },
 
   warning: {
-    main: "#fb8c00",
-    focus: "#fc9d26",
+    main: paletteDark.warningMain,
+    focus: paletteDark.warningFocus,
   },
 
   error: {
-    main: "#F44335",
-    focus: "#f65f53",
+    main: paletteDark.errorMain,
+    focus: paletteDark.errorFocus,
   },
 
   light: {
-    main: "#f0f2f566",
-    focus: "#f0f2f566",
+    main: paletteDark.lightMain,
+    focus: paletteDark.lightFocus,
   },
 
   dark: {
-    main: "#344767",
-    focus: "#2c3c58",
+    main: paletteDark.darkMain,
+    focus: paletteDark.darkFocus,
   },
 
-  grey: {
-    100: "#f8f9fa",
-    200: "#f0f2f5",
-    300: "#dee2e6",
-    400: "#ced4da",
-    500: "#adb5bd",
-    600: "#6c757d",
-    700: "#495057",
-    800: "#343a40",
-    900: "#212529",
-  },
+  grey: { ...paletteDark.grey },
 
-  gradients: {
-    primary: {
-      main: "#A855F7",
-      state: "#7C3AED",
-    },
+  gradients: { ...paletteDark.gradients },
 
-    brand: {
-      main: "#7C3AED",
-      state: "#FB7A1E",
-    },
+  socialMediaColors: { ...paletteDark.socialMediaColors },
 
-    secondary: {
-      main: "#747b8a",
-      state: "#495361",
-    },
+  badgeColors: { ...paletteDark.badgeColors },
 
-    info: {
-      main: "#49a3f1",
-      state: "#1A73E8",
-    },
+  coloredShadows: { ...paletteDark.coloredShadows },
 
-    success: {
-      main: "#66BB6A",
-      state: "#43A047",
-    },
-
-    warning: {
-      main: "#FFA726",
-      state: "#FB8C00",
-    },
-
-    error: {
-      main: "#EF5350",
-      state: "#E53935",
-    },
-
-    light: {
-      main: "#EBEFF4",
-      state: "#CED4DA",
-    },
-
-    dark: {
-      main: "#323a54",
-      state: "#1a2035",
-    },
-  },
-
-  socialMediaColors: {
-    facebook: {
-      main: "#3b5998",
-      dark: "#344e86",
-    },
-
-    twitter: {
-      main: "#55acee",
-      dark: "#3ea1ec",
-    },
-
-    instagram: {
-      main: "#125688",
-      dark: "#0e456d",
-    },
-
-    linkedin: {
-      main: "#0077b5",
-      dark: "#00669c",
-    },
-
-    pinterest: {
-      main: "#cc2127",
-      dark: "#b21d22",
-    },
-
-    youtube: {
-      main: "#e52d27",
-      dark: "#d41f1a",
-    },
-
-    vimeo: {
-      main: "#1ab7ea",
-      dark: "#13a3d2",
-    },
-
-    slack: {
-      main: "#3aaf85",
-      dark: "#329874",
-    },
-
-    dribbble: {
-      main: "#ea4c89",
-      dark: "#e73177",
-    },
-
-    github: {
-      main: "#24292e",
-      dark: "#171a1d",
-    },
-
-    reddit: {
-      main: "#ff4500",
-      dark: "#e03d00",
-    },
-
-    tumblr: {
-      main: "#35465c",
-      dark: "#2a3749",
-    },
-  },
-
-  badgeColors: {
-    primary: {
-      background: "#f8b3ca",
-      text: "#cc084b",
-    },
-
-    secondary: {
-      background: "#d7d9e1",
-      text: "#6c757d",
-    },
-
-    info: {
-      background: "#aecef7",
-      text: "#095bc6",
-    },
-
-    success: {
-      background: "#bce2be",
-      text: "#339537",
-    },
-
-    warning: {
-      background: "#ffd59f",
-      text: "#c87000",
-    },
-
-    error: {
-      background: "#fcd3d0",
-      text: "#f61200",
-    },
-
-    light: {
-      background: "#ffffff",
-      text: "#c7d3de",
-    },
-
-    dark: {
-      background: "#8097bf",
-      text: "#1e2e4a",
-    },
-  },
-
-  coloredShadows: {
-    primary: "#7c3aed",
-    secondary: "#110e0e",
-    info: "#00bbd4",
-    success: "#4caf4f",
-    warning: "#ff9900",
-    error: "#f44336",
-    light: "#adb5bd",
-    dark: "#404040",
-  },
-
-  inputBorderColor: "#d2d6da",
+  inputBorderColor: paletteDark.inputBorderColor,
 
   tabs: {
-    indicator: { boxShadow: "#ddd" },
+    indicator: { boxShadow: paletteDark.tabsIndicatorShadow },
   },
 };
 

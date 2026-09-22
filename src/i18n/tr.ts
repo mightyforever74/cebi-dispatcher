@@ -27,6 +27,17 @@ export const tr = {
     home: "Ana sayfa",
     sidenav: "Ana menü",
     language: "Dil: {code}",
+    short: {
+      liveFleet: "Harita",
+      tasks: "Görevler",
+      exceptions: "İkaz",
+      drivers: "Sürücüler",
+      vehicles: "Araçlar",
+      optimize: "Optimize",
+      tenantSettings: "Ayarlar",
+      subscription: "Plan",
+      supervisor: "Supervisor",
+    },
   },
   error: {
     title: "Bir şeyler ters gitti",
@@ -188,6 +199,8 @@ export const tr = {
     searchAria: "Tabloda ara",
     showing: "{start}–{end} / {total} kayıt gösteriliyor",
     scrollHint: "Diğer sütunlar — yatay kaydırın",
+    prevPage: "Önceki sayfa",
+    nextPage: "Sonraki sayfa",
   },
   tasks: {
     title: "Görevler",
@@ -274,6 +287,27 @@ export const tr = {
     task: "Görev",
     sos: "SOS",
   },
+  notifications: {
+    sos: {
+      title: "SOS",
+      body: "Görev {task} · {plate}",
+    },
+    moreToExceptions: "{count} daha → İstisnalar",
+  },
+  vehicle: {
+    category: {
+      truck_heavy: "Ağır kamyon",
+      truck_medium: "Orta kamyon",
+      van: "Van",
+    },
+    fuel: {
+      diesel: "Dizel",
+      gasoline: "Benzin",
+      electric: "Elektrik",
+      hybrid: "Hibrit",
+      lpg: "LPG",
+    },
+  },
   exceptions: {
     title: "İstisna yönetimi (uyarılar)",
     subtitle: "Açık ve onaylanmış olaylar · otomatik yenileme",
@@ -327,6 +361,7 @@ export const tr = {
       compliance_zone_breach: "ZE-bölge ihlali",
       traffic_impact: "Trafik etkisi",
       dock_conflict: "Rıhtım çakışması",
+      rule_violation: "Kural ihlali",
     },
     priority: {
       high: "Yüksek",

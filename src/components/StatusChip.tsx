@@ -37,6 +37,18 @@ function labelKey(kind: StatusKind, value: string): TranslationKey {
   return `status.${kind}.${value}` as TranslationKey;
 }
 
+export function enumLabel(
+  prefix: string,
+  value: string | null | undefined,
+  translate: (key: TranslationKey) => string
+): string {
+  const raw = (value ?? "").trim();
+  if (!raw) return "—";
+  const key = `${prefix}.${raw}` as TranslationKey;
+  const label = translate(key);
+  return label === key ? raw : label;
+}
+
 interface StatusChipProps {
   kind: StatusKind;
   value: string | null | undefined;
@@ -47,13 +59,15 @@ function StatusChip({ kind, value, size = "sm" }: StatusChipProps): JSX.Element 
   const { t } = useT();
   const raw = (value ?? "").trim() || "unknown";
   const colors = resolveStatusColors(kind, raw);
+  const key = labelKey(kind, raw);
+  const translated = t(key);
+  const hasLabel = translated !== key;
   const known = Boolean(PALETTE[kind][raw]);
-  if (!known && process.env.NODE_ENV !== "production") {
+  if (!known && !hasLabel && process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
     console.warn(`[StatusChip] unknown ${kind} value:`, raw);
   }
-  const key = labelKey(kind, raw);
-  const label = known ? t(key) : raw;
+  const label = hasLabel ? translated : raw;
   return (
     <Chip
       size={size === "sm" ? "small" : "medium"}

@@ -29,6 +29,17 @@ export const en = {
     home: "Home",
     sidenav: "Main navigation",
     language: "Language: {code}",
+    short: {
+      liveFleet: "Live map",
+      tasks: "Tasks",
+      exceptions: "Alerts",
+      drivers: "Drivers",
+      vehicles: "Vehicles",
+      optimize: "Optimize",
+      tenantSettings: "Settings",
+      subscription: "Plan",
+      supervisor: "Supervisor",
+    },
   },
   error: {
     title: "Something went wrong",
@@ -190,6 +201,8 @@ export const en = {
     searchAria: "Search table",
     showing: "Showing {start} to {end} of {total} entries",
     scrollHint: "More columns — scroll horizontally",
+    prevPage: "Previous page",
+    nextPage: "Next page",
   },
   tasks: {
     title: "Tasks",
@@ -276,6 +289,27 @@ export const en = {
     task: "Task",
     sos: "SOS",
   },
+  notifications: {
+    sos: {
+      title: "SOS",
+      body: "Task {task} · {plate}",
+    },
+    moreToExceptions: "{count} more → Exceptions",
+  },
+  vehicle: {
+    category: {
+      truck_heavy: "Heavy truck",
+      truck_medium: "Medium truck",
+      van: "Van",
+    },
+    fuel: {
+      diesel: "Diesel",
+      gasoline: "Gasoline",
+      electric: "Electric",
+      hybrid: "Hybrid",
+      lpg: "LPG",
+    },
+  },
   exceptions: {
     title: "Exception Management (Alerts)",
     subtitle: "Open and acknowledged events · auto-refresh",
@@ -329,6 +363,7 @@ export const en = {
       compliance_zone_breach: "ZE-zone breach",
       traffic_impact: "Traffic impact",
       dock_conflict: "Dock conflict",
+      rule_violation: "Rule violation",
     },
     priority: {
       high: "High",

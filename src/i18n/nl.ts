@@ -27,6 +27,17 @@ export const nl = {
     home: "Home",
     sidenav: "Hoofdnavigatie",
     language: "Taal: {code}",
+    short: {
+      liveFleet: "Kaart",
+      tasks: "Taken",
+      exceptions: "Meldingen",
+      drivers: "Chauffeurs",
+      vehicles: "Voertuigen",
+      optimize: "Optimaliseren",
+      tenantSettings: "Instellingen",
+      subscription: "Plan",
+      supervisor: "Supervisor",
+    },
   },
   error: {
     title: "Er is iets misgegaan",
@@ -188,6 +199,8 @@ export const nl = {
     searchAria: "Tabel doorzoeken",
     showing: "{start} tot {end} van {total} rijen",
     scrollHint: "Meer kolommen — horizontaal scrollen",
+    prevPage: "Vorige pagina",
+    nextPage: "Volgende pagina",
   },
   tasks: {
     title: "Taken",
@@ -274,6 +287,27 @@ export const nl = {
     task: "Taak",
     sos: "SOS",
   },
+  notifications: {
+    sos: {
+      title: "SOS",
+      body: "Taak {task} · {plate}",
+    },
+    moreToExceptions: "{count} meer → Uitzonderingen",
+  },
+  vehicle: {
+    category: {
+      truck_heavy: "Zware vrachtwagen",
+      truck_medium: "Middelzware vrachtwagen",
+      van: "Bestelwagen",
+    },
+    fuel: {
+      diesel: "Diesel",
+      gasoline: "Benzine",
+      electric: "Elektrisch",
+      hybrid: "Hybride",
+      lpg: "LPG",
+    },
+  },
   exceptions: {
     title: "Uitzonderingen (meldingen)",
     subtitle: "Open en bevestigde gebeurtenissen · auto-refresh",
@@ -327,6 +361,7 @@ export const nl = {
       compliance_zone_breach: "ZE-zone-inbreuk",
       traffic_impact: "Verkeersimpact",
       dock_conflict: "Dockconflict",
+      rule_violation: "Regelovertreding",
     },
     priority: {
       high: "Hoog",

@@ -17,6 +17,9 @@ Coded by www.creative-tim.com
 import borders from "assets/theme/base/borders";
 import colors from "assets/theme/base/colors";
 
+// Design tokens (single source of truth) — D1 "Tema Köprüsü"
+import { misc } from "assets/theme/tokens";
+
 const { white } = colors;
 const { borderWidth } = borders;
 
@@ -26,7 +29,7 @@ type Types = any;
 const stepConnector: Types = {
   styleOverrides: {
     root: {
-      color: "#9fc9ff",
+      color: misc.stepperInactive,
       transition: "all 200ms linear",
 
       "&.Mui-active": {

@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "App";
 import theme from "assets/theme";
 import themeDark from "assets/theme-dark";
+// D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 2.5 + 4): CSS Custom
+// Properties (landing/ürün marka token'ları) + global A11y davranışları.
+import "assets/css/global.css";
 import { MaterialUIControllerProvider, THEME_STORAGE_KEY, useMaterialUIController } from "context";
 import ForgotPassword from "layouts/authentication/forgot-password";
 import Basic from "layouts/authentication/sign-in/basic";

@@ -21,6 +21,9 @@ import colors from "assets/theme/base/colors";
 import pxToRem from "assets/theme/functions/pxToRem";
 import rgba from "assets/theme/functions/rgba";
 
+// Design tokens (single source of truth) — D1 "Tema Köprüsü"
+import { misc } from "assets/theme/tokens";
+
 const { size, fontWeightRegular } = typography;
 const { white } = colors;
 
@@ -33,7 +36,7 @@ const stepLabel: Types = {
       marginTop: `${pxToRem(8)} !important`,
       fontWeight: fontWeightRegular,
       fontSize: size.xs,
-      color: "#9fc9ff",
+      color: misc.stepperInactive,
       textTransform: "uppercase",
 
       "&.Mui-active": {

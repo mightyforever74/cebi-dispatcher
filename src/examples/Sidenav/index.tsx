@@ -78,6 +78,15 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
   const itemParentName = items[1];
   const itemName = items[items.length - 1];
 
+  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 2): D0/D1 öncesi `key === collapseName`
+  // karşılaştırması yalnızca pathname'in İLK segmentine bakıyordu — bu, çok
+  // segmentli route'larda (örn. `/dashboards/live-fleet-map`, `/dispatcher/tasks`)
+  // aktif öğe HİÇBİR ZAMAN eşleşmiyordu (emerald şerit görünmez kalırdı).
+  // Artık doğrudan tam route path'i ile karşılaştırılıyor.
+  const isRouteActive = (candidateRoute?: string) =>
+    Boolean(candidateRoute) &&
+    (pathname === candidateRoute || pathname.startsWith(`${candidateRoute}/`));
+
   let textColor:
     | "primary"
     | "secondary"
@@ -218,7 +227,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
                 name={name}
                 icon={icon}
                 noCollapse={noCollapse}
-                active={key === collapseName}
+                active={isRouteActive(route)}
               >
                 {collapse ? renderCollapse(collapse) : null}
               </SidenavCollapse>
@@ -300,7 +309,15 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
             width={!brandName && "100%"}
             sx={(theme: any) => sidenavLogoLabel(theme, { miniSidenav })}
           >
-            <MDTypography component="h6" variant="button" fontWeight="medium" color={textColor}>
+            {/* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 2): marka wordmark'ı
+                display fontuna (Space Grotesk, D1 typography.ts h1-h4) bağlanır. */}
+            <MDTypography
+              component="h6"
+              variant="button"
+              fontWeight="bold"
+              color={textColor}
+              sx={(theme: any) => ({ fontFamily: theme.typography.h1.fontFamily })}
+            >
               {brandName}
             </MDTypography>
           </MDBox>

@@ -178,9 +178,103 @@ TR `outbound`/`inbound` parantezleri de borç (stored metadata değerleri değil
 
 ## 9. Commit’ler (push yok)
 
-1. `1bc1046` — `i18n: migrate modal, exception, emission and locale strings` (sözlük + kod + `verify-i18n`)
+D5:
+1. `1bc1046` — `i18n: migrate modal, exception, emission and locale strings`
 2. `2c11d73` — `fix(ui-d5): tokenise ConfirmDialogShell and wire three modals`
 3. `3bfc58d` — `i18n: Optimize, Settings form copy and field validation`
-4. Bu rapor
+4. `21e80c1` — `docs: UI_D5_REPORT.md form/modal i18n P2`
 
-`git diff --stat 61fb58b...HEAD` (rapor commit’inden önce): 22 files, +1578 / −647. Rapor bu sayıya `docs/UI_D5_REPORT.md` ekler.
+D5-fix (preview `addf81db`):
+5. `5067fda` — React #185 blocker
+6. `5e14edd` — Resolve + Optimize
+7. `a5cda89` — Settings helperText + i18n kaçakları
+8. `8fa85ca` — kontrast token’ları
+9. Bu rapor §7
+
+---
+
+## 7. Preview turu + D5-fix (bundle addf81db)
+
+Kaynak: preview. Yeni paket yok. Push yok. Hex yalnız `tokens.ts`.
+
+### 7.0 BLOCKER — React #185 (`/dispatcher/tasks`, EN+dark)
+
+**Kök neden.** D2 reducer bail-out (`setLayout` aynı değerde aynı state nesnesi) bu yolu kapatmadı. Tasks soğuk yüklemede `useDrivers()` / `useVehicles()` `data` henüz `undefined` iken `const { data: drivers = [] }` **her render’da yeni dizi** üretiyordu → `driverNameById` / `plateById` / `table` `useMemo` kırılıyordu → `DataTable` `useTable` yeniden kuruluyordu → react-table `setPageSize` **referans-kararsız** →
+
+```ts
+useEffect(() => { setPageSize(defaultValue); }, [defaultValue, setPageSize]);
+```
+
+her render’da `setState` → Maximum update depth (#185).
+
+`useTasks`’te `select` yoktu (aday doğrulanmadı). `placeholderData: EMPTY_TASKS` eklendi. Notifications `setBanners(next)` her poll’da yeni dizi + `useExceptions.setExceptions(rows)` aynı snapshot’ta bile yeni referans — 20 sn’de bir ekstra render; döngüyü **başlatmaz**, yarış penceresini **genişletir**. Density fallback her çağrıda yeni nesne üretiyordu (`useDensity` provider dışındaysa).
+
+**Neden aralıklı / EN+dark.** Döngü yalnız `data === undefined` penceresinde (ilk fetch veya cache boş). Cache doluysa (`staleTime` 2 dk) `?? EMPTY_*` kullanılmaz, tablo referansı durur. EN+dark: varsayılan dil + saklı dark — soğuk ilk boyama. Profiler “why did this render”: parent `table.columns` kimliği + `setPageSize` effect.
+
+**Düzeltme (minimal):**
+- Tasks: `EMPTY_DRIVERS` / `EMPTY_VEHICLES` / `TASKS_PAGE_SIZE` (Vehicles D2 deseni)
+- `useTasks.placeholderData = EMPTY_TASKS`
+- DataTable: `setPageSize` yalnız `pageSize !== next`; deps’ten `setPageSize` çıkarıldı
+- `useExceptions` / banner store: snapshot eşitse aynı referans
+- `useDensity` fallback sabit nesne
+
+**ErrorBoundary “Yeniden dene”.** Zaten vardı: `t("error.retry")` + `setState({ hasError: false })` çocukları tekrar render eder. D5-fix: `generation` key ile **route ağacı remount**. `App.tsx` her route’u `ErrorBoundary` ile sarıyor.
+
+10× EN/TR/NL × dark/light giriş: oturum yok (login). Kod kanıtı yukarıda; canlı 10× Cem.
+
+### 7.1 Exceptions → Resolve
+
+- Yorum **opsiyonel** (ConflictOverride ≥5 buraya taşınmadı).
+- `Enter` textarea newline; `Ctrl/Cmd+Enter` kabuk onayı. İpucu `exceptions.commentHint` / `dialog.submitHint`.
+- `onCancel` taslağı siler (`comment` + `action`).
+- `aria-modal="true"` kabukta açık.
+- Action select `InputLabelProps={{ shrink: true }}` — label çakışması.
+- ACKNOWLEDGE/OPLOSSEN: `size="small"`; `< md` ikon-only + `aria-label`; `≥ md` ikon + metin.
+
+### 7.2 Optimize formu
+
+- Pickup/drop-off: `error` + `helperText` + `aria-invalid`. Helper rengi `form.errorFgLight` `#B71C1C` / `errorFgDark` `#FF8A80` (beyaz 6.57:1; dark panel 7.07:1).
+- `parseLocaleNumber(value, locale)` tek kaynak. EN yalnız `.` (`1,5` geçersiz, 15 olmaz). TR/NL yalnız `,`. Mesaj `optimize.errorDecimalDot` / `errorDecimalComma`.
+- Volume/Weight zorunlu değil — etikette `*` yok.
+
+### 7.3 Settings helperText + toast
+
+**Neden görünmüyordu:** `MuiFormHelperText` `display:none` değil (tema override yok). `FormField` `{...rest}` geçirir. Çağıranlar (`BasicInfo`, `EmailIntegration`, `ChangePassword` çoğu alan) **`helperText` prop’unu hiç vermiyordu**. Şimdi her alanda `settings.help*`.
+
+Toast: `NotificationHost` → `MDSnackbar` `role="status"` + `aria-live="polite"` (tek yer).
+
+TR başlık varsayılan: `nav.tenantSettings` = **“Şirket ve Sistem Ayarları”** (P3’e kadar). “System default” radyo: `alignItems: flex-start`, ikon sarmalayıcı kaldırıldı.
+
+### 7.4 i18n kaçakları
+
+- `/optimization/tour-planning` gövdesi `tourPlanning.*`.
+- Breadcrumb `dispatcher` → `nav.dispatcher` (TR “Sevk”).
+- Banner/toast başlığı `titleKey`; dil değişince `t(titleKey)` yeniden. Gövde backend ham kalır.
+- `MDBadge` `text-transform: none` (emission “Euro 6”).
+
+**BACKEND (dokunulmadı):** toast/banner `body` alanları API’den gelir — örn. `A2 otoyolu…`, `Görev başladı`, `a.description` / `e.detection_payload` serbest metin. Şablon: `bodyForAlert` / `bodyForException` (kod) + backend string (parametre). Mesaj şablonu BE’de; FE çevirmez.
+
+### 7.5 Kontrast (WCAG 2.1, hesaplı)
+
+| Token / yüzey | Eski → yeni | Zemin | Oran |
+|---|---|---|---|
+| `badgeColors.warning.text` (warning çip) | `#c87000` → `#7a4400` | `#ffd59f` | 2.64 → **5.75:1** |
+| `badgeColors.success.text` | `#339537` → `#1B5E20` | `#bce2be` | 2.69 → **5.53:1** |
+| `paletteLight.successMain` (KPI live/active, Owned chip) | `#4CAF50` → `#1B7A3D` | `#ffffff` / `#f0f2f5` | 2.78 → **5.39 / 4.80:1** |
+| “N more → Exceptions” `a11y.linkLight` | `info.main` | `#f0f2f5` | **5.46:1** |
+| aynı, dark `a11y.linkDark` `#8EC8F8` | — | `#1a2035` / `#202940` | **9.04 / 8.10:1** |
+| Vehicles plaka `text.main` (`navyFog700`) | `info.main` | `#ffffff` / `#f0f2f5` | **5.88 / 5.24:1** |
+| Form hata `form.errorFg*` | yeni | white / dark panel | **6.57 / 7.07:1** |
+
+axe Optimize / Exceptions+Resolve / Settings / Vehicles: **oturum yok** — login formu. Canlı axe Cem.
+
+### 7.6 Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| Hex grep kapsam | **0** |
+| `npm run verify:i18n` | **521 keys** |
+| `npm run build` | gzip **531.87 kB** `main.e84f45f0.js` (+1.28 kB), CSS 10.05 kB |
+| Tasks 10× dil×tema | oturum yok; kod kanıtı §7.0 |
+| Klavye Resolve | Esc / Ctrl+Enter kabukta; odak dönüşü MUI Dialog |
+| Push | **Yok** (Cem) |

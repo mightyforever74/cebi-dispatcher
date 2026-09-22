@@ -62,6 +62,7 @@ import { useT } from "i18n";
 import LanguageSwitcher from "components/LanguageSwitcher";
 import { useDensity } from "context/density";
 import { useAuthStore } from "store/useAuthStore";
+import NotificationHost from "components/Notifications";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -304,6 +305,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   });
 
   return (
+    <>
     <AppBar
       position={absolute ? "absolute" : navbarType}
       color="inherit"
@@ -319,7 +321,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
             disableRipple
             aria-label={t("nav.toggleSidenav")}
           >
-            <Icon fontSize="medium" sx={iconsStyle}>
+            <Icon aria-hidden fontSize="medium" sx={iconsStyle}>
               {miniSidenav ? "menu_open" : "menu"}
             </Icon>
           </IconButton>
@@ -343,7 +345,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
                 onClick={handleToggleDarkMode}
                 aria-label={darkMode ? t("nav.themeToggleToLight") : t("nav.themeToggleToDark")}
               >
-                <Icon sx={iconsStyle}>{darkMode ? "light_mode" : "dark_mode"}</Icon>
+                <Icon aria-hidden sx={iconsStyle}>{darkMode ? "light_mode" : "dark_mode"}</Icon>
               </IconButton>
               <IconButton
                 sx={navbarIconButton}
@@ -355,7 +357,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
                 aria-haspopup="menu"
                 aria-expanded={Boolean(accountMenu)}
               >
-                <Icon sx={iconsStyle}>account_circle</Icon>
+                <Icon aria-hidden sx={iconsStyle}>account_circle</Icon>
               </IconButton>
               <Menu
                 anchorEl={accountMenu}
@@ -394,7 +396,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
                 onClick={handleMiniSidenav}
                 aria-label={t("nav.toggleSidenav")}
               >
-                <Icon sx={iconsStyle} fontSize="medium">
+                <Icon aria-hidden sx={iconsStyle} fontSize="medium">
                   {miniSidenav ? "menu_open" : "menu"}
                 </Icon>
               </IconButton>
@@ -407,7 +409,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
                   onClick={handleConfiguratorOpen}
                   aria-label={t("nav.settings")}
                 >
-                  <Icon sx={iconsStyle}>settings</Icon>
+                  <Icon aria-hidden sx={iconsStyle}>settings</Icon>
                 </IconButton>
               ) : null}
               <IconButton
@@ -418,7 +420,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
                 aria-label={t("nav.notifications")}
               >
                 <MDBadge badgeContent={unreadCount} color="error" size="xs" circular>
-                  <Icon sx={iconsStyle}>notifications</Icon>
+                  <Icon aria-hidden sx={iconsStyle}>notifications</Icon>
                 </MDBadge>
               </IconButton>
               {renderMenu()}
@@ -427,6 +429,8 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
         )}
       </Toolbar>
     </AppBar>
+    <NotificationHost />
+    </>
   );
 }
 

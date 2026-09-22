@@ -17,9 +17,11 @@ import {
 } from "hooks/useExceptions";
 import { t, type TranslationKey } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
+import { useResolveAlert } from "hooks/useAlerts";
 
 const MERGE_WINDOW_MS = 10_000;
 const MAX_VISIBLE_TOASTS = 3;
+const MAX_VISIBLE_BANNERS = 2;
 
 export type NotifyChannel = "banner" | "toast";
 
@@ -28,6 +30,7 @@ export interface NotifyItem {
   channel: NotifyChannel;
   source: "exception" | "telemetry";
   type: string;
+  family: string;
   severity: string;
   title: string;
   body: string;
@@ -35,6 +38,8 @@ export interface NotifyItem {
   createdAt: number;
   canAck: boolean;
   exceptionId?: string;
+  exceptionIds?: string[];
+  alertIds?: string[];
 }
 
 function typeFamily(type: string): string {
@@ -54,6 +59,7 @@ function isBannerType(type: string, severity: string): boolean {
 
 function titleFor(type: string, severity: string): string {
   const family = typeFamily(type);
+  if (family === "sos") return t("notifications.sos.title");
   const exceptionKey = `status.exception.${family}` as TranslationKey;
   const exceptionLabel = t(exceptionKey);
   if (exceptionLabel !== exceptionKey) return exceptionLabel;
@@ -64,8 +70,21 @@ function titleFor(type: string, severity: string): string {
   return type || t("notify.bannerCritical");
 }
 
+function sosBody(task?: string, plate?: string): string {
+  return t("notifications.sos.body", {
+    task: task || t("notify.task"),
+    plate: plate || t("common.emptyDash"),
+  });
+}
+
 function bodyForException(e: ExceptionEvent): string {
   const p = e.detection_payload || {};
+  if (typeFamily(e.exception_type) === "sos") {
+    return sosBody(
+      p.task_no != null ? String(p.task_no) : undefined,
+      p.vehicle_plate != null ? String(p.vehicle_plate) : undefined
+    );
+  }
   const parts: string[] = [];
   if (p.task_no) parts.push(String(p.task_no));
   if (p.vehicle_plate) parts.push(String(p.vehicle_plate));
@@ -73,6 +92,10 @@ function bodyForException(e: ExceptionEvent): string {
 }
 
 function bodyForAlert(a: Alert): string {
+  const type = String(a.alert_type || a.type || "");
+  if (typeFamily(type) === "sos") {
+    return sosBody(a.title, a.vehicle_plate);
+  }
   return a.description || a.title || a.vehicle_plate || a.alert_type || a.type || a.id;
 }
 
@@ -113,18 +136,46 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const toastedRef = useRef<Set<string>>(new Set());
   const firstAlertsRef = useRef(true);
 
+  const resolveAlert = useResolveAlert();
+
   useEffect(() => {
-    const next: NotifyItem[] = [];
+    const byFamily = new Map<string, NotifyItem>();
+    const consider = (item: NotifyItem) => {
+      const family = item.family;
+      if (dismissedRef.current.has(item.id) || dismissedRef.current.has(`family:${family}`)) return;
+      const existing = byFamily.get(family);
+      if (existing) {
+        existing.count += 1;
+        existing.createdAt = Math.max(existing.createdAt, item.createdAt);
+        existing.body = item.body;
+        existing.canAck = existing.canAck || item.canAck;
+        if (item.exceptionId) {
+          existing.exceptionIds = [...(existing.exceptionIds ?? []), item.exceptionId];
+        }
+        if (item.alertIds?.length) {
+          existing.alertIds = [...(existing.alertIds ?? []), ...item.alertIds];
+        }
+        return;
+      }
+      byFamily.set(family, {
+        ...item,
+        id: `banner:${family}`,
+        count: 1,
+        exceptionIds: item.exceptionId ? [item.exceptionId] : [],
+        alertIds: item.alertIds ?? [],
+      });
+    };
+
     exceptions.forEach((e) => {
       if (e.status !== "open") return;
       if (!isBannerType(e.exception_type, e.severity)) return;
-      const id = `ex:${e.id}`;
-      if (dismissedRef.current.has(id)) return;
-      next.push({
-        id,
+      const family = typeFamily(e.exception_type);
+      consider({
+        id: `ex:${e.id}`,
         channel: "banner",
         source: "exception",
         type: e.exception_type,
+        family,
         severity: e.severity,
         title: titleFor(e.exception_type, e.severity),
         body: bodyForException(e),
@@ -139,22 +190,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       const type = String(a.alert_type || a.type || "default");
       const severity = String(a.severity || "").toLowerCase();
       if (!isBannerType(type, severity)) return;
-      const id = `al:${a.id}`;
-      if (dismissedRef.current.has(id)) return;
-      next.push({
-        id,
+      const family = typeFamily(type);
+      consider({
+        id: `al:${a.id}`,
         channel: "banner",
         source: "telemetry",
         type,
+        family,
         severity: severity || "critical",
         title: titleFor(type, severity || "critical"),
         body: bodyForAlert(a),
         count: 1,
         createdAt: a.created_at ? new Date(a.created_at).getTime() : Date.now(),
-        canAck: false,
+        canAck: true,
+        alertIds: [a.id],
       });
     });
-    next.sort((a, b) => b.createdAt - a.createdAt);
+    const next = Array.from(byFamily.values()).sort((a, b) => b.createdAt - a.createdAt);
     setBanners(next);
   }, [exceptions, alerts]);
 
@@ -194,6 +246,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         channel: "toast",
         source: "exception",
         type: e.exception_type,
+        family: typeFamily(e.exception_type),
         severity: e.severity,
         title: titleFor(e.exception_type, e.severity),
         body: bodyForException(e),
@@ -226,6 +279,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         channel: "toast",
         source: "telemetry",
         type,
+        family: typeFamily(type),
         severity: severity || "info",
         title: titleFor(type, severity),
         body: bodyForAlert(a),
@@ -248,6 +302,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           channel: "toast" as const,
           source: "telemetry" as const,
           type: i < 5 ? "geofence" : "speed",
+          family: i < 5 ? "geofence" : "speed",
           severity: "medium",
           title: titleFor(i < 5 ? "geofence" : "speed", "medium"),
           body: `storm ${i + 1}`,
@@ -264,7 +319,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const dismissBanner = useCallback((id: string) => {
     dismissedRef.current.add(id);
-    setBanners((prev) => prev.filter((b) => b.id !== id));
+    setBanners((prev) => {
+      const hit = prev.find((b) => b.id === id);
+      if (hit) dismissedRef.current.add(`family:${hit.family}`);
+      return prev.filter((b) => b.id !== id);
+    });
   }, []);
 
   const dismissToast = useCallback((id: string) => {
@@ -273,12 +332,17 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const acknowledge = useCallback(
     async (item: NotifyItem) => {
-      if (item.exceptionId) {
-        await resolve(item.exceptionId, "acknowledge");
-      }
+      const exIds = item.exceptionIds?.length
+        ? item.exceptionIds
+        : item.exceptionId
+          ? [item.exceptionId]
+          : [];
+      await Promise.all(exIds.map((id) => resolve(id, "acknowledge")));
+      const alertIds = item.alertIds ?? [];
+      await Promise.all(alertIds.map((id) => resolveAlert.mutateAsync({ id })));
       dismissBanner(item.id);
     },
-    [resolve, dismissBanner]
+    [resolve, resolveAlert, dismissBanner]
   );
 
   const toasts = toastQueue.slice(0, MAX_VISIBLE_TOASTS);
@@ -325,4 +389,4 @@ export function useNotifications(): Api {
   return ctx;
 }
 
-export { MERGE_WINDOW_MS, MAX_VISIBLE_TOASTS };
+export { MERGE_WINDOW_MS, MAX_VISIBLE_TOASTS, MAX_VISIBLE_BANNERS };

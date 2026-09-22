@@ -148,8 +148,16 @@ interface Types {
   };
 }
 
+/**
+ * D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 3.2): landing ile hizalı
+ * font mimarisi. Gövde metinleri Manrope, büyük başlıklar (h1-h4, d1-d6)
+ * Space Grotesk kullanır. Roboto referansı BİLEREK kaldırıldı (Adım 3.4).
+ */
+const fontFamilyBody = '"Manrope", "Helvetica Neue", Arial, sans-serif';
+const fontFamilyDisplay = '"Space Grotesk", "Manrope", "Helvetica Neue", Arial, sans-serif';
+
 const baseProperties = {
-  fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+  fontFamily: fontFamilyBody,
   fontWeightLighter: 100,
   fontWeightLight: 300,
   fontWeightRegular: 400,
@@ -165,14 +173,24 @@ const baseProperties = {
   fontSize3XL: pxToRem(30),
 };
 
+// h1-h4: Space Grotesk (Adım 3.2)
 const baseHeadingProperties = {
-  fontFamily: baseProperties.fontFamily,
+  fontFamily: fontFamilyDisplay,
   color: dark.main,
   fontWeight: baseProperties.fontWeightBold,
 };
 
+// h5-h6: Manrope (gövde ile aynı aile — landing'de küçük başlıklar display
+// fontuna geçmiyor)
+const baseSubHeadingProperties = {
+  fontFamily: fontFamilyBody,
+  color: dark.main,
+  fontWeight: baseProperties.fontWeightBold,
+};
+
+// d1-d6: Space Grotesk (h1'den de büyük marka/marketing tipografisi)
 const baseDisplayProperties = {
-  fontFamily: baseProperties.fontFamily,
+  fontFamily: fontFamilyDisplay,
   color: dark.main,
   fontWeight: baseProperties.fontWeightLight,
   lineHeight: 1.2,
@@ -213,13 +231,13 @@ const typography: Types = {
   h5: {
     fontSize: pxToRem(20),
     lineHeight: 1.375,
-    ...baseHeadingProperties,
+    ...baseSubHeadingProperties,
   },
 
   h6: {
     fontSize: pxToRem(16),
     lineHeight: 1.625,
-    ...baseHeadingProperties,
+    ...baseSubHeadingProperties,
   },
 
   subtitle1: {

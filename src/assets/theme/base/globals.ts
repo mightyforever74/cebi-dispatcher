@@ -22,6 +22,14 @@ const globals = {
   html: {
     scrollBehavior: "smooth",
   },
+  // D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 3.3): tüm sayısal/telemetri
+  // metinleri (plaka, ETA, mesafe, tarih) tabular-nums ile hizalı genişlikte
+  // render edilsin. `body` seviyesinde tanımlanır ve inheritance ile TÜM
+  // metin düğümlerine yayılır — rakam İÇERMEYEN metinlerde görsel etkisi
+  // SIFIRDIR (font-variant-numeric yalnızca 0-9 karakterlerini etkiler).
+  body: {
+    fontVariantNumeric: "tabular-nums",
+  },
   "*, *::before, *::after": {
     margin: 0,
     padding: 0,

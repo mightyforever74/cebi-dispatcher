@@ -291,3 +291,15 @@ Tek commit. Yeni paket yok.
 6. **Optimize heading-order.** Sayfa `h2`; form / job / constraints kart `h3`; araç kolon başlığı `h4`. Görsel `variant="h6"` aynı.
 
 axe Optimize + Vehicles + Exceptions dark/light serious 0: oturum yok (login). 1280 / 1045 ACTION ekran görüntüsü aynı nedenle rapora gömülmedi.
+
+### 7.8 D5-fix-3
+
+Tek commit. Yeni paket yok.
+
+**ACTION 1045 hâlâ metin — kanıt.** `md` değildi. `useMediaQuery(theme.breakpoints.up("lg"))` kullanılıyordu. MD2 `breakpoints.ts`: `md=768`, **`lg=992`**, `xl=1200`. `up("lg")` = `min-width: 992px` → 1045’te `true` → etiket kalır. MUI varsayılan `lg=1200` bu temada yok. Düzeltme: `theme.breakpoints.down(1200)` (`iconOnly`). ≥1200 metinli buton `padding: 6px 10px`, `min-width: 0`, `overflow: hidden; text-overflow: ellipsis`.
+
+**Resolve Select.** Kök: `MuiSelect.styleOverrides.select` `padding: 0 0.75rem !important` + `icon: display:none` (MD2, light+dark). Override kaldırıldı (padding + gizli ikon). Dialog `!important` yaması silindi. `size="small"` MUI varsayılan padding bırakır; label shrink + değer çakışmaz. Settings’te MuiSelect yok (FormField). Optimize’da MuiSelect yok (ToggleButtonGroup + flatpickr + chip). Tema değişikliği onları bozmaz.
+
+**Yerel Chrome.** `/dispatcher/exceptions` login duvarı; `dispatcher-auth` `expiresAt=2026-09-22T14:01:48Z` (süresi dolmuş). 1045 / 1280 ACTION ve Resolve koordinat ekran görüntüsü bu oturumda alınamadı.
+
+Push sonrası CNAME: Chrome’da yalnız 1045 (ikon) + 1280 (metin) Exceptions ACTION; Resolve label/değer çakışması 0.

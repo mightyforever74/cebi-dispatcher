@@ -63,7 +63,9 @@ function statusLabel(status: string, translate: (key: TranslationKey) => string)
 export default function Exceptions(): JSX.Element {
   const { t, lang } = useT();
   const theme = useTheme();
-  const isLgUp = useMediaQuery(theme.breakpoints.up("lg"));
+  // MD2 breakpoints: lg=992, xl=1200. Preview 1045 still showed labels because
+  // `up("lg")` is min-width 992 — not MUI's default lg (1200).
+  const iconOnly = useMediaQuery(theme.breakpoints.down(1200));
   const {
     exceptions,
     loading,
@@ -161,12 +163,24 @@ export default function Exceptions(): JSX.Element {
                 color="info"
                 onClick={() => void doAcknowledge(e)}
                 aria-label={t("exceptions.acknowledge")}
-                sx={{ textTransform: "none", whiteSpace: "nowrap", minWidth: 0 }}
+                sx={{
+                  textTransform: "none",
+                  whiteSpace: "nowrap",
+                  minWidth: 0,
+                  ...(!iconOnly
+                    ? {
+                        px: "10px",
+                        py: "6px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }
+                    : {}),
+                }}
               >
                 <Icon fontSize="small" aria-hidden>
                   done
                 </Icon>
-                {isLgUp ? t("exceptions.acknowledge") : null}
+                {iconOnly ? null : t("exceptions.acknowledge")}
               </MDButton>
             )}
             <MDButton
@@ -175,13 +189,25 @@ export default function Exceptions(): JSX.Element {
               color="success"
               onClick={() => setDialogFor(e)}
               aria-label={t("exceptions.resolve")}
-              sx={{ textTransform: "none", whiteSpace: "nowrap", minWidth: 0 }}
+              sx={{
+                textTransform: "none",
+                whiteSpace: "nowrap",
+                minWidth: 0,
+                ...(!iconOnly
+                  ? {
+                      px: "10px",
+                      py: "6px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }
+                  : {}),
+              }}
             >
-              <Icon fontSize="small" aria-hidden>
-                task_alt
-              </Icon>
-              {isLgUp ? t("exceptions.resolve") : null}
-            </MDButton>
+                <Icon fontSize="small" aria-hidden>
+                  task_alt
+                </Icon>
+                {iconOnly ? null : t("exceptions.resolve")}
+              </MDButton>
           </MDBox>
         ),
         id: e.id,
@@ -190,7 +216,7 @@ export default function Exceptions(): JSX.Element {
     });
 
     return { columns, rows };
-  }, [exceptions, newIds, t, lang, doAcknowledge, isLgUp]);
+  }, [exceptions, newIds, t, lang, doAcknowledge, iconOnly]);
 
   const state = listFetchState({
     isLoading: loading,
@@ -285,15 +311,7 @@ export default function Exceptions(): JSX.Element {
           value={action}
           onChange={(ev) => setAction(ev.target.value as ResolveAction)}
           InputLabelProps={{ shrink: true }}
-          sx={{
-            mb: 2,
-            "& .MuiSelect-select": {
-              padding: "8.5px 14px !important",
-              paddingRight: "32px !important",
-              display: "block",
-            },
-            "& .MuiSelect-icon": { display: "inline-block" },
-          }}
+          sx={{ mb: 2 }}
         >
           {RESOLVE_OPTIONS.map((value) => (
             <MenuItem key={value} value={value}>

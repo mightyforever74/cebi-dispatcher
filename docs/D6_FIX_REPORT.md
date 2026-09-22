@@ -4,7 +4,7 @@
 **Kapsam:** axe serious=0, i18n sizintisi, 390px banner. Yeni ozellik yok.
 **Hex:** yalniz `src/assets/theme/tokens.ts`. Metin: `src/i18n/{en,tr,nl}.ts` (+ `backendCopy.ts` backend TR prefix eslemesi).
 **Yeni npm paketi:** Yok.
-**Bundle:** `main.0416b55d.js` → **`main.0a1b7136.js`** (535 kB gzip JS / 10.2 kB CSS). Deployments alias: `ui-d6-closeout` push.
+**Bundle:** `main.0416b55d.js` → yerel `main.0a1b7136.js` (535 kB gzip JS / 10.2 kB CSS). Deployments commit `71a64d2`; Pages hash yerel hash'ten farklıdır.
 
 ---
 
@@ -132,6 +132,100 @@ Yorum ASCII (kapi): `src/index.tsx`, `src/routes.tsx`, `src/page.routes.tsx`, `s
 `docs/screenshots/d6fix-livemap-390.jpg`
 
 **Dokunulmadi:** `scripts/sim-portxl.js`, `docs/UI_D0_DISCOVERY.md`, `.env`, `.cursorrules`.
+
+---
+
+## 8. Kontrast ekleri (WCAG 2.x relative luminance)
+
+Formul (WCAG 2.2 relative luminance + contrast ratio):
+
+```
+sRGB kanal:  C_srgb = C_8bit / 255
+dogrusal:    C = C_srgb <= 0.04045 ? C_srgb/12.92 : ((C_srgb+0.055)/1.055)^2.4
+L = 0.2126 R + 0.7152 G + 0.0722 B
+oran = (L_acik + 0.05) / (L_koyu + 0.05)
+esik AA metin: 4.50
+```
+
+### (a) Login footer / Forgot + `textOnChip` — kendi yuzeyi, iki tema
+
+Footer zemini her temada `landing.navyInk` (`#070b18`) — light temada da gradient fallback + footer `backgroundColor` ayni token. Forgot kart zemini light `paletteLight.white` (`#ffffff`), dark `paletteDark.backgroundCard` (`#202940`). Chip zemini `map.*.chipBg`.
+
+| Yuzey | Tema | Token (hex) | Zemin (hex) | L_fg | L_bg | Oran |
+|---|---|---|---|---|---|---|
+| Footer © | light = dark | `landing.offwhite` `#f8fafc` | `landing.navyInk` `#070b18` | 0.9536 | 0.0035 | **18.76** |
+| Footer Privacy / Terms / v1.0.2 | light = dark | `landing.navyFog` `#c5cde3` | `landing.navyInk` `#070b18` | 0.6108 | 0.0035 | **12.35** |
+| Forgot password | light | `a11y.linkLight` `#155fc0` | kart `#ffffff` | 0.1215 | 1.0000 | **6.12** |
+| Forgot password | dark | `a11y.linkDark` `#8EC8F8` | kart `#202940` | 0.5384 | 0.0226 | **8.10** |
+| Polling / N active (`textOnChip`) | dark | `paletteDark.white` `#ffffff` | `landing.navyDeep` `#0d1427` | 1.0000 | 0.0073 | **18.32** |
+| Polling / N active (`textOnChip`) | light | `paletteLight.darkMain` `#344767` | `grey.200` `#f0f2f5` | 0.0622 | 0.8862 | **8.35** |
+
+Once (Forgot): `landing.emerald` `#10b981` / `#ffffff` = **2.54** (<4.5). Footer light'ta solid fallback yokken axe sayfa `#f0f2f5` uzerinden olcuyordu.
+
+### (b) StatusChip pending / in_progress — dark tema ciftleri
+
+`tokens.status.task` tema-bolunmez (StatusChip `darkMode` okumaz). Dark temada da ayni hex; kontrast cipin kendi `fg`/`bg` ciftidir (sayfa zemini degil).
+
+| Durum | Dark (ve light) fg | Dark (ve light) bg | L_fg | L_bg | Oran |
+|---|---|---|---|---|---|
+| pending | `#343a40` (`paletteLight.grey[800]`) | `#d7d9e1` (`badge.secondary.background`) | 0.0413 | 0.6951 | **8.16** |
+| in_progress | `#6d0830` | `#f8b3ca` (`badge.primary.background`) | 0.0364 | 0.5646 | **7.11** |
+
+Once: pending `#6c757d`/`#d7d9e1` = 3.33; in_progress `#cc084b`/`#f8b3ca` = 3.32.
+
+### (c) Yalniz yorum ASCII — dosya listesi
+
+`a6ccd24` **icinde** (commit'ten cikarilmadi). Runtime / sozluk degismeyen, yalniz `ğüşıöçĞÜŞİÖÇ` → ASCII (yorum / JSDoc / dosya basligi). Gate yorumlari haric tutmaz; harfler ASCII oldugu icin gecer. 45 dosya:
+
+```
+src/assets/theme/base/borders.ts
+src/assets/theme/base/colors.ts
+src/assets/theme/base/globals.ts
+src/assets/theme/base/typography.ts
+src/assets/theme/components/stepper/stepConnector.ts
+src/assets/theme/components/stepper/stepIcon.ts
+src/assets/theme/components/stepper/stepLabel.ts
+src/assets/theme/index.ts
+src/assets/theme-dark/base/borders.ts
+src/assets/theme-dark/base/colors.ts
+src/assets/theme-dark/base/globals.ts
+src/assets/theme-dark/base/typography.ts
+src/assets/theme-dark/components/stepper/stepConnector.ts
+src/assets/theme-dark/components/stepper/stepIcon.ts
+src/assets/theme-dark/components/stepper/stepLabel.ts
+src/assets/theme-dark/index.ts
+src/components/BulkConfirmDialog/index.tsx
+src/components/ConfirmDialogShell/index.tsx
+src/components/ConflictOverrideModal/index.tsx
+src/components/FuelGaugeMini.tsx
+src/context/index.tsx
+src/examples/Configurator/index.tsx
+src/examples/Footer/index.tsx
+src/examples/Navbars/DashboardNavbar/styles.ts
+src/examples/Navbars/DefaultNavbar/index.tsx
+src/examples/Sidenav/SidenavRoot.tsx
+src/examples/Sidenav/index.tsx
+src/examples/Sidenav/styles/sidenavCollapse.ts
+src/hooks/useActiveRoutes.ts
+src/hooks/useDriverIndex.ts
+src/hooks/useFleetSnapshot.ts
+src/hooks/useMqttTelemetry.ts
+src/hooks/useNotificationPreferences.ts
+src/index.tsx
+src/layouts/authentication/components/BrandBlock/index.tsx
+src/layouts/authentication/forgot-password/index.tsx
+src/layouts/dispatcher/exceptions/index.tsx
+src/layouts/pages/account/components/BaseLayout/index.tsx
+src/layouts/pages/account/settings/index.tsx
+src/layouts/supervisor/supervisorSession.ts
+src/page.routes.tsx
+src/routes.tsx
+src/services/dispatch/decisionLog.ts
+src/store/useRouteLayerStore.ts
+src/store/useVehicleStore.ts
+```
+
+Ayni commit'te **yorum + kod/sozluk** (bu listede degil): `src/i18n/{en,tr,nl,index,backendCopy}.ts`, `useNotifications.ts`, `DashboardNavbar/index.tsx`, `subscription/{index,b2bApi}`, `supervisor/{index,SupervisorGate,customerDetail}`, `TollAnalyticsPlaceholder.tsx`, `useTaskOptimization.ts`.
 
 ---
 

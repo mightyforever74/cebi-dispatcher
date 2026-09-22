@@ -10,18 +10,16 @@ import { useVehicleStore, deriveStatus, VehicleTelemetry } from "store/useVehicl
  * into useVehicleStore. Status is derived client-side from speed (no DB status
  * column — proven 2026-06-04 against prod public.locations).
  *
+ * Missing broker env (preview without Cloudflare MQTT vars) does not throw a
+ * user-facing error: `configured` is false and the live-map badge shows
+ * `polling` while REST snapshot runs.
+ *
  * Dev: ws://localhost:8083/mqtt via SSH tunnel to fleet-prod-01 (no TLS).
  * Prod: wss://mqtt.tulipfleet.com:8084/mqtt (needs browser-valid cert on the
  *   WSS listener — separate infra task; see INTEGRATION_BOUNDARIES §3.2).
  *
  * Payload contract (16-col): device_id, latitude, longitude, speed, heading,
  *   altitude, satellite_count, hdop, accel_x/y/z, accuracy, timestamp.
- *
- * The store seeds 5 mock trucks whose ids are the plate strings (GV-082-B …),
- * and the synthetic publisher publishes to fleet/device/<plate>/location, so
- * device_id on the topic matches the store key in dev. With real ESP32s the
- * device_id is the chipId; a chipId→vehicle map will be added in Sıra 4.3 when
- * GET /api/locations/latest provides the initial roster.
  */
 
 type ConnState = "connecting" | "connected" | "error" | "closed";
@@ -34,10 +32,17 @@ interface LocationFrame {
   heading?: number;
 }
 
-export function useMqttTelemetry(): { state: ConnState; lastError: string | null } {
+export function useMqttTelemetry(): {
+  state: ConnState;
+  lastError: string | null;
+  configured: boolean;
+  lastMessageAt: number | null;
+} {
   const updateVehicleLocation = useVehicleStore((s) => s.updateVehicleLocation);
   const [state, setState] = useState<ConnState>("connecting");
   const [lastError, setLastError] = useState<string | null>(null);
+  const [configured, setConfigured] = useState(true);
+  const [lastMessageAt, setLastMessageAt] = useState<number | null>(null);
   const clientRef = useRef<MqttClient | null>(null);
 
   useEffect(() => {
@@ -46,13 +51,13 @@ export function useMqttTelemetry(): { state: ConnState; lastError: string | null
     const password = process.env.REACT_APP_MQTT_DISPATCHER_PASS;
 
     if (!url || !username || !password) {
-      setState("error");
-      setLastError("MQTT env vars missing (REACT_APP_MQTT_BROKER_URL / USER / PASS).");
-      // eslint-disable-next-line no-console
-      console.error("[mqtt] missing env config — check dispatcher .env");
+      setConfigured(false);
+      setState("closed");
+      setLastError(null);
       return;
     }
 
+    setConfigured(true);
     const client = mqtt.connect(url, {
       username,
       password,
@@ -70,8 +75,6 @@ export function useMqttTelemetry(): { state: ConnState; lastError: string | null
         if (err) {
           setState("error");
           setLastError(`subscribe failed: ${err.message}`);
-          // eslint-disable-next-line no-console
-          console.error("[mqtt] subscribe error", err);
         }
       });
     });
@@ -84,8 +87,9 @@ export function useMqttTelemetry(): { state: ConnState; lastError: string | null
           typeof frame.latitude !== "number" ||
           typeof frame.longitude !== "number"
         ) {
-          return; // ignore malformed frame
+          return;
         }
+        setLastMessageAt(Date.now());
         updateVehicleLocation(
           frame.device_id,
           frame.latitude,
@@ -101,8 +105,6 @@ export function useMqttTelemetry(): { state: ConnState; lastError: string | null
     client.on("error", (err) => {
       setState("error");
       setLastError(err.message);
-      // eslint-disable-next-line no-console
-      console.error("[mqtt] connection error", err.message);
     });
 
     client.on("close", () => setState((prev) => (prev === "error" ? prev : "closed")));
@@ -115,10 +117,8 @@ export function useMqttTelemetry(): { state: ConnState; lastError: string | null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { state, lastError };
+  return { state, lastError, configured, lastMessageAt };
 }
 
-// Helper for the store: ensure deriveStatus + VehicleTelemetry stay referenced
-// so a tree-shake doesn't drop the type-only import in some build configs.
 export type { VehicleTelemetry };
 export { deriveStatus };

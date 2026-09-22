@@ -11,9 +11,12 @@
  * emission_class NULL→"n_a" (dürüst rozet — uydurma euro sınıfı yazılmaz).
  * BUG-4 v2 (2026-08-02): vehicle_id (public.vehicles.id UUID) artık telemetriye
  * taşınır — sürücü→araç rota seçimi (Olasılık C) bu alandan eşlenir.
+ *
+ * D3: yükleme/hata/yeniden-dene UI için phase + lastOkAt + refetch döner.
  */
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ENTERPRISE_API_URL } from "config/api";
+import { map as mapTokens } from "assets/theme/tokens";
 import { useAuthStore } from "store/useAuthStore";
 import {
   useVehicleStore,
@@ -21,7 +24,7 @@ import {
   deriveStatus,
 } from "store/useVehicleStore";
 
-const POLL_MS = 20 * 1000;
+export type SnapshotPhase = "loading" | "ready" | "error";
 
 interface SnapshotRow {
   device_id: string;
@@ -59,37 +62,46 @@ function rowToTelemetry(r: SnapshotRow): VehicleTelemetry {
   };
 }
 
-export function useFleetSnapshot(): void {
+export function useFleetSnapshot(): {
+  phase: SnapshotPhase;
+  error: string | null;
+  lastOkAt: number | null;
+  bootstrapped: boolean;
+  refetch: () => void;
+} {
   const token = useAuthStore((s) => s.token);
+  const [phase, setPhase] = useState<SnapshotPhase>("loading");
+  const [error, setError] = useState<string | null>(null);
+  const [lastOkAt, setLastOkAt] = useState<number | null>(null);
+  const [bootstrapped, setBootstrapped] = useState(false);
+  const bootRef = useRef(false);
+  const stoppedRef = useRef(false);
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
 
-  useEffect(() => {
-    let stopped = false;
-    let bootstrapped = false;
+  const pull = useCallback(async (): Promise<void> => {
+    try {
+      const res = await fetch(`${ENTERPRISE_API_URL}/api/dispatcher/locations/latest`, {
+        headers: { Authorization: tokenRef.current ? `Bearer ${tokenRef.current}` : "" },
+      });
+      if (!res.ok) throw new Error(`snapshot HTTP ${res.status}`);
+      const data = await res.json();
+      const rows: SnapshotRow[] = data.locations || [];
+      if (stoppedRef.current) return;
 
-    async function pull(): Promise<void> {
-      try {
-        const res = await fetch(`${ENTERPRISE_API_URL}/api/dispatcher/locations/latest`, {
-          headers: { Authorization: token ? `Bearer ${token}` : "" },
+      const store = useVehicleStore.getState();
+      if (!bootRef.current) {
+        const record: Record<string, VehicleTelemetry> = {};
+        rows.forEach((r) => {
+          record[r.device_id] = rowToTelemetry(r);
         });
-        if (!res.ok) throw new Error(`snapshot HTTP ${res.status}`);
-        const data = await res.json();
-        const rows: SnapshotRow[] = data.locations || [];
-        if (stopped) return;
-
-        const store = useVehicleStore.getState();
-        if (!bootstrapped) {
-          const record: Record<string, VehicleTelemetry> = {};
-          rows.forEach((r) => {
-            record[r.device_id] = rowToTelemetry(r);
-          });
-          store.setVehicles(record);
-          bootstrapped = true;
-          return;
-        }
+        store.setVehicles(record);
+        bootRef.current = true;
+        setBootstrapped(true);
+      } else {
         rows.forEach((r) => {
           const known = useVehicleStore.getState().vehicles[r.device_id];
           if (!known) {
-            // filoya yeni katılan araç: merge (mock'suz dünyada tek yeni-araç yolu)
             useVehicleStore.getState().setVehicles({
               ...useVehicleStore.getState().vehicles,
               [r.device_id]: rowToTelemetry(r),
@@ -97,7 +109,6 @@ export function useFleetSnapshot(): void {
             return;
           }
           if (!known.vehicle_id && r.vehicle_id) {
-            // BUG-4 v2: MQTT ile doğmuş / eski kayıtta UUID eksikse tamamla
             useVehicleStore.getState().setVehicles({
               ...useVehicleStore.getState().vehicles,
               [r.device_id]: { ...known, vehicle_id: r.vehicle_id },
@@ -114,17 +125,31 @@ export function useFleetSnapshot(): void {
             source: "rest",
           });
         });
-      } catch (e) {
-        // sessiz düşme yok: konsola dürüst log; UI mevcut son durumla yaşar
-        console.error("[fleet-snapshot]", e instanceof Error ? e.message : e);
       }
+      setLastOkAt(Date.now());
+      setPhase("ready");
+      setError(null);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      // eslint-disable-next-line no-console
+      console.error("[fleet-snapshot]", message);
+      setError(message);
+      if (!bootRef.current) setPhase("error");
     }
+  }, []);
 
+  useEffect(() => {
+    stoppedRef.current = false;
+    bootRef.current = false;
+    setBootstrapped(false);
+    setPhase("loading");
     pull();
-    const iv = setInterval(pull, POLL_MS);
+    const iv = setInterval(pull, mapTokens.restPollMs);
     return () => {
-      stopped = true;
+      stoppedRef.current = true;
       clearInterval(iv);
     };
-  }, [token]);
+  }, [token, pull]);
+
+  return { phase, error, lastOkAt, bootstrapped, refetch: pull };
 }

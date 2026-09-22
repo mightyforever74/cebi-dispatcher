@@ -4,8 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "App";
 import theme from "assets/theme";
 import themeDark from "assets/theme-dark";
-// D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 2.5 + 4): CSS Custom
-// Properties (landing/ürün marka token'ları) + global A11y davranışları.
+// D1 "Tema Koprusu" (docs/UI_D1_REPORT.md, Adim 2.5 + 4): CSS Custom
+// Properties (landing/urun marka token'lari) + global A11y davranislari.
 import "assets/css/global.css";
 import { MaterialUIControllerProvider, THEME_STORAGE_KEY, useMaterialUIController } from "context";
 import ForgotPassword from "layouts/authentication/forgot-password";
@@ -31,21 +31,21 @@ if (!container) {
 const root = createRoot(container);
 
 /**
- * D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 1.2-1.3): önceden burada
- * `themeDark` sabit olarak geçiliyordu (Configurator'daki dark-mode switch'i
- * etkisiz kılıyordu). Artık seçim `MaterialUIController` context'indeki
- * `darkMode` state'inden türetilir: `darkMode ? themeDark : theme`.
- * Bu bileşen `MaterialUIControllerProvider` İÇİNDE render edilmelidir.
+ * D1 "Tema Koprusu" (docs/UI_D1_REPORT.md, Adim 1.2-1.3): onceden burada
+ * `themeDark` sabit olarak geciliyordu (Configurator'daki dark-mode switch'i
+ * etkisiz kiliyordu). Artik secim `MaterialUIController` context'indeki
+ * `darkMode` state'inden turetilir: `darkMode ? themeDark : theme`.
+ * Bu bilesen `MaterialUIControllerProvider` ICINDE render edilmelidir.
  */
 function ThemedApp({ children }: { children: ReactNode }) {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
 
-  // Context'ten gelen darkMode her değiştiğinde (Configurator switch dahil)
+  // Context'ten gelen darkMode her degistiginde (Configurator switch dahil)
   // `data-theme` / `color-scheme` DOM'da senkron tutulur. Bu, index.html'deki
-  // FOUC-önleyici script ile aynı sözleşmeyi (aynı localStorage anahtarı)
-  // paylaşır; ilk mount'ta script zaten doğru değeri yazmış olur, bu effect
-  // yalnızca sonraki değişiklikleri (toggle) yansıtan güvenlik ağıdır.
+  // FOUC-onleyici script ile ayni sozlesmeyi (ayni localStorage anahtari)
+  // paylasir; ilk mount'ta script zaten dogru degeri yazmis olur, bu effect
+  // yalnizca sonraki degisiklikleri (toggle) yansitan guvenlik agidir.
   useEffect(() => {
     const value = darkMode ? "dark" : "light";
     document.documentElement.setAttribute("data-theme", value);
@@ -53,7 +53,7 @@ function ThemedApp({ children }: { children: ReactNode }) {
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, value);
     } catch {
-      // localStorage erişilemez (gizli sekme/kota) — sessizce yok say.
+      // localStorage erisilemez (gizli sekme/kota) — sessizce yok say.
     }
   }, [darkMode]);
 
@@ -77,9 +77,9 @@ function SkipLink(): JSX.Element {
 function AuthGate() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { pathname } = useLocation();
-  // Sıra 4.3: REST snapshot SADECE burada çağrılır. LiveFleetMap içine
-  // EKLEME — çift fetch / çift mount riski. MQTT canlı akışı LiveFleetMap'te,
-  // ilk-durum snapshot'ı burada; iki ayrı sorumluluk, tek çağrı noktası.
+  // Sira 4.3: REST snapshot SADECE burada cagrilir. LiveFleetMap icine
+  // EKLEME — cift fetch / cift mount riski. MQTT canli akisi LiveFleetMap'te,
+  // ilk-durum snapshot'i burada; iki ayri sorumluluk, tek cagri noktasi.
   useLatestLocations();
 
   const page = isAuthenticated ? (

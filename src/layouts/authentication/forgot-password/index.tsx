@@ -121,7 +121,7 @@ function ForgotPassword(): JSX.Element {
         return;
       }
 
-      // Enumeration-safe: 429 dışında her durumda adım 2.
+      // Enumeration-safe: 429 disinda her durumda adim 2.
       setEmail(normalized);
       setStep(2);
       startCooldown();

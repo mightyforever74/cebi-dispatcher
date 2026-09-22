@@ -17,11 +17,11 @@ Coded by www.creative-tim.com
 import { Theme } from "@mui/material/styles";
 import { density } from "assets/theme/tokens";
 
-// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1): 64px sabit yükseklikte, edge-to-edge
-// sticky navbar (landing Header paritesi). `glass` token'ı (D1 tokens.ts + global.css
-// CSS custom properties) CSS var() referanslarıyla TÜKETİLİR — bu sayede
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 1): 64px sabit yukseklikte, edge-to-edge
+// sticky navbar (landing Header paritesi). `glass` token'i (D1 tokens.ts + global.css
+// CSS custom properties) CSS var() referanslariyla TUKETILIR — bu sayede
 // `prefers-reduced-transparency: reduce` fallback'i (global.css) JS'e dokunmadan
-// otomatik uygulanır.
+// otomatik uygulanir.
 const NAVBAR_HEIGHT_PX = density.navbar;
 
 function navbar(theme: Theme | any, ownerState: any) {
@@ -56,8 +56,8 @@ function navbar(theme: Theme | any, ownerState: any) {
 
       return color;
     },
-    // Landing Header paritesi: floating/rounded kart değil, viewport üstüne
-    // hizalanmış düz bir çubuk (top:0, borderRadius:0, minHeight: 64px).
+    // Landing Header paritesi: floating/rounded kart degil, viewport ustune
+    // hizalanmis duz bir cubuk (top:0, borderRadius:0, minHeight: 64px).
     top: 0,
     minHeight: pxToRem(NAVBAR_HEIGHT_PX),
     display: "grid",
@@ -89,14 +89,14 @@ function navbar(theme: Theme | any, ownerState: any) {
   };
 }
 
-// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1): mobilde de navbar TEK SATIR kalmalı
-// ("navbar içeriği tek satırda kalır"). Önceki MD2 şablonu <md genişlikte
-// `flexDirection: column` kullanıyordu — bu, breadcrumb+başlık satırının ikinci
-// bir satıra (arama kutusu + ikonlar) düşmesine, dolayısıyla navbar'ın 2-3
-// satıra bölünmesine yol açıyordu (bkz. 390px mobil ekran görüntüsü, D0/D1
-// döneminden kalma bozukluk). Artık HER genişlikte `row` — taşan öğe (arama
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 1): mobilde de navbar TEK SATIR kalmali
+// ("navbar icerigi tek satirda kalir"). Onceki MD2 sablonu <md genislikte
+// `flexDirection: column` kullaniyordu — bu, breadcrumb+baslik satirinin ikinci
+// bir satira (arama kutusu + ikonlar) dusmesine, dolayisiyla navbar'in 2-3
+// satira bolunmesine yol aciyordu (bkz. 390px mobil ekran goruntusu, D0/D1
+// doneminden kalma bozukluk). Artik HER genislikte `row` — tasan oge (arama
 // kutusu) `index.tsx`'te <sm gizleniyor, kalanlar (dil/tema/hesap/hamburger/
-// ayarlar/bildirim ikonları) tek satıra sığıyor.
+// ayarlar/bildirim ikonlari) tek satira sigiyor.
 const navbarContainer = (): any => ({
   flexDirection: "row",
   alignItems: "center",
@@ -106,11 +106,11 @@ const navbarContainer = (): any => ({
   pb: 0,
 });
 
-// D2 Adım 1: navbarContainer artık her genişlikte `row` (bkz. yukarısı) — bu
-// yüzden iki alt kutu (sol: breadcrumb/başlık, sağ: dil/tema/hesap/ikonlar)
-// AYNI satırda yan yana sığmalı. Sol kutu daralabilir (flex-shrink + minWidth:0
-// + overflow:hidden, başlık zaten `noWrap` — bkz. Breadcrumbs/index.tsx), sağ
-// kutu asla küçülmez (flex-shrink: 0) — ikonlar hiçbir genişlikte kırpılmaz.
+// D2 Adim 1: navbarContainer artik her genislikte `row` (bkz. yukarisi) — bu
+// yuzden iki alt kutu (sol: breadcrumb/baslik, sag: dil/tema/hesap/ikonlar)
+// AYNI satirda yan yana sigmali. Sol kutu daralabilir (flex-shrink + minWidth:0
+// + overflow:hidden, baslik zaten `noWrap` — bkz. Breadcrumbs/index.tsx), sag
+// kutu asla kuculmez (flex-shrink: 0) — ikonlar hicbir genislikte kirpilmaz.
 const navbarRow = ({ breakpoints }: Theme, { isMini, variant }: any) => {
   if (variant === "end") {
     return {

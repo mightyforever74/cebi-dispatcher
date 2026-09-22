@@ -1,5 +1,5 @@
 /**
- * BulkConfirmDialog — BUG-2 Bulk Guard. Fan-out sözleşmesi değişmedi.
+ * BulkConfirmDialog — BUG-2 Bulk Guard. Fan-out sozlesmesi degismedi.
  */
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";

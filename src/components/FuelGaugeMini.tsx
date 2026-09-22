@@ -1,14 +1,14 @@
 import { useTheme } from "@mui/material/styles";
 
 /**
- * FuelGaugeMini — dispatcher (web) için küçük dairesel yakıt göstergesi.
+ * FuelGaugeMini — dispatcher (web) icin kucuk dairesel yakit gostergesi.
  *
- * Mobil RN FuelGauge'ın web/SVG karşılığı (react-native-svg web'de çalışmaz).
- * Aynı renk eşiği: <=15% error, <=40% warning, else success.
+ * Mobil RN FuelGauge'in web/SVG karsiligi (react-native-svg web'de calismaz).
+ * Ayni renk esigi: <=15% error, <=40% warning, else success.
  *
- * @param percent  0-100 doluluk yüzdesi
- * @param size     px çap (default 40)
- * @param liters   opsiyonel; verilirse ortada % yerine litre gösterilmez, sadece tooltip amaçlı
+ * @param percent  0-100 doluluk yuzdesi
+ * @param size     px cap (default 40)
+ * @param liters   opsiyonel; verilirse ortada % yerine litre gosterilmez, sadece tooltip amacli
  */
 interface FuelGaugeMiniProps {
   percent: number;
@@ -20,7 +20,7 @@ function FuelGaugeMini({ percent, size = 40 }: FuelGaugeMiniProps): JSX.Element 
 
   const pct = Math.max(0, Math.min(100, Number(percent) || 0));
 
-  // renk eşiği (mobil ile birebir)
+  // renk esigi (mobil ile birebir)
   const color =
     pct <= 15
       ? theme.palette.error.main
@@ -41,7 +41,7 @@ function FuelGaugeMini({ percent, size = 40 }: FuelGaugeMiniProps): JSX.Element 
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       {/* arka halka */}
       <circle cx={cx} cy={cy} r={radius} fill="none" stroke={track} strokeWidth={stroke} />
-      {/* doluluk yayı (12 o'clock'tan başlasın diye -90 derece döndür) */}
+      {/* doluluk yayi (12 o'clock'tan baslasin diye -90 derece dondur) */}
       <circle
         cx={cx}
         cy={cy}
@@ -54,7 +54,7 @@ function FuelGaugeMini({ percent, size = 40 }: FuelGaugeMiniProps): JSX.Element 
         strokeDashoffset={offset}
         transform={`rotate(-90 ${cx} ${cy})`}
       />
-      {/* ortadaki yüzde */}
+      {/* ortadaki yuzde */}
       <text
         x={cx}
         y={cy}

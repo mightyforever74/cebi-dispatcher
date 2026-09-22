@@ -20,7 +20,7 @@ import colors from "assets/theme-dark/base/colors";
 import pxToRem from "assets/theme-dark/functions/pxToRem";
 import boxShadow from "assets/theme-dark/functions/boxShadow";
 
-// Design tokens (single source of truth) — D1 "Tema Köprüsü"
+// Design tokens (single source of truth) — D1 "Tema Koprusu"
 import { misc } from "assets/theme/tokens";
 
 const { white } = colors;

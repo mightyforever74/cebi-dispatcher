@@ -17,6 +17,7 @@ import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
 import MDTypography from "components/MDTypography";
 
+import { useT } from "i18n";
 import {
   SUPERVISOR_API_URL,
   getSupervisorToken,
@@ -37,6 +38,7 @@ function decodeRole(token: string): string | null {
 }
 
 function SupervisorGate({ children }: Props): JSX.Element {
+  const { t } = useT();
   const [token, setToken] = useState<string | null>(getSupervisorToken());
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -53,19 +55,19 @@ function SupervisorGate({ children }: Props): JSX.Element {
         body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
-        setError("Kimlik dogrulanamadi (401). E-posta/parola kontrol edin.");
+        setError(t("supervisor.gateAuthFailed"));
         return;
       }
       const data = await res.json();
-      const t = data.token as string;
-      if (decodeRole(t) !== "super_admin") {
-        setError("Bu panel yalniz Super Admin icindir (403).");
+      const saTok = data.token as string;
+      if (decodeRole(saTok) !== "super_admin") {
+        setError(t("supervisor.gateForbidden"));
         return;
       }
-      setSupervisorToken(t);
-      setToken(t);
+      setSupervisorToken(saTok);
+      setToken(saTok);
     } catch {
-      setError("Sunucuya ulasilamadi.");
+      setError(t("supervisor.gateNetwork"));
     } finally {
       setLoading(false);
     }
@@ -93,11 +95,10 @@ function SupervisorGate({ children }: Props): JSX.Element {
             </MDBox>
             <MDBox>
               <MDTypography variant="h5" fontWeight="bold">
-                Supervizör Doğrulama
+                {t("supervisor.gateTitle")}
               </MDTypography>
               <MDTypography variant="caption" color="text">
-                Super Admin kimliğinizle yeniden doğrulayın. Doğrulama olmadan
-                müşteri verisi çekilmez.
+                {t("supervisor.gateHint")}
               </MDTypography>
             </MDBox>
           </MDBox>
@@ -111,7 +112,7 @@ function SupervisorGate({ children }: Props): JSX.Element {
               <MDInput
                 fullWidth
                 type="email"
-                label="E-posta"
+                label={t("supervisor.gateEmail")}
                 value={email}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               />
@@ -120,7 +121,7 @@ function SupervisorGate({ children }: Props): JSX.Element {
               <MDInput
                 fullWidth
                 type="password"
-                label="Parola"
+                label={t("supervisor.gatePassword")}
                 value={password}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               />
@@ -132,7 +133,7 @@ function SupervisorGate({ children }: Props): JSX.Element {
               disabled={loading || !email || !password}
               onClick={handleLogin}
             >
-              {loading ? "Doğrulanıyor..." : "Doğrula ve Paneli Aç"}
+              {loading ? t("supervisor.gateSubmitting") : t("supervisor.gateSubmit")}
             </MDButton>
           </MDBox>
         </Card>

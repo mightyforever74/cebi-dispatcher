@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ENTERPRISE_API_URL } from "config/api";
+import { t } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 // Kisit sozlesmesi (types/metadata): capacity_required/skill_required'in GERCEK
 // sekli. Onceden Record<string, unknown> (gevsek jsonb passthrough) idi; strict
@@ -241,7 +242,7 @@ export function useApproveOptimization() {
           // govde bos olabilir - metadata'siz conflict error firlatilir
         }
         throw new ApproveConflictError(
-          body.message || "Bu araca belirtilen aralıkta atanmış görev var.",
+          body.message || t("conflict.fallback"),
           body.conflict_metadata || null,
           body.conflicting_draft_id,
           body.pushed_before_conflict,

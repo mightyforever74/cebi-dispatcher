@@ -1,19 +1,19 @@
 /**
- * useDriverIndex — BUG-4 v2 Olasılık C (sürücü adı bazlı rota seçimi) veri kaynağı.
+ * useDriverIndex — BUG-4 v2 Olasilik C (surucu adi bazli rota secimi) veri kaynagi.
  *
  * GET /api/dispatcher/drivers (enterprise, company-scoped, SELECT-only) tek kez
- * çekilir (token değişiminde yenilenir). Backend'e SIFIR dokunuş — endpoint
+ * cekilir (token degisiminde yenilenir). Backend'e SIFIR dokunus — endpoint
  * zaten first_name/last_name + assigned_vehicle_id (public.vehicles.id UUID)
- * döndürüyor (routes/drivers.js, kod kanıtlı).
+ * donduruyor (routes/drivers.js, kod kanitli).
  *
- * ATANMAMIŞ SÜRÜCÜ GUARD'I (Cem düzeltmesi #1): assigned_vehicle_id NULL olan
- * ya da aracı canlı snapshot'ta bulunmayan (device eşleşmesi yok) sürücüler
- * seçilemez — deviceId: null döner, UI "(Atanmamış)" etiketiyle disable eder.
- * Böylece set'e asla null/undefined sızmaz, "harita tepki vermiyor" algısı doğmaz.
+ * ATANMAMIS SURUCU GUARD'I (Cem duzeltmesi #1): assigned_vehicle_id NULL olan
+ * ya da araci canli snapshot'ta bulunmayan (device eslesmesi yok) suruculer
+ * secilemez — deviceId: null doner, UI "(Atanmamis)" etiketiyle disable eder.
+ * Boylece set'e asla null/undefined sizmaz, "harita tepki vermiyor" algisi dogmaz.
  *
- * Eşleme zinciri (kanıtlı): drivers.assigned_vehicle_id (UUID)
+ * Esleme zinciri (kanitli): drivers.assigned_vehicle_id (UUID)
  *   → VehicleTelemetry.vehicle_id (snapshot'tan doldurulur)
- *   → store anahtarı device_id (rota/marker evreni).
+ *   → store anahtari device_id (rota/marker evreni).
  */
 import { useEffect, useMemo, useState } from "react";
 import { ENTERPRISE_API_URL } from "config/api";
@@ -33,7 +33,7 @@ interface ApiDriverRow {
 export interface DriverIndexEntry {
   driverId: string;
   name: string;
-  /** Rota evrenindeki araç anahtarı; null = seçilemez (Atanmamış / araç canlıda yok). */
+  /** Rota evrenindeki arac anahtari; null = secilemez (Atanmamis / arac canlida yok). */
   deviceId: string | null;
   plate: string | null;
 }
@@ -65,7 +65,7 @@ export function useDriverIndex(): DriverIndexEntry[] {
   }, [token]);
 
   return useMemo(() => {
-    // vehicle_id (UUID) → device_id (store anahtarı) ters indeksi
+    // vehicle_id (UUID) → device_id (store anahtari) ters indeksi
     const byVehicleUuid: Record<string, { deviceId: string; plate: string }> = {};
     Object.values(vehicles).forEach((v) => {
       if (v.vehicle_id) byVehicleUuid[v.vehicle_id] = { deviceId: v.id, plate: v.plate };

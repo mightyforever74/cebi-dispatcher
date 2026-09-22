@@ -1,9 +1,9 @@
 /**
- * useActiveRoutes — hareket eden araçların hedef koordinatları (30 sn polling).
- * Demo turu ihtiyacı (2026-07-31): haritada aracın NEREYE gittiği görünsün.
- * HERE-geometri dilimi (aynı gün, Cem onaylı): backend artık `geometry` alanında
- * GERÇEK yol koordinat dizisi döndürebiliyor — varsa Polyline ona çizilir,
- * yoksa kesikli hedef-yönü fallback (Graceful Degradation).
+ * useActiveRoutes — hareket eden araclarin hedef koordinatlari (30 sn polling).
+ * Demo turu ihtiyaci (2026-07-31): haritada aracin NEREYE gittigi gorunsun.
+ * HERE-geometri dilimi (ayni gun, Cem onayli): backend artik `geometry` alaninda
+ * GERCEK yol koordinat dizisi dondurebiliyor — varsa Polyline ona cizilir,
+ * yoksa kesikli hedef-yonu fallback (Graceful Degradation).
  */
 import { useEffect, useState } from "react";
 import { ENTERPRISE_API_URL } from "config/api";
@@ -77,7 +77,7 @@ export function useActiveRoutes(): Record<string, ActiveRoute> {
               geometry: cleanGeometry(r.geometry),
             };
           }
-          // koordinat kanıtsızsa çizgi çizilmez (dürüst SKIP)
+          // koordinat kanitsizsa cizgi cizilmez (durust SKIP)
         });
         setRoutes(next);
       } catch (e) {

@@ -58,7 +58,7 @@ import {
 
 // Real API — GET/PUT /api/alerts (api.tulipfleet.com)
 import { useAlerts, useResolveAlert, Alert, EMPTY_ALERTS } from "hooks/useAlerts";
-import { useT } from "i18n";
+import { localizeBackendAlert, useT } from "i18n";
 import LanguageSwitcher from "components/LanguageSwitcher";
 import { useDensity } from "context/density";
 import { useAuthStore } from "store/useAuthStore";
@@ -73,9 +73,9 @@ interface Props {
   isMini?: boolean;
 }
 
-// ── Alert type dictionary — kanıtlı, AdminAlerts.js ALERT_CONFIG_MAP ile
-// birebir eşleşiyor (icon isimleri Ionicons'tan MUI Material Icons'a
-// çevrildi, severity/renk eşlemesi aynı kaldı).
+// ── Alert type dictionary — kanitli, AdminAlerts.js ALERT_CONFIG_MAP ile
+// birebir eslesiyor (icon isimleri Ionicons'tan MUI Material Icons'a
+// cevrildi, severity/renk eslemesi ayni kaldi).
 type Severity = "critical" | "warning" | "info";
 
 const ALERT_CONFIG: Record<string, { severity: Severity; icon: string }> = {
@@ -160,9 +160,9 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
     navigate("/authentication/sign-in/basic");
   };
 
-  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1.2): tema anahtarı Configurator'dan
-  // navbar'a taşındı. D1'deki Configurator handleDarkMode ile BİREBİR aynı
-  // sözleşme (localStorage `tf.theme` + `data-theme`/`color-scheme` DOM özniteliği).
+  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 1.2): tema anahtari Configurator'dan
+  // navbar'a tasindi. D1'deki Configurator handleDarkMode ile BIREBIR ayni
+  // sozlesme (localStorage `tf.theme` + `data-theme`/`color-scheme` DOM ozniteligi).
   const handleToggleDarkMode = () => {
     const next = !darkMode;
     setDarkMode(dispatch, next);
@@ -170,7 +170,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, value);
     } catch {
-      // localStorage erişilemez (gizli sekme/kota) — sessizce yok say.
+      // localStorage erisilemez (gizli sekme/kota) — sessizce yok say.
     }
     document.documentElement.setAttribute("data-theme", value);
     document.documentElement.style.colorScheme = value;
@@ -196,7 +196,10 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
     const subject = alert.vehicle_plate
       ? t("navbar.alertWithPlate", { type: alertType, plate: alert.vehicle_plate })
       : alertType;
-    const body = alert.description || alert.title || t("navbar.seeDispatcher");
+    const body =
+      localizeBackendAlert(alert.description, t) ||
+      localizeBackendAlert(alert.title, t) ||
+      t("navbar.seeDispatcher");
     return `mailto:${notificationEmail}?subject=${encodeURIComponent(
       subject
     )}&body=${encodeURIComponent(body)}`;
@@ -248,8 +251,9 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
         {activeAlerts.map((alert: Alert) => {
           const config = getAlertConfig(alert.alert_type || alert.type);
           const fallbackType = alert.alert_type || alert.type || t("navbar.alertFallback");
+          const localizedTitle = localizeBackendAlert(alert.title, t);
           const label =
-            alert.title ||
+            (alert.title && localizedTitle !== alert.title ? localizedTitle : alert.title) ||
             (alert.vehicle_plate
               ? t("navbar.alertLabelWithPlate", { type: fallbackType, plate: alert.vehicle_plate })
               : fallbackType);
@@ -328,10 +332,10 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
         </MDBox>
         {isMini ? null : (
           <MDBox sx={(theme) => navbarRow(theme, { isMini, variant: "end" })}>
-            {/* D2 Adım 1: arama kutusu 5 icon-buton listesinde değil; <sm
-                genişlikte navbar'ı tek satırda tutmak için gizlenir (taşan
-                öğe — spec: "taşanlar hesap menüsüne"; burada basitçe saklanıyor,
-                ekran içeriği/arama işlevine dokunulmadı). */}
+            {/* D2 Adim 1: arama kutusu 5 icon-buton listesinde degil; <sm
+                genislikte navbar'i tek satirda tutmak icin gizlenir (tasan
+                oge — spec: "tasanlar hesap menusune"; burada basitce saklaniyor,
+                ekran icerigi/arama islevine dokunulmadi). */}
             <MDBox pr={1} sx={{ display: { xs: "none", sm: "block" } }}>
               <MDInput label={t("navbar.search")} />
             </MDBox>

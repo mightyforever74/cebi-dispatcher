@@ -81,11 +81,11 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
   const itemParentName = items[1];
   const itemName = items[items.length - 1];
 
-  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 2): D0/D1 öncesi `key === collapseName`
-  // karşılaştırması yalnızca pathname'in İLK segmentine bakıyordu — bu, çok
-  // segmentli route'larda (örn. `/dashboards/live-fleet-map`, `/dispatcher/tasks`)
-  // aktif öğe HİÇBİR ZAMAN eşleşmiyordu (emerald şerit görünmez kalırdı).
-  // Artık doğrudan tam route path'i ile karşılaştırılıyor.
+  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 2): D0/D1 oncesi `key === collapseName`
+  // karsilastirmasi yalnizca pathname'in ILK segmentine bakiyordu — bu, cok
+  // segmentli route'larda (orn. `/dashboards/live-fleet-map`, `/dispatcher/tasks`)
+  // aktif oge HICBIR ZAMAN eslesmiyordu (emerald serit gorunmez kalirdi).
+  // Artik dogrudan tam route path'i ile karsilastiriliyor.
   const isRouteActive = (candidateRoute?: string) =>
     Boolean(candidateRoute) &&
     (pathname === candidateRoute || pathname.startsWith(`${candidateRoute}/`));

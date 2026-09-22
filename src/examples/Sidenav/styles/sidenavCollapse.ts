@@ -16,9 +16,9 @@ Coded by www.creative-tim.com
 // @mui material components
 import { Theme } from "@mui/material/styles";
 
-// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 2): varsayılan (dark) sidenav artık
-// jenerik `palette[color].main` dolgu yerine landing köprüsü `emerald` şerit +
-// `offwhite`/`navyFog` metin renklerini kullanıyor — tek kaynak `tokens.ts`.
+// D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 2): varsayilan (dark) sidenav artik
+// jenerik `palette[color].main` dolgu yerine landing koprusu `emerald` serit +
+// `offwhite`/`navyFog` metin renklerini kullaniyor — tek kaynak `tokens.ts`.
 import { landing } from "assets/theme/tokens";
 
 function collapseItem(theme: Theme, ownerState: any) {
@@ -40,7 +40,7 @@ function collapseItem(theme: Theme, ownerState: any) {
       } else if (whiteSidenav) {
         backgroundValue = active ? grey[200] : transparent.main;
       } else {
-        // Varsayılan (dark) sidenav: emerald şerit + düşük opaklı dolgu.
+        // Varsayilan (dark) sidenav: emerald serit + dusuk opakli dolgu.
         backgroundValue = active ? withAlpha(landing.emerald, 0.16) : transparent.main;
       }
 

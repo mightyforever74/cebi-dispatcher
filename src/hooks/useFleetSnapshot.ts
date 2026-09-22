@@ -1,18 +1,18 @@
 /**
- * Live Fleet Map — Sıra 4.3 REST snapshot bootstrap (FEAT-010 sonrası, 2026-07-31).
- * GÖREV: mock tohumu GERÇEK filoyla değiştirir ve 20 sn'de bir tazeler.
- *  - İlk başarılı fetch: store'u device_id anahtarlı gerçek araç kümesiyle
+ * Live Fleet Map — Sira 4.3 REST snapshot bootstrap (FEAT-010 sonrasi, 2026-07-31).
+ * GOREV: mock tohumu GERCEK filoyla degistirir ve 20 sn'de bir tazeler.
+ *  - Ilk basarili fetch: store'u device_id anahtarli gercek arac kumesiyle
  *    setVehicles (mock biter). Endpoint company-scoped (tenant izolasyonu).
- *  - Sonraki turlar: bilinen araçlara applyLocationFrame(source:"rest") —
- *    stale-overwrite guard MQTT (Sıra 4.2) ile çakışmayı zaten çözüyor;
- *    yeni görünen araç merge edilir.
- * Eşleme (kanıtlı, 31.07): vehicles'ta weight kolonu YOK; vehicle_category
- * truck_heavy→32_plus_t, van→12_18t, diğer/bilinmeyen→18_32t.
- * emission_class NULL→"n_a" (dürüst rozet — uydurma euro sınıfı yazılmaz).
- * BUG-4 v2 (2026-08-02): vehicle_id (public.vehicles.id UUID) artık telemetriye
- * taşınır — sürücü→araç rota seçimi (Olasılık C) bu alandan eşlenir.
+ *  - Sonraki turlar: bilinen araclara applyLocationFrame(source:"rest") —
+ *    stale-overwrite guard MQTT (Sira 4.2) ile cakismayi zaten cozuyor;
+ *    yeni gorunen arac merge edilir.
+ * Esleme (kanitli, 31.07): vehicles'ta weight kolonu YOK; vehicle_category
+ * truck_heavy→32_plus_t, van→12_18t, diger/bilinmeyen→18_32t.
+ * emission_class NULL→"n_a" (durust rozet — uydurma euro sinifi yazilmaz).
+ * BUG-4 v2 (2026-08-02): vehicle_id (public.vehicles.id UUID) artik telemetriye
+ * tasinir — surucu→arac rota secimi (Olasilik C) bu alandan eslenir.
  *
- * D3: yükleme/hata/yeniden-dene UI için phase + lastOkAt + refetch döner.
+ * D3: yukleme/hata/yeniden-dene UI icin phase + lastOkAt + refetch doner.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ENTERPRISE_API_URL } from "config/api";

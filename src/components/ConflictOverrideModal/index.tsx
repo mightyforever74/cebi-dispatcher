@@ -1,6 +1,6 @@
 /**
- * ConflictOverrideModal — BUG-1 Faz C çekirdeği.
- * Davranış sözleşmesi DEĞİŞMEDİ: zorunlu ≥5 karakter gerekçe.
+ * ConflictOverrideModal — BUG-1 Faz C cekirdegi.
+ * Davranis sozlesmesi DEGISMEDI: zorunlu ≥5 karakter gerekce.
  */
 import { useEffect, useState } from "react";
 

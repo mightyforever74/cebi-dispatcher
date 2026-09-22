@@ -1,10 +1,10 @@
 /**
- * FEAT-SaaS S3 — Sayfa 2: TulipFleet Connect (B2B API) (/subscription/b2b-api).
- * Spec: docs/FEAT-SAAS_self-service.md §2 Sayfa 2 + Kapsam Muhru (FEAT-Connect).
- * DURUSTLUK: sahte sayac / simule key / canli kullanim grafigi YOK. Sayfa
- * "Yakinda" lansmaniyla durur; TEK gercek islev: api_package on-talebi
- * (request_type='api_package', ayni subscription_requests akisi, PENDING kalici).
- * Onay tarafi FEAT-Connect lansmanina ertelidir — ekranda acikca yazilir.
+ * FEAT-SaaS S3 — Page 2: TulipFleet Connect (B2B API) (/subscription/b2b-api).
+ * Spec: docs/FEAT-SAAS_self-service.md §2 Page 2 + scope seal (FEAT-Connect).
+ * Honesty: no fake counters / simulated keys / live usage charts. The page
+ * stays on a "coming soon" launch; the only real action is the api_package
+ * pre-request (request_type='api_package', same subscription_requests flow).
+ * Approval is deferred to the FEAT-Connect launch — stated on screen.
  */
 import { useEffect, useState } from "react";
 
@@ -22,7 +22,10 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
+import { dialog } from "assets/theme/tokens";
 import { ENTERPRISE_API_URL } from "config/api";
+import { useMaterialUIController } from "context";
+import { useT } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 
 
@@ -35,6 +38,9 @@ interface SubRequest {
 }
 
 function B2bApiPage(): JSX.Element {
+  const { t } = useT();
+  const [controller] = useMaterialUIController();
+  const muted = controller.darkMode ? dialog.dark.textMuted : dialog.light.textMuted;
   const token = useAuthStore((s) => s.token);
   const [pending, setPending] = useState<SubRequest | null>(null);
   const [packageCount, setPackageCount] = useState<string>("1");
@@ -82,10 +88,10 @@ function B2bApiPage(): JSX.Element {
         setPending(data.request);
       } else {
         const body = await res.json().catch(() => null);
-        setError((body && body.message) || "Talep iletilirken bir hata olustu.");
+        setError((body && body.message) || t("connect.errorSubmit"));
       }
     } catch (err) {
-      setError("Sunucuya ulasilamadi.");
+      setError(t("connect.errorNetwork"));
     } finally {
       setLoading(false);
     }
@@ -97,17 +103,15 @@ function B2bApiPage(): JSX.Element {
       <MDBox mb={9} mt={4}>
         <Grid container justifyContent="center">
           <Grid item xs={12} lg={8}>
-            {/* Baslik */}
             <MDBox mb={4} textAlign="center">
               <MDTypography variant="h3" fontWeight="bold">
-                TulipFleet Connect
+                {t("connect.title")}
               </MDTypography>
-              <MDTypography variant="h6" fontWeight="regular" color="secondary" mt={1}>
-                B2B API &amp; Entegrasyonlar — Zero-Emission Zone &amp; Vrachtwagenheffing servisi
+              <MDTypography variant="h6" fontWeight="regular" mt={1} sx={{ color: muted }}>
+                {t("connect.subtitle")}
               </MDTypography>
             </MDBox>
 
-            {/* Lansman Banner — durust "Yakinda" */}
             <Card sx={{ p: 3, mb: 4 }}>
               <MDBox display="flex" alignItems="center">
                 <MDBox
@@ -125,28 +129,22 @@ function B2bApiPage(): JSX.Element {
                 </MDBox>
                 <MDBox>
                   <MDTypography variant="h5" fontWeight="bold">
-                    🚀 TulipFleet Europe ZE-Zone &amp; Toll API — Yakında Hizmetinizde
+                    {t("connect.launchTitle")}
                   </MDTypography>
                   <MDTypography variant="button" color="text" fontWeight="regular">
-                    PostGIS bölge denetimi (ST_Contains) ve Vrachtwagenheffing maliyet motoru,
-                    FEAT-Connect lansmanıyla API anahtarı yönetimi ve kullanım panosuyla birlikte
-                    açılacaktır. Bu sayfada canlı sayaç veya API anahtarı GÖSTERİLMEZ — servis
-                    yayına alındığında burada gerçek verilerle görünecektir.
+                    {t("connect.launchBody")}
                   </MDTypography>
                 </MDBox>
               </MDBox>
             </Card>
 
-            {/* On-Talep Formu — GERCEK akis (api_package) */}
             <Card>
               <MDBox p={3}>
                 <MDTypography variant="h5" fontWeight="bold" mb={1}>
-                  Ek API Paketi Ön-Talebi
+                  {t("connect.requestTitle")}
                 </MDTypography>
                 <MDTypography variant="button" color="text" fontWeight="regular" display="block" mb={2}>
-                  Paket: <b>€49 / 50.000 sorgu</b>. Talebiniz kayıt altına alınır
-                  (PENDING_APPROVAL); tahsis işlemi FEAT-Connect lansmanıyla birlikte
-                  Supervizör onayından geçer.
+                  {t("connect.requestHint")}
                 </MDTypography>
 
                 {error && (
@@ -157,9 +155,7 @@ function B2bApiPage(): JSX.Element {
 
                 {pending ? (
                   <Alert severity="info" sx={{ mt: 2 }}>
-                    <b>⏳ Paket Talebiniz Onay Bekliyor:</b> {pending.requested_amount} adet API
-                    paketi ön-talebiniz alınmıştır. FEAT-Connect lansmanıyla birlikte işleme
-                    alınacaktır.
+                    {t("connect.pending", { count: pending.requested_amount })}
                   </Alert>
                 ) : (
                   <MDBox component="form" role="form" mt={3}>
@@ -168,7 +164,7 @@ function B2bApiPage(): JSX.Element {
                         <MDInput
                           fullWidth
                           type="number"
-                          label="Paket Adedi"
+                          label={t("connect.countLabel")}
                           value={packageCount}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             setPackageCount(e.target.value)
@@ -179,8 +175,8 @@ function B2bApiPage(): JSX.Element {
                         <MDInput
                           fullWidth
                           type="text"
-                          label="Dekont No / Ödeme Bildirimi Notu"
-                          placeholder="Örn: Dekont #TR-9483"
+                          label={t("connect.noteLabel")}
+                          placeholder={t("connect.notePlaceholder")}
                           value={paymentNote}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             setPaymentNote(e.target.value)
@@ -196,7 +192,7 @@ function B2bApiPage(): JSX.Element {
                         disabled={loading || !countOk}
                         onClick={handleSubmit}
                       >
-                        {loading ? "Gönderiliyor..." : "Ek Paket Talep Et"}
+                        {loading ? t("connect.submitting") : t("connect.submit")}
                       </MDButton>
                     </MDBox>
                   </MDBox>

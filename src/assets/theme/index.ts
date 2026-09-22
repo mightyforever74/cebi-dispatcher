@@ -84,7 +84,7 @@ import dialogContent from "assets/theme/components/dialog/dialogContent";
 import dialogContentText from "assets/theme/components/dialog/dialogContentText";
 import dialogActions from "assets/theme/components/dialog/dialogActions";
 
-// Design tokens (single source of truth) — D1 "Tema Köprüsü"
+// Design tokens (single source of truth) — D1 "Tema Koprusu"
 import { motionDurationOverrides } from "assets/theme/tokens";
 
 const reducedMotionDuration = motionDurationOverrides();
@@ -95,7 +95,7 @@ export default createTheme({
   typography: { ...typography },
   boxShadows: { ...boxShadows },
   borders: { ...borders },
-  // Adım 4.1: prefers-reduced-motion aktifse tüm MUI transition süreleri 0.
+  // Adim 4.1: prefers-reduced-motion aktifse tum MUI transition sureleri 0.
   ...(reducedMotionDuration ? { transitions: { duration: reducedMotionDuration } } : {}),
   functions: {
     boxShadow,

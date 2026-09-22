@@ -22,11 +22,11 @@ const globals = {
   html: {
     scrollBehavior: "smooth",
   },
-  // D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md, Adım 3.3): tüm sayısal/telemetri
-  // metinleri (plaka, ETA, mesafe, tarih) tabular-nums ile hizalı genişlikte
-  // render edilsin. `body` seviyesinde tanımlanır ve inheritance ile TÜM
-  // metin düğümlerine yayılır — rakam İÇERMEYEN metinlerde görsel etkisi
-  // SIFIRDIR (font-variant-numeric yalnızca 0-9 karakterlerini etkiler).
+  // D1 "Tema Koprusu" (docs/UI_D1_REPORT.md, Adim 3.3): tum sayisal/telemetri
+  // metinleri (plaka, ETA, mesafe, tarih) tabular-nums ile hizali genislikte
+  // render edilsin. `body` seviyesinde tanimlanir ve inheritance ile TUM
+  // metin dugumlerine yayilir — rakam ICERMEYEN metinlerde gorsel etkisi
+  // SIFIRDIR (font-variant-numeric yalnizca 0-9 karakterlerini etkiler).
   body: {
     fontVariantNumeric: "tabular-nums",
   },

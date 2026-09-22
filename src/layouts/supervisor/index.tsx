@@ -1,5 +1,5 @@
 /**
- * FEAT-SaaS S4 — Sayfa 3: Supervizör Komuta Merkezi (/admin/supervisor).
+ * FEAT-SaaS S4 — Sayfa 3: Supervizor Komuta Merkezi (/admin/supervisor).
  * Kaynak desen: ecommerce/orders/order-list (DataTable + filtre menusu).
  * D-S2: SupervisorGate gecilmeden fetch YOK. Veri: superadmin/companies
  * (zengin liste) + subscriptions/requests (bekleyen sayaci) birlesimi.
@@ -26,6 +26,7 @@ import DataTable from "examples/Tables/DataTable";
 
 import SupervisorGate from "layouts/supervisor/SupervisorGate";
 import { SUPERVISOR_API_URL } from "layouts/supervisor/supervisorSession";
+import { useT } from "i18n";
 
 interface CompanyRow {
   id: string;
@@ -45,6 +46,7 @@ interface PendingReq {
 }
 
 function SupervisorContent({ saToken }: { saToken: string }): JSX.Element {
+  const { t } = useT();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [pending, setPending] = useState<PendingReq[]>([]);
@@ -62,7 +64,7 @@ function SupervisorContent({ saToken }: { saToken: string }): JSX.Element {
         const arr = Array.isArray(data) ? data : data.companies || data.rows || [];
         setCompanies(arr);
       })
-      .catch(() => setError("Firma listesi alinamadi."));
+      .catch(() => setError(t("supervisor.errorList")));
     fetch(`${SUPERVISOR_API_URL}/api/superadmin/subscriptions/requests?status=PENDING_APPROVAL`, {
       headers,
     })
@@ -88,7 +90,7 @@ function SupervisorContent({ saToken }: { saToken: string }): JSX.Element {
         abonelik: `${c.subscription_tier || "—"} · ${c.subscription_status || "—"}`,
         bekleyen: pendingByCompany.has(c.id) ? (
           <MDBadge
-            badgeContent={`${pendingByCompany.get(c.id)} talep`}
+            badgeContent={t("supervisor.pendingCount", { count: pendingByCompany.get(c.id) })}
             color="warning"
             size="sm"
             container
@@ -105,32 +107,32 @@ function SupervisorContent({ saToken }: { saToken: string }): JSX.Element {
             size="small"
             onClick={() => navigate(`/admin/supervisor/customer-detail?companyId=${c.id}`)}
           >
-            İncele
+            {t("supervisor.inspect")}
           </MDButton>
         ),
       }));
     return {
       columns: [
-        { Header: "Firma", accessor: "firma", width: "22%" },
-        { Header: "Ülke · Vergi No", accessor: "ulke_vergi" },
-        { Header: "Araç (Aktif/Kota)", accessor: "arac" },
-        { Header: "Abonelik", accessor: "abonelik" },
-        { Header: "Bekleyen Talep", accessor: "bekleyen" },
-        { Header: "Aksiyon", accessor: "aksiyon" },
+        { Header: t("supervisor.colCompany"), accessor: "firma", width: "22%" },
+        { Header: t("supervisor.colCountryTax"), accessor: "ulke_vergi" },
+        { Header: t("supervisor.colVehicles"), accessor: "arac" },
+        { Header: t("supervisor.colPlan"), accessor: "abonelik" },
+        { Header: t("supervisor.colPending"), accessor: "bekleyen" },
+        { Header: t("supervisor.colAction"), accessor: "aksiyon" },
       ],
       rows,
     };
-  }, [companies, pendingOnly, pendingByCompany, navigate]);
+  }, [companies, pendingOnly, pendingByCompany, navigate, t]);
 
   return (
     <MDBox my={3}>
       <MDBox display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
         <MDBox>
           <MDTypography variant="h4" fontWeight="bold">
-            🛡️ Supervizör Komuta Merkezi
+            {t("supervisor.title")}
           </MDTypography>
           <MDTypography variant="button" color="text">
-            {companies.length} firma · {pending.length} bekleyen talep
+            {t("supervisor.summary", { companies: companies.length, pending: pending.length })}
           </MDTypography>
         </MDBox>
         <MDBox display="flex">
@@ -139,7 +141,7 @@ function SupervisorContent({ saToken }: { saToken: string }): JSX.Element {
             color="dark"
             onClick={(e: any) => setMenu(e.currentTarget)}
           >
-            filtre&nbsp;<Icon>keyboard_arrow_down</Icon>
+            {t("supervisor.filter")}&nbsp;<Icon>keyboard_arrow_down</Icon>
           </MDButton>
           <Menu anchorEl={menu} open={Boolean(menu)} onClose={() => setMenu(null)} keepMounted>
             <MenuItem
@@ -148,7 +150,7 @@ function SupervisorContent({ saToken }: { saToken: string }): JSX.Element {
                 setMenu(null);
               }}
             >
-              Tüm firmalar
+              {t("supervisor.filterAll")}
             </MenuItem>
             <MenuItem
               onClick={() => {
@@ -156,7 +158,7 @@ function SupervisorContent({ saToken }: { saToken: string }): JSX.Element {
                 setMenu(null);
               }}
             >
-              Yalnız bekleyen talebi olanlar
+              {t("supervisor.filterPending")}
             </MenuItem>
           </Menu>
         </MDBox>

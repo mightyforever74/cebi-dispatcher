@@ -21,7 +21,7 @@ import colors from "assets/theme/base/colors";
 import pxToRem from "assets/theme/functions/pxToRem";
 import rgba from "assets/theme/functions/rgba";
 
-// Design tokens (single source of truth) — D1 "Tema Köprüsü"
+// Design tokens (single source of truth) — D1 "Tema Koprusu"
 import { misc } from "assets/theme/tokens";
 
 const { size, fontWeightRegular } = typography;

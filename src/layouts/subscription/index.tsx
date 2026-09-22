@@ -1,15 +1,15 @@
 /**
- * FEAT-SaaS S3 — Sayfa 1: Abonelik & Arac Yonetimi (/subscription).
- * Spec: docs/FEAT-SAAS_self-service.md §2 Sayfa 1 (05.08.2026, Cem referans yapisi).
- * Kaynak desen: ecommerce/products/new-product (Card+Grid+MD bilesenleri) —
- * stepper kaldirildi, tek sayfa: ustte kota ozeti, altta artirim talebi formu.
- * Sozlesmeler (S2-E1 smoke'uyla kanitli):
+ * FEAT-SaaS S3 — Page 1: Subscription & vehicle management (/subscription).
+ * Spec: docs/FEAT-SAAS_self-service.md §2 Page 1 (05.08.2026, Cem reference).
+ * Source pattern: ecommerce/products/new-product (Card+Grid+MD) —
+ * stepper removed, single page: quota summary on top, increase form below.
+ * Contracts (proven by S2-E1 smoke):
  *   GET  {ENTERPRISE}/api/subscription/quota    -> { quota: {...} }
  *   GET  {ENTERPRISE}/api/subscription/requests -> { requests: [...] }
  *   POST {ENTERPRISE}/api/subscription/requests  { request_type:'vehicle_increase',
  *        requested_amount, payment_note } -> 201 { request }
- * Durustluk: paket adi hardcode edilmez (subscription_tier basilir); otomatik
- * kart cekimi/kota artisi YOK — yalniz PENDING_APPROVAL talebi.
+ * Honesty: package name is not hardcoded (subscription_tier is shown); no automatic
+ * card charge / quota bump — PENDING_APPROVAL request only.
  */
 import { useEffect, useState } from "react";
 
@@ -27,7 +27,10 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
+import { dialog } from "assets/theme/tokens";
 import { ENTERPRISE_API_URL } from "config/api";
+import { useMaterialUIController } from "context";
+import { useT } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 
 
@@ -48,6 +51,9 @@ interface SubRequest {
 }
 
 function SubscriptionPage(): JSX.Element {
+  const { t } = useT();
+  const [controller] = useMaterialUIController();
+  const muted = controller.darkMode ? dialog.dark.textMuted : dialog.light.textMuted;
   const token = useAuthStore((s) => s.token);
   const [quota, setQuota] = useState<QuotaData | null>(null);
   const [pending, setPending] = useState<SubRequest | null>(null);
@@ -61,13 +67,12 @@ function SubscriptionPage(): JSX.Element {
     "Content-Type": "application/json",
   };
 
-  // Acilista: kota + mevcut PENDING talep (yenilemede durum kaybolmasin)
   useEffect(() => {
     if (!token) return;
     fetch(`${ENTERPRISE_API_URL}/api/subscription/quota`, { headers: authHeaders })
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data) => setQuota(data.quota))
-      .catch(() => setError("Kota bilgisi alinamadi."));
+      .catch(() => setError(t("plan.errorQuota")));
     fetch(`${ENTERPRISE_API_URL}/api/subscription/requests`, { headers: authHeaders })
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data) => {
@@ -101,10 +106,10 @@ function SubscriptionPage(): JSX.Element {
         setPending(data.request);
       } else {
         const body = await res.json().catch(() => null);
-        setError((body && body.message) || "Talep iletilirken bir hata olustu.");
+        setError((body && body.message) || t("plan.errorSubmit"));
       }
     } catch (err) {
-      setError("Sunucuya ulasilamadi.");
+      setError(t("plan.errorNetwork"));
     } finally {
       setLoading(false);
     }
@@ -116,17 +121,15 @@ function SubscriptionPage(): JSX.Element {
       <MDBox mb={9} mt={4}>
         <Grid container justifyContent="center">
           <Grid item xs={12} lg={8}>
-            {/* Baslik */}
             <MDBox mb={4} textAlign="center">
               <MDTypography variant="h3" fontWeight="bold">
-                Abonelik &amp; Araç Yönetimi
+                {t("plan.title")}
               </MDTypography>
-              <MDTypography variant="h6" fontWeight="regular" color="secondary" mt={1}>
-                Mevcut filo kotanızı görüntüleyin ve ek araç lisans talebinde bulunun.
+              <MDTypography variant="h6" fontWeight="regular" mt={1} sx={{ color: muted }}>
+                {t("plan.subtitle")}
               </MDTypography>
             </MDBox>
 
-            {/* Kota & Durum Karti */}
             <Card sx={{ p: 3, mb: 4 }}>
               <Grid container spacing={3} alignItems="center">
                 <Grid item xs={12} md={6}>
@@ -146,10 +149,15 @@ function SubscriptionPage(): JSX.Element {
                     </MDBox>
                     <MDBox>
                       <MDTypography variant="button" fontWeight="regular" color="text">
-                        Aktif Araç / Max Kota
+                        {t("plan.activeQuota")}
                       </MDTypography>
                       <MDTypography variant="h4" fontWeight="bold">
-                        {quota ? `${quota.active_vehicles} / ${quota.max_vehicles} Araç` : "Yükleniyor..."}
+                        {quota
+                          ? t("plan.vehiclesCount", {
+                              active: quota.active_vehicles,
+                              max: quota.max_vehicles,
+                            })
+                          : t("plan.loading")}
                       </MDTypography>
                     </MDBox>
                   </MDBox>
@@ -157,7 +165,7 @@ function SubscriptionPage(): JSX.Element {
                 <Grid item xs={12} md={6}>
                   <MDBox display="flex" justifyContent={{ xs: "flex-start", md: "flex-end" }}>
                     <MDTypography variant="caption" color="text">
-                      Paket:{" "}
+                      {t("plan.package")}{" "}
                       <b>{quota && quota.subscription_tier ? quota.subscription_tier : "—"}</b>
                       {quota && quota.subscription_status ? ` · ${quota.subscription_status}` : ""}
                     </MDTypography>
@@ -166,11 +174,10 @@ function SubscriptionPage(): JSX.Element {
               </Grid>
             </Card>
 
-            {/* Talep Formu Karti */}
             <Card>
               <MDBox p={3}>
                 <MDTypography variant="h5" fontWeight="bold" mb={2}>
-                  Lisans / Araç Sayısı Artırım Talebi
+                  {t("plan.requestTitle")}
                 </MDTypography>
 
                 {error && (
@@ -181,9 +188,7 @@ function SubscriptionPage(): JSX.Element {
 
                 {pending ? (
                   <Alert severity="info" sx={{ mt: 2 }}>
-                    <b>⏳ Talebiniz İncelemede:</b> {pending.requested_amount} ek araç lisans
-                    talebiniz Supervizör onayına sunulmuştur. Ödeme teyidinin ardından kotanız
-                    güncellenecektir.
+                    {t("plan.pending", { count: pending.requested_amount })}
                   </Alert>
                 ) : (
                   <MDBox component="form" role="form" mt={3}>
@@ -192,7 +197,7 @@ function SubscriptionPage(): JSX.Element {
                         <MDInput
                           fullWidth
                           type="number"
-                          label="Talep Edilen Ek Araç Sayısı"
+                          label={t("plan.amountLabel")}
                           value={requestedVehicles}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             setRequestedVehicles(e.target.value)
@@ -203,8 +208,8 @@ function SubscriptionPage(): JSX.Element {
                         <MDInput
                           fullWidth
                           type="text"
-                          label="Dekont No / Ödeme Bildirimi Notu"
-                          placeholder="Örn: Dekont #TR-9482"
+                          label={t("plan.noteLabel")}
+                          placeholder={t("plan.notePlaceholder")}
                           value={paymentNote}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             setPaymentNote(e.target.value)
@@ -220,7 +225,7 @@ function SubscriptionPage(): JSX.Element {
                         disabled={loading || !amountOk}
                         onClick={handleSubmitRequest}
                       >
-                        {loading ? "Gönderiliyor..." : "Artırım Talebi Gönder"}
+                        {loading ? t("plan.submitting") : t("plan.submit")}
                       </MDButton>
                     </MDBox>
                   </MDBox>

@@ -2,9 +2,9 @@
 =========================================================
 * TulipFleet Dispatcher — Dashboard Footer
 =========================================================
-* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 3): tek satır, navyInk/navyFog;
-* sol "© {year} TulipFleet B.V.", sağ Gizlilik/Şartlar + uygulama sürümü.
-* Creative Tim/MD2 metinleri ve linkleri (Site/Abonelik/İletişim) kaldırıldı.
+* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 3): tek satir, navyInk/navyFog;
+* sol "© {year} TulipFleet B.V.", sag Gizlilik/Sartlar + uygulama surumu.
+* Creative Tim/MD2 metinleri ve linkleri (Site/Abonelik/Iletisim) kaldirildi.
 */
 
 import Link from "@mui/material/Link";

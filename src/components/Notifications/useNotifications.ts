@@ -15,7 +15,7 @@ import {
   type ExceptionEvent,
   type ResolveAction,
 } from "hooks/useExceptions";
-import { t, type TranslationKey } from "i18n";
+import { localizeBackendAlert, t, type TranslationKey } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 import { useResolveAlert } from "hooks/useAlerts";
 
@@ -115,7 +115,11 @@ function bodyForAlert(a: Alert): string {
   if (typeFamily(type) === "sos") {
     return sosBody(a.title, a.vehicle_plate);
   }
-  return a.description || a.title || a.vehicle_plate || a.alert_type || a.type || a.id;
+  const fromTitle = localizeBackendAlert(a.title, t);
+  if (a.title && fromTitle !== a.title) return fromTitle;
+  const fromDesc = localizeBackendAlert(a.description, t);
+  if (a.description && fromDesc !== a.description) return fromDesc;
+  return a.description || a.title || a.vehicle_plate || a.alert_type || a.type || a.id || "";
 }
 
 type Api = {
@@ -303,6 +307,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       const type = String(a.alert_type || a.type || "default");
       const severity = String(a.severity || "").toLowerCase();
       if (isBannerType(type, severity)) return;
+      const localizedTitle = localizeBackendAlert(a.title, t);
+      const accepted = Boolean(a.title && localizedTitle !== a.title);
       incoming.push({
         id,
         channel: "toast",
@@ -310,9 +316,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         type,
         family: typeFamily(type),
         severity: severity || "info",
-        title: titleFor(type, severity),
-        titleKey: titleKeyFor(type, severity),
-        body: bodyForAlert(a),
+        title: accepted ? localizedTitle : titleFor(type, severity),
+        titleKey: accepted ? undefined : titleKeyFor(type, severity),
+        body: accepted ? "" : bodyForAlert(a),
         count: 1,
         createdAt: Date.now(),
         canAck: false,

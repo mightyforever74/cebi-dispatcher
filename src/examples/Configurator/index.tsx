@@ -74,10 +74,10 @@ function Configurator(): JSX.Element {
   };
   const handleMiniSidenav = () => setMiniSidenav(dispatch, !miniSidenav);
   const handleFixedNavbar = () => setFixedNavbar(dispatch, !fixedNavbar);
-  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1.2): Açık/Koyu anahtarı buradan
-  // kaldırıldı — birincil kontrol artık DashboardNavbar'da (her zaman görünür).
-  // D1'de burada tanımlanan sözleşme (localStorage `tf.theme` + `data-theme`)
-  // DashboardNavbar/index.tsx'teki handleToggleDarkMode'a BİREBİR taşındı.
+  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 1.2): Acik/Koyu anahtari buradan
+  // kaldirildi — birincil kontrol artik DashboardNavbar'da (her zaman gorunur).
+  // D1'de burada tanimlanan sozlesme (localStorage `tf.theme` + `data-theme`)
+  // DashboardNavbar/index.tsx'teki handleToggleDarkMode'a BIREBIR tasindi.
 
   // sidenav type buttons styles
   const sidenavTypeButtonsStyles = ({
@@ -112,9 +112,9 @@ function Configurator(): JSX.Element {
     },
   });
 
-  // D2 Adım 1.2: Configurator paneli üretimde yok — tema anahtarı navbar'da.
-  // App.tsx Configurator'ı hâlâ mount ediyor (izin verilen yollar dışında);
-  // üretimde null dönerek panel ve kalan MD2 seçenekleri gizlenir.
+  // D2 Adim 1.2: Configurator paneli uretimde yok — tema anahtari navbar'da.
+  // App.tsx Configurator'i hâlâ mount ediyor (izin verilen yollar disinda);
+  // uretimde null donerek panel ve kalan MD2 secenekleri gizlenir.
   if (process.env.NODE_ENV !== "development") {
     return null;
   }

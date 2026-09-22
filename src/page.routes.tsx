@@ -2,8 +2,8 @@
 =========================================================
 * TulipFleet Dispatcher — page.routes
 =========================================================
-* Creative Tim demo navbar menüsü boşaltıldı. Dosya DefaultNavbar
-* import'u için kalır (BasicLayout).
+* Creative Tim demo navbar menusu bosaltildi. Dosya DefaultNavbar
+* import'u icin kalir (BasicLayout).
 =========================================================
 */
 

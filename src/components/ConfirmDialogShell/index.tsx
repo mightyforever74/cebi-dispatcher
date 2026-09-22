@@ -1,7 +1,7 @@
 /**
  * ConfirmDialogShell — dispatcher ikaz/onay modallarinin ORTAK govdesi.
- * D5: token'lı light/dark chrome, Esc/Enter, odak tuzağı, aria, spinner.
- * Tehlikeli aksiyon: ilk adım nötr (accent), onay adımı kırmızı.
+ * D5: token'li light/dark chrome, Esc/Enter, odak tuzagi, aria, spinner.
+ * Tehlikeli aksiyon: ilk adim notr (accent), onay adimi kirmizi.
  */
 import { ReactNode, useEffect, useId, useState, type KeyboardEvent } from "react";
 

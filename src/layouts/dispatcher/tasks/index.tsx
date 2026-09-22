@@ -80,7 +80,12 @@ function TasksLayout(): JSX.Element {
 
       const routeLine = `${task.start_location || "—"} → ${task.end_location || "—"}`;
       const routeInfo = (
-        <MDTypography variant="caption" noWrap title={routeLine}>
+        <MDTypography
+          variant="caption"
+          noWrap
+          title={routeLine}
+          sx={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, maxWidth: "100%" }}
+        >
           {routeLine}
         </MDTypography>
       );

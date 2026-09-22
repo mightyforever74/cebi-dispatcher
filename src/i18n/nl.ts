@@ -24,6 +24,13 @@ export const nl = {
     themeToggleToDark: "Overschakelen naar donkere modus",
     themeToggleToLight: "Overschakelen naar lichte modus",
     logout: "Afmelden",
+    home: "Home",
+    sidenav: "Hoofdnavigatie",
+    language: "Taal: {code}",
+  },
+  error: {
+    title: "Er is iets misgegaan",
+    retry: "Opnieuw proberen",
   },
   crumb: {
     dashboards: "Dashboards",

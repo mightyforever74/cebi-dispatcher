@@ -26,6 +26,13 @@ export const en = {
     themeToggleToDark: "Switch to dark mode",
     themeToggleToLight: "Switch to light mode",
     logout: "Sign out",
+    home: "Home",
+    sidenav: "Main navigation",
+    language: "Language: {code}",
+  },
+  error: {
+    title: "Something went wrong",
+    retry: "Try again",
   },
   crumb: {
     dashboards: "Dashboards",

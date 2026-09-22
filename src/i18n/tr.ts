@@ -24,6 +24,13 @@ export const tr = {
     themeToggleToDark: "Koyu temaya geç",
     themeToggleToLight: "Açık temaya geç",
     logout: "Çıkış yap",
+    home: "Ana sayfa",
+    sidenav: "Ana menü",
+    language: "Dil: {code}",
+  },
+  error: {
+    title: "Bir şeyler ters gitti",
+    retry: "Yeniden dene",
   },
   crumb: {
     dashboards: "Panolar",

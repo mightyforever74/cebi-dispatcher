@@ -122,6 +122,61 @@ export function formatRelative(
   return rtf.format(Math.round(hr / 24), "day");
 }
 
+const DATE_OPTS: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+};
+
+const DATETIME_OPTS: Intl.DateTimeFormatOptions = {
+  ...DATE_OPTS,
+  hour: "2-digit",
+  minute: "2-digit",
+};
+
+function toEpoch(value: Date | number | string | null | undefined): number | null {
+  if (value == null || value === "") return null;
+  const t0 = typeof value === "number" ? value : new Date(value).getTime();
+  return Number.isFinite(t0) && t0 > 0 ? t0 : null;
+}
+
+/** Locale-aware calendar date (NL `dd-mm-yyyy` via `nl-NL`). Empty → em dash. */
+export function formatDate(
+  value: Date | number | string | null | undefined,
+  lang: Lang = currentLang
+): string {
+  const t0 = toEpoch(value);
+  if (t0 == null) return translate(lang, "common.emptyDash");
+  return new Intl.DateTimeFormat(LOCALE_BY_LANG[lang], DATE_OPTS).format(t0);
+}
+
+/** Locale-aware date + time. Empty → em dash. */
+export function formatDateTime(
+  value: Date | number | string | null | undefined,
+  lang: Lang = currentLang
+): string {
+  const t0 = toEpoch(value);
+  if (t0 == null) return translate(lang, "common.emptyDash");
+  return new Intl.DateTimeFormat(LOCALE_BY_LANG[lang], DATETIME_OPTS).format(t0);
+}
+
+/** Locale-aware number (NL comma decimal). Empty / non-finite → em dash. */
+export function formatNumber(
+  value: number | string | null | undefined,
+  lang: Lang = currentLang,
+  options?: Intl.NumberFormatOptions
+): string {
+  if (value == null || value === "") return translate(lang, "common.emptyDash");
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return translate(lang, "common.emptyDash");
+  return new Intl.NumberFormat(LOCALE_BY_LANG[lang], options).format(n);
+}
+
+/** Empty-cell renderer — never print `null` / `undefined`. */
+export function emptyDash(lang: Lang = currentLang): string {
+  return translate(lang, "common.emptyDash");
+}
+
 type LanguageApi = {
   t: TFunction;
   lang: Lang;

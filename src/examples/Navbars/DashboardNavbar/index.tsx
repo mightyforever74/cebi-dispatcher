@@ -60,6 +60,7 @@ import {
 import { useAlerts, useResolveAlert, Alert } from "hooks/useAlerts";
 import { useT } from "i18n";
 import LanguageSwitcher from "components/LanguageSwitcher";
+import { useDensity } from "context/density";
 import { useAuthStore } from "store/useAuthStore";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -116,6 +117,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const [accountMenu, setAccountMenu] = useState<HTMLElement | null>(null);
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
+  const { density, toggleDensity } = useDensity();
   const route = useLocation().pathname.split("/").slice(1);
 
   useEffect(() => {
@@ -369,6 +371,14 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
                   component={Link}
                   to="/system/settings"
                   onClick={handleCloseAccount}
+                />
+                <NotificationItem
+                  icon={<Icon fontSize="small">table_rows</Icon>}
+                  title={density === "compact" ? t("density.comfortable") : t("density.compact")}
+                  onClick={() => {
+                    toggleDensity();
+                    handleCloseAccount();
+                  }}
                 />
                 <NotificationItem
                   icon={<Icon fontSize="small">logout</Icon>}

@@ -61,6 +61,7 @@ export function useExceptions(token: string | null) {
   const [exceptions, setExceptions] = useState<ExceptionEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastOkAt, setLastOkAt] = useState<number | null>(null);
   // FN-12 MVP: son gorulen id kumesine gore "yeni olay" tespiti (toast yerine sayfa-ici vurgu)
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const seenRef = useRef<Set<string>>(new Set());
@@ -76,6 +77,7 @@ export function useExceptions(token: string | null) {
       rows.forEach((r) => seenRef.current.add(r.id));
       firstLoadRef.current = false;
       setExceptions(rows);
+      setLastOkAt(Date.now());
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -98,5 +100,5 @@ export function useExceptions(token: string | null) {
     [token, refresh]
   );
 
-  return { exceptions, loading, error, newIds, refresh, resolve };
+  return { exceptions, loading, error, lastOkAt, newIds, refresh, resolve };
 }

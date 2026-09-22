@@ -34,6 +34,11 @@ export const landing = {
   navyInk: "#070b18",
   navyFog: "#c5cde3",
   /**
+   * Light-theme secondary text / input labels on `#f0f2f5`. Landing
+   * `--color-roadmap` (#64748b) is 4.24:1 on page bg; this is the ≥4.5:1 step.
+   */
+  navyFog700: "#5b6577",
+  /**
    * Landing'in `color-mix(in srgb, var(--color-navy-elevated) 62%, white 16%)`
    * (global.css:9) ifadesinin JS/MUI tarafı için statik yaklaşık karşılığı
    * (renk-hesabı derleme zamanında yapılamadığından elle hesaplanmıştır).
@@ -74,15 +79,15 @@ export const brand = {
 // =========================================================================
 export const paletteLight = {
   backgroundDefault: "#f0f2f5",
-  textMain: "#7b809a",
-  textFocus: "#7b809a",
+  textMain: landing.navyFog700,
+  textFocus: landing.navyFog700,
   white: "#ffffff",
   black: "#000000",
   primaryMain: "#7C3AED",
   primaryFocus: "#6D28D9",
-  secondaryMain: "#7b809a",
-  secondaryFocus: "#8f93a9",
-  infoMain: "#1A73E8",
+  secondaryMain: landing.navyFog700,
+  secondaryFocus: landing.navyFog700,
+  infoMain: "#155fc0",
   infoFocus: "#1662C4",
   successMain: "#4CAF50",
   successFocus: "#67bb6a",
@@ -133,10 +138,10 @@ export const paletteLight = {
   badgeColors: {
     primary: { background: "#f8b3ca", text: "#cc084b" },
     secondary: { background: "#d7d9e1", text: "#6c757d" },
-    info: { background: "#aecef7", text: "#095bc6" },
+    info: { background: "#aecef7", text: "#074a9e" },
     success: { background: "#bce2be", text: "#339537" },
     warning: { background: "#ffd59f", text: "#c87000" },
-    error: { background: "#fcd3d0", text: "#f61200" },
+    error: { background: "#fcd3d0", text: "#c1170a" },
     light: { background: "#ffffff", text: "#c7d3de" },
     dark: { background: "#8097bf", text: "#1e2e4a" },
   },
@@ -276,6 +281,14 @@ export type AlertSeverity = "low" | "medium" | "high" | "critical";
  * (available/in_use/maintenance/retired) ile KARIŞTIRILMAMALI, ayrı ad alanı. */
 export type VehicleConnectivityStatus = "online" | "stale" | "offline" | "maintenance";
 
+/** `public.vehicles.status` — liste ekranı (D4 StatusChip kind=vehicle ops). */
+export type VehicleOpsStatus = "available" | "in_use" | "maintenance" | "retired";
+
+/** `public.drivers.status` — liste ekranı (D4 StatusChip kind=vehicle lookup). */
+export type DriverDutyStatus = "available" | "on_task" | "task_pending" | "on_leave" | "offline";
+
+export type TaskPriority = "high" | "normal" | "low";
+
 /** 6 tip — src/layouts/dispatcher/exceptions/index.tsx:38-45 (`TYPE_LABEL`) */
 export type ExceptionType =
   | "eta_delay"
@@ -283,7 +296,8 @@ export type ExceptionType =
   | "driver_location_mismatch"
   | "compliance_zone_breach"
   | "traffic_impact"
-  | "dock_conflict";
+  | "dock_conflict"
+  | "rule_violation";
 
 export interface StatusColorSet {
   bg: string;
@@ -316,7 +330,11 @@ export const status: {
   task: Record<TaskStatus, StatusColorSet>;
   alert: Record<AlertSeverity, StatusColorSet>;
   vehicle: Record<VehicleConnectivityStatus, StatusColorSet>;
+  vehicleOps: Record<VehicleOpsStatus, StatusColorSet>;
+  driver: Record<DriverDutyStatus, StatusColorSet>;
   exception: Record<ExceptionType, StatusColorSet>;
+  priority: Record<TaskPriority, StatusColorSet>;
+  unknown: StatusColorSet;
 } = {
   // Renk eşlemesi src/layouts/dispatcher/tasks/index.tsx:56-78 ile birebir.
   task: {
@@ -356,8 +374,87 @@ export const status: {
     compliance_zone_breach: fromBadge("error", main.error),
     traffic_impact: fromBadge("info", main.info),
     dock_conflict: fromBadge("info", main.info),
+    rule_violation: fromBadge("warning", main.warning),
   },
+  // public.vehicles.status — eski vehicles/index.tsx statusColor ile birebir.
+  vehicleOps: {
+    available: fromBadge("success", main.success),
+    in_use: fromBadge("info", main.info),
+    maintenance: fromBadge("warning", main.warning),
+    retired: fromBadge("error", main.error),
+  },
+  // public.drivers.status — eski drivers/index.tsx statusColor ile birebir.
+  driver: {
+    available: fromBadge("success", main.success),
+    on_task: fromBadge("info", main.info),
+    task_pending: fromBadge("warning", main.warning),
+    on_leave: fromBadge("warning", main.warning),
+    offline: fromBadge("error", main.error),
+  },
+  priority: {
+    high: fromBadge("error", main.error),
+    normal: fromBadge("info", main.info),
+    low: fromBadge("secondary", main.secondary),
+  },
+  unknown: fromBadge("secondary", main.secondary),
 };
+
+// =========================================================================
+// 5b) LIVE MAP — D3 (basemap, chrome, eşikler). Hex yalnız burada.
+//     Marker renkleri `status.vehicle.*` (online/stale/offline); bu nesne
+//     panel/basemap/rota/küme ve tek stale eşiğini taşır.
+// =========================================================================
+
+export const map = {
+  /** Son telemetri bu süreyi aşınca araç marker'ı `stale`. Tek kaynak. */
+  staleMs: 2 * 60 * 1000,
+  /** MQTT son mesaj bu süreden yeniyse bağlantı rozeti `live`. */
+  liveMs: 30 * 1000,
+  /** REST snapshot yedekleme aralığı — `useFleetSnapshot` ile aynı. */
+  restPollMs: 20 * 1000,
+  clusterMinVehicles: 20,
+  /** Şehir ölçeği — bu zoom ve üstünde küme kapanır. */
+  clusterDisableZoom: 14,
+  panelWidthPx: 280,
+  tiles: {
+    dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2n9e_1_5c749a815246c8c8b2b608b7",
+    light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2n9e_1_5c749a815246c8c8b2b608b7",
+  },
+  route: brand.primary,
+  routeHover: paletteLight.gradients.primary.main,
+  selected: brand.primary,
+  markerStroke: paletteLight.white,
+  ze: paletteLight.infoMain,
+  cluster: {
+    bg: main.success,
+    fg: paletteLight.white,
+    stroke: paletteLight.white,
+  },
+  dark: {
+    sidebarBg: paletteDark.backgroundDefault,
+    panelBg: landing.navyInk,
+    panelBgSel: paletteDark.backgroundCard,
+    border: landing.navyLine,
+    inputBg: landing.navyDeep,
+    text: paletteDark.white,
+    textMuted: paletteDark.textSecondary,
+    textFaint: paletteDark.textDisabled,
+    leafletBg: "#191a1a",
+    chipBg: landing.navyDeep,
+  },
+  light: {
+    sidebarBg: landing.offwhite,
+    panelBg: paletteLight.white,
+    panelBgSel: paletteLight.grey[200],
+    border: paletteLight.grey[300],
+    inputBg: paletteLight.grey[100],
+    text: paletteLight.darkMain,
+    textMuted: paletteLight.grey[600],
+    textFaint: paletteLight.grey[500],
+    leafletBg: paletteLight.backgroundDefault,
+    chipBg: paletteLight.grey[200],
+  },
+} as const;
 
 // =========================================================================
 // 6) YOĞUNLUK / RADIUS / SHADOW / GLASS

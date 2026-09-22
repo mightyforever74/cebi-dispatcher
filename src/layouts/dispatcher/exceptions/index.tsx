@@ -1,12 +1,10 @@
 /**
  * FEAT-010 Dilim 4 - Istisna Yonetimi sayfasi (FN-13 ExceptionStatusPanel
  * + FN-14 ResolutionActionPanel MVP + FN-12 MVP sayfa-ici "yeni olay" vurgusu).
- * SAPMA NOTU (kanitli): Notistack kodda KURULU DEGIL (yalniz spec/ADR metninde
- * geciyor) - toast yerine severity rozetleri + yeni-olay satir vurgusu; gercek
- * toast ayri cila kalemi. 20 sn polling: useExceptions (FN-09 yerine onaylanan karar).
- * FN-14 "sifir is gucu" butonlari (tel:, Focus-on-Map) sonraki tur - payload hazir.
+ * D4: StatusChip + DataTable + DataState; toast/banner `useNotifications`.
+ * Dialog (çöz modal) D5 kapsamındadır — buradaki Dialog olduğu gibi bırakıldı.
  */
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Card from "@mui/material/Card";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -14,35 +12,17 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import DataState, { isDataStale, listFetchState } from "components/DataState";
+import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
-import MDBadge from "components/MDBadge";
+import StatusChip from "components/StatusChip";
+import { useNotifications } from "components/Notifications";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import DataTable from "examples/Tables/DataTable";
-import { useAuthStore } from "store/useAuthStore";
-import {
-  useExceptions,
-  ExceptionEvent,
-  ResolveAction,
-} from "hooks/useExceptions";
-
-const SEVERITY_COLOR: Record<string, "error" | "warning" | "info" | "dark"> = {
-  critical: "error",
-  high: "warning",
-  medium: "info",
-  low: "dark",
-};
-
-const TYPE_LABEL: Record<string, string> = {
-  eta_delay: "ETA Gecikmesi",
-  driver_offline: "Sürücü Çevrimdışı",
-  driver_location_mismatch: "Konum Uyumsuzluğu",
-  compliance_zone_breach: "ZE-Zone İhlali",
-  traffic_impact: "Trafik Etkisi",
-  dock_conflict: "Rampa Çakışması",
-};
+import { ExceptionEvent, ResolveAction } from "hooks/useExceptions";
+import { formatDateTime, useT, type TranslationKey } from "i18n";
 
 const RESOLVE_OPTIONS: { value: ResolveAction; label: string }[] = [
   { value: "manual_replan", label: "Yeniden planlandı (manuel)" },
@@ -63,9 +43,30 @@ function payloadSummary(e: ExceptionEvent): string {
   return parts.join(" · ") || "—";
 }
 
+function exceptionTypeLabel(type: string, translate: (key: TranslationKey) => string): string {
+  const key = `status.exception.${type}` as TranslationKey;
+  const label = translate(key);
+  return label === key ? type : label;
+}
+
+function statusLabel(status: string, translate: (key: TranslationKey) => string): string {
+  if (status === "open") return translate("exceptions.statusOpen");
+  if (status === "acknowledged") return translate("exceptions.statusAcknowledged");
+  if (status === "resolved") return translate("exceptions.statusResolved");
+  return status;
+}
+
 export default function Exceptions(): JSX.Element {
-  const token = useAuthStore((s) => s.token);
-  const { exceptions, loading, error, newIds, resolve } = useExceptions(token);
+  const { t, lang } = useT();
+  const {
+    exceptions,
+    loading,
+    error,
+    newIds,
+    lastOkAt,
+    refresh,
+    resolve,
+  } = useNotifications();
 
   const [dialogFor, setDialogFor] = useState<ExceptionEvent | null>(null);
   const [action, setAction] = useState<ResolveAction>("dismiss");
@@ -81,14 +82,14 @@ export default function Exceptions(): JSX.Element {
     return c;
   }, [exceptions]);
 
-  const doAcknowledge = async (e: ExceptionEvent) => {
+  const doAcknowledge = useCallback(async (e: ExceptionEvent) => {
     setActionError(null);
     try {
       await resolve(e.id, "acknowledge");
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err));
     }
-  };
+  }, [resolve]);
 
   const doResolve = async () => {
     if (!dialogFor) return;
@@ -106,66 +107,71 @@ export default function Exceptions(): JSX.Element {
     }
   };
 
-  const table = useMemo(
-    () => ({
-      columns: [
-        { Header: "Tip", accessor: "type", width: "18%" },
-        { Header: "Önem", accessor: "severity", width: "10%" },
-        { Header: "Durum", accessor: "status", width: "12%" },
-        { Header: "Özet", accessor: "summary", width: "34%" },
-        { Header: "Zaman", accessor: "time", width: "12%" },
-        { Header: "Aksiyon", accessor: "actions", width: "14%" },
-      ],
-      rows: exceptions.map((e) => ({
+  const table = useMemo(() => {
+    const columns: DataColumn[] = [
+      { Header: t("exceptions.colType"), accessor: "type", minWidth: 140, truncate: true, primary: true },
+      { Header: t("exceptions.colSeverity"), accessor: "severity", minWidth: 96, maxWidth: 120, primary: true },
+      { Header: t("exceptions.colStatus"), accessor: "status", minWidth: 88, maxWidth: 110 },
+      { Header: t("exceptions.colSummary"), accessor: "summary", minWidth: 160, flex: 1, truncate: true, primary: true },
+      { Header: t("exceptions.colTime"), accessor: "time", minWidth: 120, maxWidth: 160 },
+      { Header: t("exceptions.colActions"), accessor: "actions", minWidth: 140, maxWidth: 180 },
+    ];
+
+    const rows: DataRow[] = exceptions.map((e) => {
+      const summary = payloadSummary(e);
+      return {
         type: (
-          <MDTypography
-            variant="button"
-            fontWeight={newIds.has(e.id) ? "bold" : "regular"}
-            color={newIds.has(e.id) ? "error" : "text"}
-          >
-            {newIds.has(e.id) ? "● " : ""}
-            {TYPE_LABEL[e.exception_type] || e.exception_type}
-          </MDTypography>
+          <MDBox display="flex" alignItems="center" gap={0.75} title={exceptionTypeLabel(e.exception_type, t)}>
+            {newIds.has(e.id) ? (
+              <MDTypography variant="caption" color="error" fontWeight="bold">
+                {t("exceptions.newDot")}
+              </MDTypography>
+            ) : null}
+            <StatusChip kind="exception" value={e.exception_type} />
+          </MDBox>
         ),
-        severity: (
-          <MDBadge
-            badgeContent={e.severity}
-            color={SEVERITY_COLOR[e.severity] || "dark"}
-            size="xs"
-            container
-          />
-        ),
+        severity: <StatusChip kind="alert" value={e.severity} />,
         status: (
           <MDTypography variant="caption" color="text">
-            {e.status === "open" ? "AÇIK" : e.status === "acknowledged" ? "GÖRÜLDÜ" : e.status}
+            {statusLabel(e.status, t)}
           </MDTypography>
         ),
         summary: (
-          <MDTypography variant="caption" color="text">
-            {payloadSummary(e)}
+          <MDTypography variant="caption" color="text" noWrap title={summary}>
+            {summary}
           </MDTypography>
         ),
         time: (
-          <MDTypography variant="caption" color="text">
-            {new Date(e.occurred_at).toLocaleString("tr-TR")}
+          <MDTypography variant="caption" color="text" sx={{ fontVariantNumeric: "tabular-nums" }}>
+            {formatDateTime(e.occurred_at, lang)}
           </MDTypography>
         ),
         actions: (
           <MDBox display="flex" gap={1}>
             {e.status === "open" && (
-              <MDButton size="small" variant="outlined" color="info" onClick={() => doAcknowledge(e)}>
-                Onayla
+              <MDButton size="small" variant="outlined" color="info" onClick={() => void doAcknowledge(e)}>
+                {t("exceptions.acknowledge")}
               </MDButton>
             )}
             <MDButton size="small" variant="gradient" color="success" onClick={() => setDialogFor(e)}>
-              Çöz
+              {t("exceptions.resolve")}
             </MDButton>
           </MDBox>
         ),
-      })),
-    }),
-    [exceptions, newIds]
-  );
+        id: e.id,
+        _ariaLabel: summary,
+      };
+    });
+
+    return { columns, rows };
+  }, [exceptions, newIds, t, lang, doAcknowledge]);
+
+  const state = listFetchState({
+    isLoading: loading,
+    isError: Boolean(error),
+    data: loading ? undefined : exceptions,
+    error,
+  });
 
   return (
     <DashboardLayout>
@@ -174,52 +180,47 @@ export default function Exceptions(): JSX.Element {
         <Card>
           <MDBox p={3} display="flex" alignItems="center" justifyContent="space-between">
             <MDBox>
-              <MDTypography variant="h5">İstisna Yönetimi (İkaz)</MDTypography>
+              <MDTypography variant="h5" component="h2">{t("exceptions.title")}</MDTypography>
               <MDTypography variant="caption" color="text">
-                FEAT-010 · 20 sn otomatik yenileme · açık + görüldü olaylar
+                {t("exceptions.subtitle")}
               </MDTypography>
             </MDBox>
-            <MDBox display="flex" gap={1}>
+            <MDBox display="flex" gap={1} flexWrap="wrap">
               {(["critical", "high", "medium", "low"] as const).map((s) => (
-                <MDBadge
-                  key={s}
-                  badgeContent={`${s}: ${counts[s]}`}
-                  color={SEVERITY_COLOR[s]}
-                  size="sm"
-                  container
-                />
+                <MDBox key={s} display="flex" alignItems="center" gap={0.5}>
+                  <StatusChip kind="alert" value={s} />
+                  <MDTypography variant="caption">{counts[s]}</MDTypography>
+                </MDBox>
               ))}
             </MDBox>
           </MDBox>
-          {error && (
-            <MDBox px={3} pb={1}>
-              <MDTypography variant="caption" color="error">
-                Veri alınamadı: {error}
-              </MDTypography>
-            </MDBox>
-          )}
           {actionError && (
             <MDBox px={3} pb={1}>
               <MDTypography variant="caption" color="error">
-                Aksiyon hatası: {actionError}
+                {t("common.errorWithMessage", { message: actionError })}
               </MDTypography>
             </MDBox>
           )}
-          {loading ? (
-            <MDBox p={3}>
-              <MDTypography variant="button" color="text">
-                Yükleniyor…
-              </MDTypography>
-            </MDBox>
-          ) : exceptions.length === 0 ? (
-            <MDBox p={3}>
-              <MDTypography variant="button" color="text">
-                Açık istisna yok — filo temiz. ✅
-              </MDTypography>
-            </MDBox>
-          ) : (
-            <DataTable table={table} entriesPerPage={false} showTotalEntries={false} isSorted={false} />
-          )}
+          <DataState
+            status={state}
+            stale={isDataStale(lastOkAt)}
+            staleWhen={lastOkAt}
+            onRetry={() => {
+              void refresh();
+            }}
+            emptyMessage={t("dataState.emptyExceptions")}
+            emptyIcon="check_circle"
+            errorMessage={error ?? undefined}
+          >
+            <DataTable
+              table={table}
+              loading={loading}
+              ariaLabel={t("exceptions.title")}
+              entriesPerPage={false}
+              showTotalEntries={false}
+              isSorted={false}
+            />
+          </DataState>
         </Card>
       </MDBox>
 
@@ -227,7 +228,7 @@ export default function Exceptions(): JSX.Element {
         <DialogTitle>İstisnayı çöz</DialogTitle>
         <DialogContent>
           <MDTypography variant="body2" mb={2}>
-            {dialogFor ? TYPE_LABEL[dialogFor.exception_type] || dialogFor.exception_type : ""} —{" "}
+            {dialogFor ? exceptionTypeLabel(dialogFor.exception_type, t) : ""} —{" "}
             {dialogFor ? payloadSummary(dialogFor) : ""}
           </MDTypography>
           <TextField
@@ -257,7 +258,7 @@ export default function Exceptions(): JSX.Element {
           <MDButton variant="text" color="secondary" onClick={() => setDialogFor(null)}>
             Vazgeç
           </MDButton>
-          <MDButton variant="gradient" color="success" onClick={doResolve} disabled={busy}>
+          <MDButton variant="gradient" color="success" onClick={() => void doResolve()} disabled={busy}>
             {busy ? "Kaydediliyor…" : "Çöz ve Kapat"}
           </MDButton>
         </DialogActions>

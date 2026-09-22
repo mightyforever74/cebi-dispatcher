@@ -15,6 +15,8 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
 
 import { LanguageProvider } from "i18n";
+import { DensityProvider } from "context/density";
+import { NotificationsProvider } from "components/Notifications";
 import { useLatestLocations } from "hooks/useLatestLocations";
 import { useAuthStore } from "store/useAuthStore";
 
@@ -90,7 +92,11 @@ root.render(
       <MaterialUIControllerProvider>
         <ThemedApp>
           <LanguageProvider>
-            <AuthGate />
+            <DensityProvider>
+              <NotificationsProvider>
+                <AuthGate />
+              </NotificationsProvider>
+            </DensityProvider>
           </LanguageProvider>
         </ThemedApp>
       </MaterialUIControllerProvider>

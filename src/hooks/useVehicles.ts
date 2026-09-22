@@ -36,6 +36,7 @@ export function useVehicles() {
     enabled: Boolean(token),
     staleTime: 1000 * 60 * 2, // 2 dakika
     retry: 1,
+    networkMode: "always",
   });
 }
 

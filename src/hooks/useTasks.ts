@@ -44,6 +44,7 @@ export function useTasks(filter: TaskFilter = "all") {
     enabled: !!token,
     staleTime: 1000 * 60 * 2,
     retry: 1,
+    networkMode: "always",
   });
 }
 

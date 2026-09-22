@@ -28,6 +28,18 @@ export interface ExceptionEvent {
   occurred_at: string;
 }
 
+function sameExceptionSnapshot(a: ExceptionEvent[], b: ExceptionEvent[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (row, i) =>
+      row.id === b[i].id &&
+      row.status === b[i].status &&
+      row.severity === b[i].severity &&
+      row.exception_type === b[i].exception_type &&
+      row.occurred_at === b[i].occurred_at
+  );
+}
+
 async function fetchExceptions(token: string | null): Promise<ExceptionEvent[]> {
   const res = await fetch(`${ENTERPRISE_API_URL}/api/dispatcher/exceptions`, {
     headers: { Authorization: token ? `Bearer ${token}` : "" },
@@ -76,7 +88,7 @@ export function useExceptions(token: string | null) {
       }
       rows.forEach((r) => seenRef.current.add(r.id));
       firstLoadRef.current = false;
-      setExceptions(rows);
+      setExceptions((prev) => (sameExceptionSnapshot(prev, rows) ? prev : rows));
       setLastOkAt(Date.now());
       setError(null);
     } catch (e) {

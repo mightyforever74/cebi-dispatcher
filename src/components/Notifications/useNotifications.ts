@@ -91,6 +91,19 @@ function bodyForException(e: ExceptionEvent): string {
   return parts.join(" · ") || e.exception_type;
 }
 
+function sameBannerSnapshot(a: NotifyItem[], b: NotifyItem[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (item, i) =>
+      item.id === b[i].id &&
+      item.count === b[i].count &&
+      item.title === b[i].title &&
+      item.body === b[i].body &&
+      item.severity === b[i].severity &&
+      item.family === b[i].family
+  );
+}
+
 function bodyForAlert(a: Alert): string {
   const type = String(a.alert_type || a.type || "");
   if (typeFamily(type) === "sos") {
@@ -213,7 +226,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       });
     });
     const next = Array.from(byFamily.values()).sort((a, b) => b.createdAt - a.createdAt);
-    setBanners(next);
+    setBanners((prev) => (sameBannerSnapshot(prev, next) ? prev : next));
   }, [exceptions, alerts]);
 
   const enqueueToasts = useCallback((incoming: NotifyItem[]) => {

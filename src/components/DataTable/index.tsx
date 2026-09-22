@@ -187,8 +187,12 @@ function DataTable({
   } = tableInstance;
 
   useEffect(() => {
-    setPageSize(defaultValue || 10);
-  }, [defaultValue, setPageSize]);
+    const next = defaultValue || 10;
+    if (pageSize !== next) setPageSize(next);
+    // setPageSize from react-table is not referentially stable — listing it
+    // in deps re-fires this effect every render and trips React #185.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultValue]);
 
   const measureOverflow = useCallback(() => {
     const el = scrollerRef.current;

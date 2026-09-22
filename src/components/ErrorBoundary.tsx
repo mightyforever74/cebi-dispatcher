@@ -3,26 +3,27 @@ import { Link } from "react-router-dom";
 import { t } from "i18n";
 
 type Props = { children: ReactNode };
-type State = { hasError: boolean };
+type State = { hasError: boolean; generation: number };
 
 /**
  * Route-level fence so a render crash cannot empty `#root`.
  * Plain HTML — no MUI / MD2. Copy from the i18n dictionary.
+ * Retry remounts the failed route tree (`generation` key).
  */
 class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, generation: 0 };
 
-  static getDerivedStateFromError(): State {
+  static getDerivedStateFromError(): Partial<State> {
     return { hasError: true };
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false });
+    this.setState((prev) => ({ hasError: false, generation: prev.generation + 1 }));
   };
 
   render() {
     if (!this.state.hasError) {
-      return this.props.children;
+      return <div key={this.state.generation}>{this.props.children}</div>;
     }
 
     return (

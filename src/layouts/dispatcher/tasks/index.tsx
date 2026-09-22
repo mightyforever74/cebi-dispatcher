@@ -16,6 +16,9 @@ import { useNavigate } from "react-router-dom";
 import { toNum } from "utils/toNum";
 
 const EMPTY_TASKS: Task[] = [];
+const EMPTY_DRIVERS: Driver[] = [];
+const EMPTY_VEHICLES: Vehicle[] = [];
+const TASKS_PAGE_SIZE = { defaultValue: 10, entries: [5, 10, 25, 50] };
 
 function TasksLayout(): JSX.Element {
   const { t, lang } = useT();
@@ -31,8 +34,10 @@ function TasksLayout(): JSX.Element {
     refetch,
   } = useTasks(filter);
   const tasks = data ?? EMPTY_TASKS;
-  const { data: drivers = [] } = useDrivers();
-  const { data: vehicles = [] } = useVehicles();
+  const { data: driversData } = useDrivers();
+  const { data: vehiclesData } = useVehicles();
+  const drivers = driversData ?? EMPTY_DRIVERS;
+  const vehicles = vehiclesData ?? EMPTY_VEHICLES;
 
   const driverNameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -186,7 +191,7 @@ function TasksLayout(): JSX.Element {
             canSearch
             loading={isLoading}
             ariaLabel={t("tasks.title")}
-            entriesPerPage={{ defaultValue: 10, entries: [5, 10, 25, 50] }}
+            entriesPerPage={TASKS_PAGE_SIZE}
           />
         </DataState>
       </MDBox>

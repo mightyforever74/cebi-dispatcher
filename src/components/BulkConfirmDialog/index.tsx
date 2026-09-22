@@ -1,12 +1,9 @@
 /**
- * BulkConfirmDialog — BUG-2 Bulk Guard + UI Modernizasyonu (04.08.2026).
- *
- * Fan-out sözleşmesi DEĞİŞMEDİ: N>1 seçimde onay kapısı; onaylanırsa her
- * araca aynı görevin 1 kopyası (draft[i] → araç[i]); N=1 akışı buraya uğramaz.
+ * BulkConfirmDialog — BUG-2 Bulk Guard. Fan-out sözleşmesi değişmedi.
  */
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
-import ConfirmDialogShell, { SHELL_C } from "components/ConfirmDialogShell";
+import ConfirmDialogShell, { useDialogChrome } from "components/ConfirmDialogShell";
 import { useT } from "i18n";
 
 interface BulkVehicle {
@@ -30,6 +27,7 @@ function BulkConfirmDialog({
   onConfirm,
 }: Props): JSX.Element {
   const { t } = useT();
+  const chrome = useDialogChrome();
   const count = vehicles.length;
   return (
     <ConfirmDialogShell
@@ -46,17 +44,17 @@ function BulkConfirmDialog({
     >
       <MDBox
         sx={{
-          bgcolor: SHELL_C.accentBg,
-          border: `1px solid ${SHELL_C.border}`,
+          bgcolor: chrome.accentBg,
+          border: `1px solid ${chrome.border}`,
           borderRadius: "12px",
           p: 1.5,
           mb: 1.5,
         }}
       >
-        <MDTypography variant="button" color="white" sx={{ display: "block" }}>
+        <MDTypography variant="button" sx={{ display: "block", color: chrome.text }}>
           {t("bulk.body", { count })}
         </MDTypography>
-        <MDTypography variant="caption" sx={{ color: SHELL_C.textMuted, display: "block", mt: 0.5 }}>
+        <MDTypography variant="caption" sx={{ color: chrome.textMuted, display: "block", mt: 0.5 }}>
           {t("bulk.bodyHint")}
         </MDTypography>
       </MDBox>
@@ -66,7 +64,7 @@ function BulkConfirmDialog({
         flexWrap="wrap"
         gap={0.7}
         sx={{
-          border: `1px solid ${SHELL_C.border}`,
+          border: `1px solid ${chrome.border}`,
           borderRadius: "12px",
           p: 1.5,
           mb: 0.5,
@@ -78,9 +76,9 @@ function BulkConfirmDialog({
           <MDBox
             key={v.id}
             sx={{
-              border: `1px solid ${SHELL_C.accent}`,
-              bgcolor: SHELL_C.accentBg,
-              color: "#fff",
+              border: `1px solid ${chrome.accent}`,
+              bgcolor: chrome.accentBg,
+              color: chrome.onAccent,
               borderRadius: "999px",
               px: 1.2,
               py: 0.3,

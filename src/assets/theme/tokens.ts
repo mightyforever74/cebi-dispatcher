@@ -399,6 +399,39 @@ export const status: {
   unknown: fromBadge("secondary", main.secondary),
 };
 
+/** ConfirmDialogShell — D5. Hex yalnız burada; light/dark chrome + severity. */
+export const dialog = {
+  danger: "#f44336",
+  dangerDark: "#b71c1c",
+  dangerBg: "rgba(244,67,54,0.08)",
+  warning: "#ff9800",
+  warningDark: "#e65100",
+  warningBg: "rgba(255,152,0,0.10)",
+  accent: brand.primary,
+  accentDark: "#5b21b6",
+  accentBg: "rgba(124,58,237,0.10)",
+  onAccent: paletteLight.white,
+  radiusPx: 16,
+  dark: {
+    panelBg: paletteDark.backgroundDefault,
+    border: "#2c3454",
+    inputBg: "#131826",
+    textMuted: "#B0BEC5",
+    textFaint: "#8f9bb3",
+    text: paletteDark.white,
+    cardWash: "rgba(255,255,255,0.03)",
+  },
+  light: {
+    panelBg: paletteLight.white,
+    border: paletteLight.grey[300],
+    inputBg: paletteLight.grey[100],
+    textMuted: landing.navyFog700,
+    textFaint: paletteLight.grey[600],
+    text: paletteLight.darkMain,
+    cardWash: paletteLight.grey[100],
+  },
+} as const;
+
 // =========================================================================
 // 5b) LIVE MAP — D3 (basemap, chrome, eşikler). Hex yalnız burada.
 //     Marker renkleri `status.vehicle.*` (online/stale/offline); bu nesne

@@ -2,16 +2,13 @@
  * FEAT-010 Dilim 4 - Istisna Yonetimi sayfasi (FN-13 ExceptionStatusPanel
  * + FN-14 ResolutionActionPanel MVP + FN-12 MVP sayfa-ici "yeni olay" vurgusu).
  * D4: StatusChip + DataTable + DataState; toast/banner `useNotifications`.
- * Dialog (çöz modal) D5 kapsamındadır — buradaki Dialog olduğu gibi bırakıldı.
+ * D5: çöz modalı ConfirmDialogShell.
  */
 import { useCallback, useMemo, useState } from "react";
 import Card from "@mui/material/Card";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import ConfirmDialogShell from "components/ConfirmDialogShell";
 import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import MDBox from "components/MDBox";
@@ -228,45 +225,43 @@ export default function Exceptions(): JSX.Element {
         </Card>
       </MDBox>
 
-      <Dialog open={dialogFor !== null} onClose={() => setDialogFor(null)} fullWidth maxWidth="xs">
-        <DialogTitle>{t("exceptions.resolveTitle")}</DialogTitle>
-        <DialogContent>
-          <MDTypography variant="body2" mb={2}>
-            {dialogFor ? exceptionTypeLabel(dialogFor.exception_type, t) : ""} —{" "}
-            {dialogFor ? payloadSummary(dialogFor, t) : ""}
-          </MDTypography>
-          <TextField
-            select
-            fullWidth
-            label={t("exceptions.actionLabel")}
-            value={action}
-            onChange={(ev) => setAction(ev.target.value as ResolveAction)}
-            sx={{ mb: 2 }}
-          >
-            {RESOLVE_OPTIONS.map((value) => (
-              <MenuItem key={value} value={value}>
-                {t(`exceptions.action.${value}` as TranslationKey)}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
-            label={t("exceptions.commentLabel")}
-            value={comment}
-            onChange={(ev) => setComment(ev.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <MDButton variant="text" color="secondary" onClick={() => setDialogFor(null)}>
-            {t("dialog.cancel")}
-          </MDButton>
-          <MDButton variant="gradient" color="success" onClick={() => void doResolve()} disabled={busy}>
-            {busy ? t("exceptions.saving") : t("exceptions.resolveClose")}
-          </MDButton>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialogShell
+        open={dialogFor !== null}
+        severity="accent"
+        icon="task_alt"
+        title={t("exceptions.resolveTitle")}
+        submitting={busy}
+        confirmLabel={t("exceptions.resolveClose")}
+        submittingLabel={t("exceptions.saving")}
+        onCancel={() => setDialogFor(null)}
+        onConfirm={() => {
+          void doResolve();
+        }}
+        reason={{
+          value: comment,
+          onChange: setComment,
+          label: t("exceptions.commentLabel"),
+        }}
+      >
+        <MDTypography variant="body2" mb={2}>
+          {dialogFor ? exceptionTypeLabel(dialogFor.exception_type, t) : ""} —{" "}
+          {dialogFor ? payloadSummary(dialogFor, t) : ""}
+        </MDTypography>
+        <TextField
+          select
+          fullWidth
+          label={t("exceptions.actionLabel")}
+          value={action}
+          onChange={(ev) => setAction(ev.target.value as ResolveAction)}
+          sx={{ mb: 2 }}
+        >
+          {RESOLVE_OPTIONS.map((value) => (
+            <MenuItem key={value} value={value}>
+              {t(`exceptions.action.${value}` as TranslationKey)}
+            </MenuItem>
+          ))}
+        </TextField>
+      </ConfirmDialogShell>
     </DashboardLayout>
   );
 }

@@ -22,11 +22,9 @@
 import { useState } from "react";
 import Autocomplete from "@mui/material/Autocomplete";
 import CircularProgress from "@mui/material/CircularProgress";
-import { form } from "assets/theme/tokens";
 import MDBox from "components/MDBox";
 import MDInput from "components/MDInput";
 import MDTypography from "components/MDTypography";
-import { useMaterialUIController } from "context";
 import { useGeocodeSearch, GeocodeResult } from "hooks/useGeocodeSearch";
 
 export interface LocationValue {
@@ -56,8 +54,6 @@ function LocationSearchInput({
   // value.address: SECILMIS/onaylanmis adres (parent state).
   const [inputText, setInputText] = useState(value.address || "");
   const { results, loading } = useGeocodeSearch(inputText);
-  const [controller] = useMaterialUIController();
-  const errorFg = controller.darkMode ? form.errorFgDark : form.errorFgLight;
 
   return (
     <Autocomplete
@@ -115,7 +111,7 @@ function LocationSearchInput({
             "aria-invalid": error || undefined,
           }}
           FormHelperTextProps={{
-            sx: { color: error ? errorFg : undefined },
+            sx: { color: error ? "error.main" : undefined },
           }}
           InputProps={{
             ...params.InputProps,

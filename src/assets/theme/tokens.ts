@@ -93,7 +93,7 @@ export const paletteLight = {
   successFocus: "#67bb6a",
   warningMain: "#fb8c00",
   warningFocus: "#fc9d26",
-  errorMain: "#F44335",
+  errorMain: "#d32f2f",
   errorFocus: "#f65f53",
   lightMain: "#f0f2f5",
   lightFocus: "#f0f2f5",
@@ -184,7 +184,7 @@ export const paletteDark = {
   successFocus: "#67bb6a",
   warningMain: "#fb8c00",
   warningFocus: "#fc9d26",
-  errorMain: "#F44335",
+  errorMain: "#ff6b6b",
   errorFocus: "#f65f53",
   lightMain: "#f0f2f566",
   lightFocus: "#f0f2f566",
@@ -432,10 +432,10 @@ export const dialog = {
   },
 } as const;
 
-/** Form field error text — ≥4.5:1 on page/panel backgrounds. */
+/** Form field error text — same as `error.main` (single color per theme). */
 export const form = {
-  errorFgLight: "#B71C1C",
-  errorFgDark: "#FF8A80",
+  errorFgLight: paletteLight.errorMain,
+  errorFgDark: paletteDark.errorMain,
 } as const;
 
 /** Text links that must stay ≥4.5:1 on page backgrounds. */

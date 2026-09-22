@@ -278,3 +278,16 @@ axe Optimize / Exceptions+Resolve / Settings / Vehicles: **oturum yok** — logi
 | Tasks 10× dil×tema | oturum yok; kod kanıtı §7.0 |
 | Klavye Resolve | Esc / Ctrl+Enter kabukta; odak dönüşü MUI Dialog |
 | Push | **Yok** (Cem) |
+
+### 7.7 D5-fix-2 (merge öncesi)
+
+Tek commit. Yeni paket yok.
+
+1. **Exceptions ACTION.** `size="small"`, `text-transform: none`, `white-space: nowrap`, sütun `minWidth: 230` / `maxWidth: 280`. `< lg` ikon-only + `aria-label`; `≥ lg` Acknowledge / Resolve (1280 tam metin, 1045 ikon).
+2. **StatusChip** kök `display: inline-flex; width: max-content`. DataTable `td > .MuiChip-root` aynı; hücre `align=left`. Tasks / Drivers / Vehicles aynı `StatusChip` / `PriorityChip`.
+3. **Resolve Select.** `size="small"`; dialog içinde MUI small padding (`8.5px 14px`) + ikon görünür. Global `MuiSelect` `padding: 0` / `icon: none` dialog dışında durur. `InputLabel shrink` çakışması 0.
+4. **`error.main`.** Light `#d32f2f` (beyaz **4.98:1**; sayfa `#f0f2f5` 4.44 — helper kart üzeri). Dark `#ff6b6b` (panel **5.81:1**, kart **5.21:1**). Pickup helper `error.main`; `form.errorFg*` aynı token’a alias. Eski `#ff8a80` / `#F44335` kalktı.
+5. **Vehicles ikincil.** “More columns…” / “Showing…” `color="text"` → light `navyFog700` **5.88 / 5.24:1** (eski dark `secondary` `#7b809a` on `#202940` 3.71). Rented çip fg `#7a4400` on `#ffd59f` **5.75:1**; Leased `#074a9e` on `#aecef7` **5.23:1**.
+6. **Optimize heading-order.** Sayfa `h2`; form / job / constraints kart `h3`; araç kolon başlığı `h4`. Görsel `variant="h6"` aynı.
+
+axe Optimize + Vehicles + Exceptions dark/light serious 0: oturum yok (login). 1280 / 1045 ACTION ekran görüntüsü aynı nedenle rapora gömülmedi.

@@ -63,7 +63,7 @@ function statusLabel(status: string, translate: (key: TranslationKey) => string)
 export default function Exceptions(): JSX.Element {
   const { t, lang } = useT();
   const theme = useTheme();
-  const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
+  const isLgUp = useMediaQuery(theme.breakpoints.up("lg"));
   const {
     exceptions,
     loading,
@@ -120,7 +120,7 @@ export default function Exceptions(): JSX.Element {
       { Header: t("exceptions.colStatus"), accessor: "status", minWidth: 88, maxWidth: 110 },
       { Header: t("exceptions.colSummary"), accessor: "summary", minWidth: 160, flex: 1, truncate: true, primary: true },
       { Header: t("exceptions.colTime"), accessor: "time", minWidth: 120, maxWidth: 160 },
-      { Header: t("exceptions.colActions"), accessor: "actions", minWidth: 140, maxWidth: 180 },
+      { Header: t("exceptions.colActions"), accessor: "actions", minWidth: 230, maxWidth: 280 },
     ];
 
     const rows: DataRow[] = exceptions.map((e) => {
@@ -161,11 +161,12 @@ export default function Exceptions(): JSX.Element {
                 color="info"
                 onClick={() => void doAcknowledge(e)}
                 aria-label={t("exceptions.acknowledge")}
+                sx={{ textTransform: "none", whiteSpace: "nowrap", minWidth: 0 }}
               >
                 <Icon fontSize="small" aria-hidden>
                   done
                 </Icon>
-                {isMdUp ? t("exceptions.acknowledge") : null}
+                {isLgUp ? t("exceptions.acknowledge") : null}
               </MDButton>
             )}
             <MDButton
@@ -174,11 +175,12 @@ export default function Exceptions(): JSX.Element {
               color="success"
               onClick={() => setDialogFor(e)}
               aria-label={t("exceptions.resolve")}
+              sx={{ textTransform: "none", whiteSpace: "nowrap", minWidth: 0 }}
             >
               <Icon fontSize="small" aria-hidden>
                 task_alt
               </Icon>
-              {isMdUp ? t("exceptions.resolve") : null}
+              {isLgUp ? t("exceptions.resolve") : null}
             </MDButton>
           </MDBox>
         ),
@@ -188,7 +190,7 @@ export default function Exceptions(): JSX.Element {
     });
 
     return { columns, rows };
-  }, [exceptions, newIds, t, lang, doAcknowledge, isMdUp]);
+  }, [exceptions, newIds, t, lang, doAcknowledge, isLgUp]);
 
   const state = listFetchState({
     isLoading: loading,
@@ -278,11 +280,20 @@ export default function Exceptions(): JSX.Element {
         <TextField
           select
           fullWidth
+          size="small"
           label={t("exceptions.actionLabel")}
           value={action}
           onChange={(ev) => setAction(ev.target.value as ResolveAction)}
           InputLabelProps={{ shrink: true }}
-          sx={{ mb: 2 }}
+          sx={{
+            mb: 2,
+            "& .MuiSelect-select": {
+              padding: "8.5px 14px !important",
+              paddingRight: "32px !important",
+              display: "block",
+            },
+            "& .MuiSelect-icon": { display: "inline-block" },
+          }}
         >
           {RESOLVE_OPTIONS.map((value) => (
             <MenuItem key={value} value={value}>

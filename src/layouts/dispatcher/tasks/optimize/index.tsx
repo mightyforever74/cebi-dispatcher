@@ -347,7 +347,7 @@ function ConstraintsSummary({
       <Grid item xs={12} md={7}>
         <Card sx={{ height: "100%" }}>
           <MDBox pt={2} px={2} lineHeight={1}>
-            <MDTypography variant="h6" fontWeight="medium">
+            <MDTypography variant="h6" component="h3" fontWeight="medium">
               {t("optimize.constraintsCardTitle")}
             </MDTypography>
             <MDTypography variant="button" color="text" fontWeight="regular">
@@ -437,7 +437,7 @@ function VehicleRowHeader({
               #{rank}
             </MDTypography>
           )}
-          <MDTypography variant="h6" fontWeight="bold" color={darkMode ? "white" : "dark"}>
+          <MDTypography variant="h6" component="h4" fontWeight="bold" color={darkMode ? "white" : "dark"}>
             {title}
           </MDTypography>
           <MDTypography variant="caption" color="text">
@@ -1100,7 +1100,7 @@ function OptimizeTask(): JSX.Element {
 
         {!jobId && (
           <Card sx={{ p: 3 }}>
-            <MDTypography variant="h6" mb={2}>
+            <MDTypography variant="h6" component="h3" mb={2}>
               {t("optimize.pickup")} *
             </MDTypography>
             <Grid container spacing={2} mb={3}>
@@ -1116,7 +1116,7 @@ function OptimizeTask(): JSX.Element {
               </Grid>
             </Grid>
 
-            <MDTypography variant="h6" mb={2}>
+            <MDTypography variant="h6" component="h3" mb={2}>
               {t("optimize.dropoff")} *
             </MDTypography>
             <Grid container spacing={2} mb={3}>
@@ -1132,7 +1132,7 @@ function OptimizeTask(): JSX.Element {
               </Grid>
             </Grid>
 
-            <MDTypography variant="h6" mb={1}>
+            <MDTypography variant="h6" component="h3" mb={1}>
               {t("optimize.vehicles")} *
             </MDTypography>
             {loadingVehicles && <MDTypography variant="caption">{t("optimize.loadingVehicles")}</MDTypography>}
@@ -1158,7 +1158,7 @@ function OptimizeTask(): JSX.Element {
 
             <Divider sx={{ my: 2 }} />
 
-            <MDTypography variant="h6" mb={0.5}>
+            <MDTypography variant="h6" component="h3" mb={0.5}>
               {t("optimize.constraintsTitle")}
             </MDTypography>
             <MDTypography variant="caption" color="text" display="block" mb={2}>
@@ -1383,7 +1383,7 @@ function OptimizeTask(): JSX.Element {
         {jobId && (
           <Card sx={{ p: 3 }}>
             <MDBox display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-              <MDTypography variant="h6">{t("optimize.jobTitle")}</MDTypography>
+              <MDTypography variant="h6" component="h3">{t("optimize.jobTitle")}</MDTypography>
               <MDTypography
                 variant="caption"
                 title={jobId ? t("optimize.copyJobId", { id: jobId }) : ""}

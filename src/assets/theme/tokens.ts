@@ -402,3 +402,43 @@ export const glass = {
   /** `prefers-reduced-transparency: reduce` aktifken düşülecek opak fallback. */
   reducedOpacity: { dark: 0.96, light: 0.96 },
 } as const;
+
+// =========================================================================
+// 7) A11Y — prefers-reduced-motion → MUI transition süreleri (Adım 4.1)
+// =========================================================================
+
+/** SSR-safe `prefers-reduced-motion: reduce` kontrolü. */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
+/** `theme.transitions.duration` için — reduced-motion aktifse tüm süreler 0
+ * olur (MUI'nin kendi `transitions.create()` çıktısı da 0ms üretir). Aktif
+ * DEĞİLSE `undefined` döner; `createTheme()` kendi varsayılanlarını kullanır. */
+export function motionDurationOverrides():
+  | {
+      shortest: number;
+      shorter: number;
+      short: number;
+      standard: number;
+      complex: number;
+      enteringScreen: number;
+      leavingScreen: number;
+    }
+  | undefined {
+  if (!prefersReducedMotion()) return undefined;
+  return {
+    shortest: 0,
+    shorter: 0,
+    short: 0,
+    standard: 0,
+    complex: 0,
+    enteringScreen: 0,
+    leavingScreen: 0,
+  };
+}

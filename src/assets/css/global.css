@@ -63,3 +63,45 @@
   color-scheme: light;
   --tf-glass-opacity: 0.7;
 }
+
+/* =========================================================
+   Adım 4.2 — prefers-reduced-transparency: glass token'ları opak
+   fallback değerlerine düşürür (tokens.ts `glass.reducedOpacity`
+   ile birebir). Tüketim D2'de (GlassPanel vb.) bu değişkenler
+   üzerinden olacaktır.
+   ========================================================= */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --tf-glass-blur: 0px;
+    --tf-glass-saturate: 100%;
+    --tf-glass-opacity: 0.96;
+  }
+}
+
+/* =========================================================
+   Adım 4.1 — prefers-reduced-motion. MUI `theme.transitions.duration`
+   zaten `tokens.ts::motionDurationOverrides()` ile sıfırlanıyor
+   (assets/theme/index.ts, assets/theme-dark/index.ts). Bu blok, MUI
+   transition sistemi DIŞINDA ham CSS transition/animation kullanan
+   öğeler için güvenlik ağıdır.
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================
+   Adım 4.3 — Global :focus-visible konturu (landing renk/kalınlık).
+   Klavye ile gezinirken tüm etkileşimli öğelerde tutarlı, görünür
+   bir odak halkası sağlar (D0 §7 A5 bulgusu: odak stili tutarsızdı).
+   ========================================================= */
+:focus-visible {
+  outline: var(--tf-focus-ring-width) solid var(--tf-focus-ring-color);
+  outline-offset: var(--tf-focus-ring-offset);
+}

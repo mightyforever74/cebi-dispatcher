@@ -85,12 +85,19 @@ import dialogContent from "assets/theme-dark/components/dialog/dialogContent";
 import dialogContentText from "assets/theme-dark/components/dialog/dialogContentText";
 import dialogActions from "assets/theme-dark/components/dialog/dialogActions";
 
+// Design tokens (single source of truth) — D1 "Tema Köprüsü"
+import { motionDurationOverrides } from "assets/theme/tokens";
+
+const reducedMotionDuration = motionDurationOverrides();
+
 export default createTheme({
   breakpoints: { ...breakpoints },
   palette: { ...colors },
   typography: { ...typography },
   boxShadows: { ...boxShadows },
   borders: { ...borders },
+  // Adım 4.1: prefers-reduced-motion aktifse tüm MUI transition süreleri 0.
+  ...(reducedMotionDuration ? { transitions: { duration: reducedMotionDuration } } : {}),
   functions: {
     boxShadow,
     hexToRgb,

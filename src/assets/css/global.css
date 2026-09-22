@@ -105,3 +105,103 @@
   outline: var(--tf-focus-ring-width) solid var(--tf-focus-ring-color);
   outline-offset: var(--tf-focus-ring-offset);
 }
+
+/* =========================================================
+   D3 Live map — Leaflet popup/tooltip/zoom + küme ikonu.
+   Değerler tokens.ts `map.*` / `status.vehicle.*` ile birebir;
+   hex bu dosyada yalnızca CSS custom property olarak durur
+   (`:root` zaten D1 landing/brand hex'lerini taşır).
+   ========================================================= */
+:root {
+  --tf-map-panel-bg: var(--tf-offwhite);
+  --tf-map-panel-fg: #344767;
+  --tf-map-border: #dee2e6;
+  --tf-map-cluster-bg: #4CAF50;
+  --tf-map-cluster-fg: #ffffff;
+  --tf-map-cluster-stroke: #ffffff;
+  --tf-map-leaflet-bg: #f0f2f5;
+}
+
+[data-theme="dark"] {
+  --tf-map-panel-bg: var(--tf-navy-ink);
+  --tf-map-panel-fg: #ffffff;
+  --tf-map-border: var(--tf-navy-line);
+  --tf-map-leaflet-bg: #191a1a;
+}
+
+[data-theme="light"] {
+  --tf-map-panel-bg: var(--tf-offwhite);
+  --tf-map-panel-fg: #344767;
+  --tf-map-border: #dee2e6;
+  --tf-map-leaflet-bg: #f0f2f5;
+}
+
+.leaflet-container {
+  background: var(--tf-map-leaflet-bg);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip,
+.leaflet-tooltip,
+.leaflet-bar a,
+.leaflet-bar a:hover,
+.leaflet-control-attribution {
+  background: var(--tf-map-panel-bg);
+  color: var(--tf-map-panel-fg);
+  border-color: var(--tf-map-border);
+  box-shadow: none;
+}
+
+.leaflet-bar a {
+  border-bottom-color: var(--tf-map-border);
+}
+
+.leaflet-bar a.leaflet-disabled {
+  background: var(--tf-map-panel-bg);
+  color: var(--tf-map-panel-fg);
+  opacity: 0.45;
+}
+
+.leaflet-tooltip-top::before {
+  border-top-color: var(--tf-map-panel-bg);
+}
+
+.leaflet-tooltip-bottom::before {
+  border-bottom-color: var(--tf-map-panel-bg);
+}
+
+.leaflet-popup-close-button {
+  color: var(--tf-map-panel-fg);
+}
+
+.tf-vehicle-icon,
+.tf-dest-flag,
+.tf-map-cluster-wrap {
+  background: transparent;
+  border: none;
+}
+
+.tf-map-cluster {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--tf-map-cluster-bg);
+  color: var(--tf-map-cluster-fg);
+  border: 2px solid var(--tf-map-cluster-stroke);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tf-map-cluster span {
+  font-variant-numeric: tabular-nums;
+}
+
+.leaflet-cluster-anim .leaflet-marker-icon,
+.leaflet-cluster-anim .leaflet-marker-shadow {
+  transition: transform 0.25s ease-out;
+}

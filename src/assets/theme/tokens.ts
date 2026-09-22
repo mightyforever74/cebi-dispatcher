@@ -360,6 +360,63 @@ export const status: {
 };
 
 // =========================================================================
+// 5b) LIVE MAP — D3 (basemap, chrome, eşikler). Hex yalnız burada.
+//     Marker renkleri `status.vehicle.*` (online/stale/offline); bu nesne
+//     panel/basemap/rota/küme ve tek stale eşiğini taşır.
+// =========================================================================
+
+export const map = {
+  /** Son telemetri bu süreyi aşınca araç marker'ı `stale`. Tek kaynak. */
+  staleMs: 2 * 60 * 1000,
+  /** MQTT son mesaj bu süreden yeniyse bağlantı rozeti `live`. */
+  liveMs: 30 * 1000,
+  /** REST snapshot yedekleme aralığı — `useFleetSnapshot` ile aynı. */
+  restPollMs: 20 * 1000,
+  clusterMinVehicles: 20,
+  /** Şehir ölçeği — bu zoom ve üstünde küme kapanır. */
+  clusterDisableZoom: 14,
+  panelWidthPx: 280,
+  tiles: {
+    dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2n9e_1_5c749a815246c8c8b2b608b7",
+    light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2n9e_1_5c749a815246c8c8b2b608b7",
+  },
+  route: brand.primary,
+  routeHover: paletteLight.gradients.primary.main,
+  selected: brand.primary,
+  markerStroke: paletteLight.white,
+  ze: paletteLight.infoMain,
+  cluster: {
+    bg: main.success,
+    fg: paletteLight.white,
+    stroke: paletteLight.white,
+  },
+  dark: {
+    sidebarBg: paletteDark.backgroundDefault,
+    panelBg: landing.navyInk,
+    panelBgSel: paletteDark.backgroundCard,
+    border: landing.navyLine,
+    inputBg: landing.navyDeep,
+    text: paletteDark.white,
+    textMuted: paletteDark.textSecondary,
+    textFaint: paletteDark.textDisabled,
+    leafletBg: "#191a1a",
+    chipBg: landing.navyDeep,
+  },
+  light: {
+    sidebarBg: landing.offwhite,
+    panelBg: paletteLight.white,
+    panelBgSel: paletteLight.grey[200],
+    border: paletteLight.grey[300],
+    inputBg: paletteLight.grey[100],
+    text: paletteLight.darkMain,
+    textMuted: paletteLight.grey[600],
+    textFaint: paletteLight.grey[500],
+    leafletBg: paletteLight.backgroundDefault,
+    chipBg: paletteLight.grey[200],
+  },
+} as const;
+
+// =========================================================================
 // 6) YOĞUNLUK / RADIUS / SHADOW / GLASS
 // =========================================================================
 

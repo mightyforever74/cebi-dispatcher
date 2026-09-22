@@ -77,7 +77,7 @@ function VehiclesLayout(): JSX.Element {
           }
           sx={{
             cursor: v.plate_no ? "pointer" : "default",
-            color: "info.main",
+            color: "text.main",
             "&:hover": { textDecoration: v.plate_no ? "underline" : "none" },
           }}
         >

@@ -89,7 +89,7 @@ export const paletteLight = {
   secondaryFocus: landing.navyFog700,
   infoMain: "#155fc0",
   infoFocus: "#1662C4",
-  successMain: "#4CAF50",
+  successMain: "#1B7A3D",
   successFocus: "#67bb6a",
   warningMain: "#fb8c00",
   warningFocus: "#fc9d26",
@@ -139,8 +139,8 @@ export const paletteLight = {
     primary: { background: "#f8b3ca", text: "#cc084b" },
     secondary: { background: "#d7d9e1", text: "#6c757d" },
     info: { background: "#aecef7", text: "#074a9e" },
-    success: { background: "#bce2be", text: "#339537" },
-    warning: { background: "#ffd59f", text: "#c87000" },
+    success: { background: "#bce2be", text: "#1B5E20" },
+    warning: { background: "#ffd59f", text: "#7a4400" },
     error: { background: "#fcd3d0", text: "#c1170a" },
     light: { background: "#ffffff", text: "#c7d3de" },
     dark: { background: "#8097bf", text: "#1e2e4a" },
@@ -230,8 +230,8 @@ export const paletteDark = {
     primary: { background: "#f8b3ca", text: "#cc084b" },
     secondary: { background: "#d7d9e1", text: "#6c757d" },
     info: { background: "#aecef7", text: "#095bc6" },
-    success: { background: "#bce2be", text: "#339537" },
-    warning: { background: "#ffd59f", text: "#c87000" },
+    success: { background: "#bce2be", text: "#1B5E20" },
+    warning: { background: "#ffd59f", text: "#7a4400" },
     error: { background: "#fcd3d0", text: "#f61200" },
     light: { background: "#ffffff", text: "#c7d3de" },
     dark: { background: "#8097bf", text: "#1e2e4a" },
@@ -436,6 +436,12 @@ export const dialog = {
 export const form = {
   errorFgLight: "#B71C1C",
   errorFgDark: "#FF8A80",
+} as const;
+
+/** Text links that must stay ≥4.5:1 on page backgrounds. */
+export const a11y = {
+  linkLight: "#155fc0",
+  linkDark: "#8EC8F8",
 } as const;
 
 // =========================================================================

@@ -40,6 +40,9 @@ function PageLayout({ background, children }: Props): JSX.Element {
 
   return (
     <MDBox
+      component="main"
+      id="main-content"
+      tabIndex={-1}
       width="100vw"
       height="100%"
       minHeight="100vh"

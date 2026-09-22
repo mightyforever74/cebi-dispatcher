@@ -265,6 +265,7 @@ export const nl = {
     distanceKm: "{value} km",
     retry: "Opnieuw",
     emptyDash: "—",
+    skipToMain: "Naar hoofdinhoud",
   },
   density: {
     compact: "Compacte rijen",

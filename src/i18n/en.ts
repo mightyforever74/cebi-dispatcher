@@ -267,6 +267,7 @@ export const en = {
     distanceKm: "{value} km",
     retry: "Retry",
     emptyDash: "—",
+    skipToMain: "Skip to main content",
   },
   density: {
     compact: "Compact rows",

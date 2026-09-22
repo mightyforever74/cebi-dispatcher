@@ -265,6 +265,7 @@ export const tr = {
     distanceKm: "{value} km",
     retry: "Yeniden dene",
     emptyDash: "—",
+    skipToMain: "İçeriğe atla",
   },
   density: {
     compact: "Sıkı satırlar",

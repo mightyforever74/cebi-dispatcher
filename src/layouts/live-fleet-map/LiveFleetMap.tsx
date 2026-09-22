@@ -17,7 +17,7 @@ import Skeleton from "@mui/material/Skeleton";
 import TextField from "@mui/material/TextField";
 import { alpha } from "@mui/material/styles";
 
-import { density, map as mapTokens, status, type VehicleConnectivityStatus } from "assets/theme/tokens";
+import { density, map as mapTokens, prefersReducedMotion, status, type VehicleConnectivityStatus } from "assets/theme/tokens";
 import MapControlWidget from "components/MapControlWidget";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -633,7 +633,14 @@ function LiveFleetMap(): JSX.Element {
                 },
               }}
             >
-              <MapContainer center={INITIAL_CENTER} zoom={8} scrollWheelZoom zoomControl={false}>
+              <MapContainer
+                center={INITIAL_CENTER}
+                zoom={8}
+                scrollWheelZoom
+                zoomControl={false}
+                zoomAnimation={!prefersReducedMotion()}
+                markerZoomAnimation={!prefersReducedMotion()}
+              >
                 <Basemap darkMode={darkMode} />
                 <MapViewport
                   cmd={viewportCmd}

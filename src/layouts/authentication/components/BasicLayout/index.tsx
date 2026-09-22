@@ -36,7 +36,7 @@ function BasicLayout({ children }: Props): JSX.Element {
       />
       <MDBox px={1} width="100%" height="100vh" mx="auto" position="relative" zIndex={1}>
         <Grid container spacing={1} justifyContent="center" alignItems="center" height="100%">
-          <Grid item xs={11} sm={9} md={5} lg={4} xl={3} component="main">
+          <Grid item xs={11} sm={9} md={5} lg={4} xl={3}>
             {children}
           </Grid>
         </Grid>

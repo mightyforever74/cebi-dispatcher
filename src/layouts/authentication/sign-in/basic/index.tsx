@@ -22,9 +22,8 @@ import MDTypography from "components/MDTypography";
 
 // Authentication layout components
 import BasicLayout from "layouts/authentication/components/BasicLayout";
+import BrandBlock from "layouts/authentication/components/BrandBlock";
 
-// Images
-import bgImage from "assets/images/bg-sign-in-basic.jpeg";
 import { Link, useNavigate } from "react-router-dom";
 import { useT } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
@@ -58,27 +57,15 @@ function Basic(): JSX.Element {
       <MDBox position="fixed" top={16} right={16} zIndex={1300}>
         <LanguageSwitcher variant="login" />
       </MDBox>
-      <BasicLayout image={bgImage}>
+      <BasicLayout>
       <Card>
-        <MDBox
-          variant="gradient"
-          bgColor="info"
-          borderRadius="lg"
-          coloredShadow="info"
-          mx={2}
-          mt={-3}
-          p={2}
-          mb={1}
-          textAlign="center"
-        >
-          <MDTypography variant="h4" fontWeight="medium" color="white" mt={1}>
+        <BrandBlock />
+        <MDBox px={3} pt={1} textAlign="center">
+          <MDTypography variant="h6" fontWeight="medium">
             {t("login.title")}
           </MDTypography>
-          <MDTypography display="block" variant="button" color="white" my={1}>
-            {t("login.brand")}
-          </MDTypography>
         </MDBox>
-        <MDBox pt={4} pb={3} px={3}>
+        <MDBox pt={2} pb={3} px={3}>
           <MDBox component="form" role="form">
             <MDBox mb={2}>
               <MDInput

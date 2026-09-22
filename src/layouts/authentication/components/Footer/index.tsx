@@ -2,24 +2,30 @@
 =========================================================
 * TulipFleet Dispatcher — Auth Footer
 =========================================================
+* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 3): tek satır, navyFog metin;
+* sol "© {year} TulipFleet B.V.", sağ Gizlilik/Şartlar + uygulama sürümü.
 */
 
 import Container from "@mui/material/Container";
 import Link from "@mui/material/Link";
-import { Theme } from "@mui/material/styles";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import typography from "assets/theme/base/typography";
+import { landing } from "assets/theme/tokens";
 import { useT } from "i18n";
+// eslint-disable-next-line import/extensions
+import packageJson from "../../../../../package.json";
 
-function Footer({ light }: { light?: boolean }): JSX.Element {
-  const { t } = useT();
+const appVersion = packageJson.version;
+
+function Footer(): JSX.Element {
+  const { t, lang } = useT();
   const { size } = typography;
-  const linkColor = light ? "white" : "dark";
+  const year = new Date().getFullYear();
 
   return (
-    <MDBox position="absolute" width="100%" bottom={0} py={4}>
+    <MDBox position="absolute" width="100%" bottom={0} py={3}>
       <Container>
         <MDBox
           width="100%"
@@ -27,59 +33,48 @@ function Footer({ light }: { light?: boolean }): JSX.Element {
           flexDirection={{ xs: "column", lg: "row" }}
           justifyContent="space-between"
           alignItems="center"
+          gap={1}
           px={1.5}
         >
-          <MDBox
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            flexWrap="wrap"
-            color={light ? "white" : "text"}
-            fontSize={size.sm}
-          >
-            <Link href="https://tulipfleet.com" target="_blank" rel="noreferrer">
-              <MDTypography variant="button" fontWeight="medium" color={linkColor}>
-                © 2026 TulipFleet
-              </MDTypography>
-            </Link>
-          </MDBox>
+          <MDTypography variant="button" fontWeight="medium" sx={{ color: landing.offwhite }}>
+            © {year} TulipFleet B.V.
+          </MDTypography>
           <MDBox
             component="ul"
-            sx={({ breakpoints }: Theme) => ({
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "center",
-              listStyle: "none",
-              mt: 3,
-              mb: 0,
-              p: 0,
-
-              [breakpoints.up("lg")]: {
-                mt: 0,
-              },
-            })}
+            display="flex"
+            flexWrap="wrap"
+            alignItems="center"
+            gap={2.5}
+            m={0}
+            p={0}
+            sx={{ listStyle: "none", fontSize: size.sm }}
           >
-            <MDBox component="li" pr={2} lineHeight={1}>
-              <Link href="https://tulipfleet.com" target="_blank" rel="noreferrer">
-                <MDTypography variant="button" fontWeight="regular" color={linkColor}>
-                  {t("footer.site")}
+            <MDBox component="li" lineHeight={1}>
+              <Link
+                href={`https://tulipfleet.com/${lang}/privacy/`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MDTypography variant="button" fontWeight="regular" sx={{ color: landing.navyFog }}>
+                  {t("footer.privacy")}
                 </MDTypography>
               </Link>
             </MDBox>
-            <MDBox component="li" px={2} lineHeight={1}>
-              <Link href="/subscription">
-                <MDTypography variant="button" fontWeight="regular" color={linkColor}>
-                  {t("footer.subscription")}
+            <MDBox component="li" lineHeight={1}>
+              <Link
+                href={`https://tulipfleet.com/${lang}/terms/`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MDTypography variant="button" fontWeight="regular" sx={{ color: landing.navyFog }}>
+                  {t("footer.terms")}
                 </MDTypography>
               </Link>
             </MDBox>
-            <MDBox component="li" pl={2} lineHeight={1}>
-              <Link href="mailto:info@tulipfleet.com">
-                <MDTypography variant="button" fontWeight="regular" color={linkColor}>
-                  {t("footer.contact")}
-                </MDTypography>
-              </Link>
+            <MDBox component="li" lineHeight={1}>
+              <MDTypography variant="caption" fontWeight="regular" sx={{ color: landing.navyFog }}>
+                v{appVersion}
+              </MDTypography>
             </MDBox>
           </MDBox>
         </MDBox>
@@ -87,9 +82,5 @@ function Footer({ light }: { light?: boolean }): JSX.Element {
     </MDBox>
   );
 }
-
-Footer.defaultProps = {
-  light: false,
-};
 
 export default Footer;

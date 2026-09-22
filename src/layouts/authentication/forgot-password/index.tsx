@@ -11,11 +11,12 @@ import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
 import MDTypography from "components/MDTypography";
+import withAlpha from "assets/theme/functions/rgba";
+import { landing } from "assets/theme/tokens";
+import BrandBlock from "layouts/authentication/components/BrandBlock";
 import { AUTH_API_URL } from "config/api";
 import { useT, type TFunction } from "i18n";
 import BasicLayout from "layouts/authentication/components/BasicLayout";
-
-import bgImage from "assets/images/bg-sign-in-basic.jpeg";
 
 type Step = 1 | 2;
 
@@ -222,27 +223,15 @@ function ForgotPassword(): JSX.Element {
   };
 
   return (
-    <BasicLayout image={bgImage}>
+    <BasicLayout>
       <Card>
-        <MDBox
-          variant="gradient"
-          bgColor="info"
-          borderRadius="lg"
-          coloredShadow="info"
-          mx={2}
-          mt={-3}
-          p={2}
-          mb={1}
-          textAlign="center"
-        >
-          <MDTypography variant="h4" fontWeight="medium" color="white" mt={1}>
+        <BrandBlock />
+        <MDBox px={3} pt={1} textAlign="center">
+          <MDTypography variant="h6" fontWeight="medium">
             {t("forgot.title")}
           </MDTypography>
-          <MDTypography display="block" variant="button" color="white" my={1}>
-            {t("login.brand")}
-          </MDTypography>
         </MDBox>
-        <MDBox pt={4} pb={3} px={3}>
+        <MDBox pt={2} pb={3} px={3}>
           {succeeded ? (
             <>
               <MDAlert color="success">{t("forgot.changed")}</MDAlert>
@@ -305,7 +294,7 @@ function ForgotPassword(): JSX.Element {
                     display="flex"
                     alignItems="center"
                     justifyContent="space-between"
-                    sx={{ backgroundColor: "rgba(255,255,255,0.06)" }}
+                    sx={{ backgroundColor: withAlpha(landing.offwhite, 0.06) }}
                   >
                     <MDTypography variant="button" color="text" fontWeight="medium">
                       {email}

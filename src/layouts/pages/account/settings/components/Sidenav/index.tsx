@@ -24,23 +24,18 @@ import MDTypography from "components/MDTypography";
 
 // Material Dashboard 2 PRO React context
 import { useMaterialUIController } from "context";
+import { useT } from "i18n";
 
 function Sidenav(): JSX.Element {
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
+  const { t } = useT();
 
-  // profile (Header silindi) ve accounts/sessions (bilesenler silindi) linkleri
-  // kaldirildi. "notifications" -> "email-integration" duzeltildi: eski href
-  // hicbir Card id'sine karsilik gelmiyordu (kirik link, gercek EmailIntegration
-  // bileseninin id'si "email-integration").
-  // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 5): "2FA" facet-nav girdisi kaldırıldı
-  // — karşılık geldiği Authentication kartı (backend'e bağlı olmayan "Yakında"
-  // placeholder) settings/index.tsx'ten çıkarıldı.
   const sidenavItems = [
-    { icon: "receipt_long", label: "basic info", href: "basic-info" },
-    { icon: "lock", label: "change password", href: "change-password" },
-    { icon: "campaign", label: "email integration", href: "email-integration" },
-    { icon: "delete", label: "delete account", href: "delete-account" },
+    { icon: "receipt_long", label: t("settings.navBasic"), href: "basic-info" },
+    { icon: "lock", label: t("settings.navPassword"), href: "change-password" },
+    { icon: "campaign", label: t("settings.navEmail"), href: "email-integration" },
+    { icon: "delete", label: t("settings.navDelete"), href: "delete-account" },
   ];
 
   const renderSidenavItems = sidenavItems.map(({ icon, label, href }, key) => {
@@ -53,7 +48,7 @@ function Sidenav(): JSX.Element {
           href={`#${href}`}
           variant="button"
           fontWeight="regular"
-          textTransform="capitalize"
+        textTransform="none"
           sx={({
             borders: { borderRadius },
             functions: { pxToRem },

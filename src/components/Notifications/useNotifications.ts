@@ -112,6 +112,12 @@ type Api = {
   dismissBanner: (id: string) => void;
   dismissToast: (id: string) => void;
   acknowledge: (item: NotifyItem) => Promise<void>;
+  notifyToast: (opts: {
+    type: string;
+    title: string;
+    body?: string;
+    severity?: string;
+  }) => void;
 };
 
 const NotifyContext = createContext<Api | null>(null);
@@ -345,6 +351,27 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     [resolve, resolveAlert, dismissBanner]
   );
 
+  const notifyToast = useCallback(
+    (opts: { type: string; title: string; body?: string; severity?: string }) => {
+      enqueueToasts([
+        {
+          id: `form:${Date.now()}:${opts.type}`,
+          channel: "toast",
+          source: "telemetry",
+          type: opts.type,
+          family: typeFamily(opts.type),
+          severity: opts.severity || "info",
+          title: opts.title,
+          body: opts.body || "",
+          count: 1,
+          createdAt: Date.now(),
+          canAck: false,
+        },
+      ]);
+    },
+    [enqueueToasts]
+  );
+
   const toasts = toastQueue.slice(0, MAX_VISIBLE_TOASTS);
 
   const value = useMemo<Api>(
@@ -361,6 +388,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       dismissBanner,
       dismissToast,
       acknowledge,
+      notifyToast,
     }),
     [
       banners,
@@ -375,6 +403,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       dismissBanner,
       dismissToast,
       acknowledge,
+      notifyToast,
     ]
   );
 

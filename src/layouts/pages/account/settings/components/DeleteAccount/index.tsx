@@ -1,32 +1,22 @@
 /**
-=========================================================
-* TulipFleet Dispatcher — Delete Account
-=========================================================
-* Gercek API baglantisi: DELETE /api/users/me, body:{password}.
-* "Deactivate" butonu kaldirildi - mobil AdminSettings.js'de "deactivate"
-* kavraminin hicbir karsiligi yok, sadece MD2 demo sablonundandi.
-=========================================================
-*/
-
+ * TulipFleet Dispatcher — Delete Account
+ */
 import { useState } from "react";
 
-// @mui material components
 import Card from "@mui/material/Card";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
 
-// Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
-
-// Real API
+import ConfirmDialogShell from "components/ConfirmDialogShell";
+import { useNotifications } from "components/Notifications";
 import { useDeleteAccount } from "hooks/useUserAccount";
+import { useT } from "i18n";
 
 function DeleteAccount(): JSX.Element {
+  const { t } = useT();
+  const { notifyToast } = useNotifications();
   const deleteMutation = useDeleteAccount();
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
@@ -41,6 +31,8 @@ function DeleteAccount(): JSX.Element {
     if (!password) return;
     deleteMutation.mutate(password, {
       onSuccess: () => setOpen(false),
+      onError: () =>
+        notifyToast({ type: "form_err", title: t("settings.deleteFailed"), severity: "high" }),
     });
   };
 
@@ -55,55 +47,49 @@ function DeleteAccount(): JSX.Element {
       >
         <MDBox p={3} lineHeight={1}>
           <MDBox mb={1}>
-            <MDTypography variant="h5">Delete Account</MDTypography>
+            <MDTypography variant="h5" component="h2">
+              {t("settings.deleteTitle")}
+            </MDTypography>
           </MDBox>
           <MDTypography variant="button" color="text">
-            Once you delete your account, there is no going back. Please be certain.
+            {t("settings.deleteHint")}
           </MDTypography>
         </MDBox>
         <MDBox display="flex" flexDirection={{ xs: "column", sm: "row" }}>
           <MDButton variant="gradient" color="error" sx={{ height: "100%" }} onClick={handleOpen}>
-            delete account
+            {t("settings.deleteButton")}
           </MDButton>
         </MDBox>
       </MDBox>
 
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
-        <DialogTitle>Delete Account</DialogTitle>
-        <DialogContent>
-          <MDTypography variant="button" color="text" mb={2} display="block">
-            This action cannot be undone. Enter your password to confirm.
+      <ConfirmDialogShell
+        open={open}
+        severity="danger"
+        icon="delete_forever"
+        title={t("settings.deleteTitle")}
+        subtitle={t("settings.deleteConfirmBody")}
+        submitting={deleteMutation.isPending}
+        confirmLabel={t("settings.confirmDelete")}
+        submittingLabel={t("settings.deleting")}
+        confirmDisabled={!password}
+        onCancel={handleClose}
+        onConfirm={handleConfirmDelete}
+      >
+        <MDInput
+          fullWidth
+          autoFocus
+          label={t("settings.deletePassword")}
+          value={password}
+          required
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+          inputProps={{ type: "password", autoComplete: "", "aria-required": true }}
+        />
+        {deleteMutation.isError && (
+          <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mt={1}>
+            {t("settings.deleteFailed")}
           </MDTypography>
-          <MDInput
-            fullWidth
-            label="Password"
-            value={password}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-            inputProps={{ type: "password", autoComplete: "" }}
-          />
-          {deleteMutation.isError && (
-            <MDBox mt={1}>
-              <MDTypography variant="caption" color="error" fontWeight="bold">
-                Could not delete account — check your password
-              </MDTypography>
-            </MDBox>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <MDButton variant="outlined" color="dark" size="small" onClick={handleClose}>
-            cancel
-          </MDButton>
-          <MDButton
-            variant="gradient"
-            color="error"
-            size="small"
-            onClick={handleConfirmDelete}
-            disabled={!password || deleteMutation.isPending}
-          >
-            {deleteMutation.isPending ? "deleting..." : "confirm delete"}
-          </MDButton>
-        </DialogActions>
-      </Dialog>
+        )}
+      </ConfirmDialogShell>
     </Card>
   );
 }

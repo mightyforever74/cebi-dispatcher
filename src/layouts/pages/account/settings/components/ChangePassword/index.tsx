@@ -1,29 +1,22 @@
 /**
-=========================================================
-* TulipFleet Dispatcher — Change Password
-=========================================================
-* Gercek API baglantisi: PUT /api/user/change-password.
-* Requirements listesi mobil ChangePasswordScreen.js'ten kanitli gercek
-* kurallarla degistirildi (ozel karakter/sayi kurallari MD2 demo idi, yoktu).
-=========================================================
-*/
-
+ * TulipFleet Dispatcher — Change Password
+ */
 import { useState } from "react";
 
-// @mui material components
 import Card from "@mui/material/Card";
 import Grid from "@mui/material/Grid";
 
-// Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import MDButton from "components/MDButton";
 import MDInput from "components/MDInput";
-
-// Real API
+import { useNotifications } from "components/Notifications";
 import { useChangePassword } from "hooks/useUserAccount";
+import { useT } from "i18n";
 
 function ChangePassword(): JSX.Element {
+  const { t } = useT();
+  const { notifyToast } = useNotifications();
   const changePasswordMutation = useChangePassword();
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -31,39 +24,24 @@ function ChangePassword(): JSX.Element {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formError, setFormError] = useState("");
 
-  const passwordRequirements = [
-    "Min 6 characters",
-    "New password and confirmation must match",
-    "New password must be different from current password",
-  ];
-
-  const renderPasswordRequirements = passwordRequirements.map((item, key) => {
-    const itemKey = `element-${key}`;
-    return (
-      <MDBox key={itemKey} component="li" color="text" fontSize="1.25rem" lineHeight={1}>
-        <MDTypography variant="button" color="text" fontWeight="regular" verticalAlign="middle">
-          {item}
-        </MDTypography>
-      </MDBox>
-    );
-  });
+  const requirements = [t("settings.reqMin"), t("settings.reqMatch"), t("settings.reqDifferent")];
 
   const handleUpdate = () => {
     setFormError("");
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setFormError("All fields are required");
+      setFormError(t("settings.allRequired"));
       return;
     }
     if (newPassword.length < 6) {
-      setFormError("New password must be at least 6 characters");
+      setFormError(t("settings.passwordMin"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setFormError("New passwords do not match");
+      setFormError(t("settings.passwordMismatch"));
       return;
     }
     if (currentPassword === newPassword) {
-      setFormError("New password must be different from current password");
+      setFormError(t("settings.passwordSame"));
       return;
     }
     changePasswordMutation.mutate(
@@ -73,7 +51,14 @@ function ChangePassword(): JSX.Element {
           setCurrentPassword("");
           setNewPassword("");
           setConfirmPassword("");
+          notifyToast({ type: "form_ok", title: t("notifyForm.passwordUpdated") });
         },
+        onError: () =>
+          notifyToast({
+            type: "form_err",
+            title: t("settings.passwordFailed"),
+            severity: "high",
+          }),
       }
     );
   };
@@ -81,74 +66,73 @@ function ChangePassword(): JSX.Element {
   return (
     <Card id="change-password">
       <MDBox p={3}>
-        <MDTypography variant="h5">Change Password</MDTypography>
+        <MDTypography variant="h5" component="h2">
+          {t("settings.passwordTitle")}
+        </MDTypography>
       </MDBox>
       <MDBox component="form" pb={3} px={3}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <MDInput
               fullWidth
-              label="Current Password"
+              label={t("settings.currentPassword")}
               value={currentPassword}
+              required
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setCurrentPassword(e.target.value)
               }
-              inputProps={{ type: "password", autoComplete: "" }}
+              inputProps={{ type: "password", autoComplete: "", "aria-required": true }}
             />
           </Grid>
           <Grid item xs={12}>
             <MDInput
               fullWidth
-              label="New Password"
+              label={t("settings.newPassword")}
               value={newPassword}
+              required
+              error={Boolean(formError)}
+              helperText={formError || undefined}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
-              inputProps={{ type: "password", autoComplete: "" }}
+              inputProps={{ type: "password", autoComplete: "", "aria-required": true }}
             />
           </Grid>
           <Grid item xs={12}>
             <MDInput
               fullWidth
-              label="Confirm New Password"
+              label={t("settings.confirmPassword")}
               value={confirmPassword}
+              required
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setConfirmPassword(e.target.value)
               }
-              inputProps={{ type: "password", autoComplete: "" }}
+              inputProps={{ type: "password", autoComplete: "", "aria-required": true }}
             />
           </Grid>
         </Grid>
-        {formError && (
-          <MDBox mt={1}>
-            <MDTypography variant="caption" color="error" fontWeight="bold">
-              {formError}
-            </MDTypography>
-          </MDBox>
-        )}
         {changePasswordMutation.isError && !formError && (
           <MDBox mt={1}>
             <MDTypography variant="caption" color="error" fontWeight="bold">
-              Could not change password — check your current password
-            </MDTypography>
-          </MDBox>
-        )}
-        {changePasswordMutation.isSuccess && (
-          <MDBox mt={1}>
-            <MDTypography variant="caption" color="success" fontWeight="bold">
-              Password updated
+              {t("settings.passwordFailed")}
             </MDTypography>
           </MDBox>
         )}
         <MDBox mt={6} mb={1}>
-          <MDTypography variant="h5">Password requirements</MDTypography>
+          <MDTypography variant="h5">{t("settings.passwordRequirements")}</MDTypography>
         </MDBox>
         <MDBox mb={1}>
           <MDTypography variant="body2" color="text">
-            Please follow this guide for a strong password
+            {t("settings.passwordGuide")}
           </MDTypography>
         </MDBox>
         <MDBox display="flex" justifyContent="space-between" alignItems="flex-end" flexWrap="wrap">
           <MDBox component="ul" m={0} pl={3.25} mb={{ xs: 8, sm: 0 }}>
-            {renderPasswordRequirements}
+            {requirements.map((item) => (
+              <MDBox key={item} component="li" color="text" fontSize="1.25rem" lineHeight={1}>
+                <MDTypography variant="button" color="text" fontWeight="regular" verticalAlign="middle">
+                  {item}
+                </MDTypography>
+              </MDBox>
+            ))}
           </MDBox>
           <MDBox ml="auto">
             <MDButton
@@ -158,7 +142,7 @@ function ChangePassword(): JSX.Element {
               onClick={handleUpdate}
               disabled={changePasswordMutation.isPending}
             >
-              {changePasswordMutation.isPending ? "updating..." : "update password"}
+              {changePasswordMutation.isPending ? t("settings.updating") : t("settings.updatePassword")}
             </MDButton>
           </MDBox>
         </MDBox>

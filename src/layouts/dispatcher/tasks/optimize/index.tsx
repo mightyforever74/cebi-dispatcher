@@ -84,6 +84,8 @@ import MDDatePicker from "components/MDDatePicker";
 
 // Konum arama (HERE Discover proxy)
 import LocationSearchInput, { LocationValue } from "components/LocationSearchInput";
+import { useNotifications } from "components/Notifications";
+import { brand, dialog, paletteDark, paletteLight } from "assets/theme/tokens";
 
 // Material Dashboard 2 PRO React context (dark mode)
 import { useMaterialUIController } from "context";
@@ -143,7 +145,7 @@ import {
 } from "types/metadata";
 
 // FEAT-010:FN-18/FN-20 - karar logu (ML-analiz veri temeli; best-effort, approve'u bloke etmez)
-import { formatDateTime } from "i18n";
+import { formatDateTime, formatDurationMinutes, formatNumber, parseDecimal, useT, type TFunction, type TranslationKey } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 import { postDecisionLog } from "services/dispatch/decisionLog";
 import OverrideReasonDialog from "components/OverrideReasonDialog";
@@ -151,6 +153,39 @@ import OverrideReasonDialog from "components/OverrideReasonDialog";
 import ConflictOverrideModal from "components/ConflictOverrideModal";
 // BUG-2 - bulk fan-out onay kapisi (yalniz N>1 arac seciminde acilir)
 import BulkConfirmDialog from "components/BulkConfirmDialog";
+
+const SKILL_KEY: Record<string, TranslationKey> = {
+  "ADR Lisansi": "optimize.skillAdr",
+  "Soguk Zincir Tecrubesi": "optimize.skillCold",
+  "Vinc / Kaldirma": "optimize.skillCrane",
+  "Tank Konteyner": "optimize.skillTank",
+};
+
+function directionLabel(value: TaskDirection, translate: TFunction): string {
+  return value === "inbound" ? translate("optimize.directionInbound") : translate("optimize.directionOutbound");
+}
+
+function locationLabel(value: TaskLocationType, translate: TFunction): string {
+  if (value === "depot") return translate("optimize.locationDepot");
+  if (value === "locker") return translate("optimize.locationLocker");
+  return translate("optimize.locationCustomer");
+}
+
+function hazmatLabel(cls: string, translate: TFunction): string {
+  const n = cls.replace(/\D/g, "");
+  return n ? translate("optimize.hazmatClass", { n }) : cls;
+}
+
+function skillLabel(skill: string, translate: TFunction): string {
+  const key = SKILL_KEY[skill];
+  return key ? translate(key) : skill;
+}
+
+function scorerLabel(id: string, translate: TFunction): string {
+  const key = `optimize.scorer${id.charAt(0).toUpperCase()}${id.slice(1)}` as TranslationKey;
+  const label = translate(key);
+  return label === key ? id : label;
+}
 
 const emptyLocation: LocationValue = { address: "", latitude: null, longitude: null };
 
@@ -258,13 +293,6 @@ function buildBoard(
   return { columns };
 }
 
-/** Dakika -> "X sa Y dk" (60 altinda: "Y dk"). */
-function fmtDurationMin(totalMin: number): string {
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  return h > 0 ? `${h} sa ${m} dk` : `${m} dk`;
-}
-
 // Gorev kisitlari + Zaman Araligi — tema bilesenleriyle (04.08 UX turu):
 // sol kart: DefaultItem satirlari (widgets/UpcomingEvents deseni),
 // sag kart: TimelineList/TimelineItem (widgets/OrdersOverview deseni).
@@ -278,38 +306,37 @@ function ConstraintsSummary({
   c: StrictTaskConstraints;
   darkMode: boolean;
 }): JSX.Element {
+  const { t } = useT();
   const cap = c.capacity_required;
   const ext = c.extended;
-  const dirLabel =
-    DIRECTION_OPTIONS.find((o) => o.value === ext.direction)?.label ?? ext.direction;
-  const locLabel =
-    LOCATION_TYPE_OPTIONS.find((o) => o.value === ext.location_type)?.label ?? ext.location_type;
+  const dirLabel = directionLabel(ext.direction, t);
+  const locLabel = locationLabel(ext.location_type, t);
   const fmt = (iso: string | null) => (iso ? formatDateTime(iso) : null);
   const wStart = fmt(ext.time_window_start);
   const wEnd = fmt(ext.time_window_end);
 
   const rows: { icon: string; title: string; desc: string }[] = [
-    { icon: "local_shipping", title: dirLabel, desc: "Görev yönü" },
-    { icon: "location_on", title: locLabel, desc: "Konum tipi" },
+    { icon: "local_shipping", title: dirLabel, desc: t("optimize.fieldDirection") },
+    { icon: "location_on", title: locLabel, desc: t("optimize.fieldLocationType") },
     ...(cap.volume_m3 != null
-      ? [{ icon: "view_in_ar", title: `${cap.volume_m3} m³`, desc: "Hacim" }]
+      ? [{ icon: "view_in_ar", title: t("optimize.volumeValue", { n: cap.volume_m3 }), desc: t("optimize.fieldVolume") }]
       : []),
     ...(cap.weight_kg != null
-      ? [{ icon: "scale", title: `${cap.weight_kg} kg`, desc: "Ağırlık" }]
+      ? [{ icon: "scale", title: t("optimize.weightValue", { n: cap.weight_kg }), desc: t("optimize.fieldWeight") }]
       : []),
     cap.hazmat_classes.length
       ? {
           icon: "science",
-          title: `ADR: ${cap.hazmat_classes.join(", ")}`,
-          desc: "Tehlikeli madde",
+          title: t("optimize.hazmatAdr", { list: cap.hazmat_classes.map((cls) => hazmatLabel(cls, t)).join(", ") }),
+          desc: t("optimize.fieldHazmat"),
         }
-      : { icon: "science", title: "Hazmat yok", desc: "Tehlikeli madde beyanı" },
+      : { icon: "science", title: t("optimize.hazmatNone"), desc: t("optimize.hazmatDeclaration") },
     ...(c.skill_required.length
       ? [
           {
             icon: "engineering",
-            title: c.skill_required.join(", "),
-            desc: "Sürücü yetkinliği",
+            title: c.skill_required.map((s) => skillLabel(s, t)).join(", "),
+            desc: t("optimize.fieldSkill"),
           },
         ]
       : []),
@@ -321,10 +348,10 @@ function ConstraintsSummary({
         <Card sx={{ height: "100%" }}>
           <MDBox pt={2} px={2} lineHeight={1}>
             <MDTypography variant="h6" fontWeight="medium">
-              Görev Kısıtları
+              {t("optimize.constraintsCardTitle")}
             </MDTypography>
             <MDTypography variant="button" color="text" fontWeight="regular">
-              Karar Destek Asistanı&apos;na beslenen
+              {t("optimize.constraintsCardHint")}
             </MDTypography>
           </MDBox>
           <MDBox p={2}>
@@ -337,31 +364,30 @@ function ConstraintsSummary({
         </Card>
       </Grid>
       <Grid item xs={12} md={5}>
-        {/* UX (04.08): tarih rakamlari KPI boyutunda — bilesen forklanmadi,
-            kapsamli stil override (yalniz bu kartin caption'lari). */}
         <MDBox
           sx={{
             height: "100%",
             "& .MuiTypography-caption": {
               fontSize: "1.25rem",
               fontWeight: 700,
-              color: "#fff",
+              color: paletteLight.white,
               lineHeight: 1.3,
+              fontVariantNumeric: "tabular-nums",
             },
           }}
         >
-          <TimelineList title="Zaman Aralığı" dark={darkMode}>
+          <TimelineList title={t("optimize.timeRange")} dark={darkMode}>
             <TimelineItem
               color="success"
               icon="play_arrow"
-              title="Başlangıç"
-              dateTime={wStart ?? "Belirtilmedi"}
+              title={t("optimize.start")}
+              dateTime={wStart ?? t("optimize.unspecified")}
             />
             <TimelineItem
               color="error"
               icon="flag"
-              title="Bitiş"
-              dateTime={wEnd ?? "Belirtilmedi"}
+              title={t("optimize.end")}
+              dateTime={wEnd ?? t("optimize.unspecified")}
               lastItem
             />
           </TimelineList>
@@ -381,6 +407,7 @@ function VehicleRowHeader({
   // UX turu (04.08, Cem R2): Popover yerine satir-alti akordeon — z-index
   // savasi biter, alt siradaki araclar ASLA ortulmez.
   const [expanded, setExpanded] = useState(false);
+  const { t } = useT();
   const { title, scoreChip, scoreMemo, rank, cards, badges } = column;
   const scoreNum = scoreChip ? Number(scoreChip) : null;
   // K-A (Cem onayli): >=80 yesil, 50-79 amber, <50 gri.
@@ -401,7 +428,7 @@ function VehicleRowHeader({
         justifyContent="space-between"
         pb={1}
         sx={{
-          borderBottom: darkMode ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid #d2d6da",
+          borderBottom: darkMode ? `1px solid ${dialog.dark.border}` : `1px solid ${paletteLight.grey[300]}`,
         }}
       >
         <MDBox display="flex" alignItems="center" gap={1.5}>
@@ -414,7 +441,7 @@ function VehicleRowHeader({
             {title}
           </MDTypography>
           <MDTypography variant="caption" color="text">
-            {cards.length} gorev
+            {t("optimize.taskCount", { count: cards.length })}
           </MDTypography>
         </MDBox>
         <MDBox display="flex" alignItems="center" gap={1} flexWrap="wrap" justifyContent="flex-end">
@@ -440,7 +467,7 @@ function VehicleRowHeader({
             <IconButton
               size="small"
               onClick={() => setExpanded((v) => !v)}
-              sx={{ color: darkMode ? "rgba(255,255,255,0.7)" : "inherit" }}
+              sx={{ color: darkMode ? dialog.dark.textMuted : "inherit" }}
             >
               <Icon fontSize="small">{expanded ? "expand_less" : "info_outlined"}</Icon>
             </IconButton>
@@ -454,12 +481,12 @@ function VehicleRowHeader({
             p={1.5}
             sx={{
               borderRadius: "10px",
-              border: darkMode ? "1px solid rgba(255,255,255,0.15)" : "1px solid #d2d6da",
-              bgcolor: darkMode ? "rgba(255,255,255,0.03)" : "#f8f9fa",
+              border: darkMode ? `1px solid ${dialog.dark.border}` : `1px solid ${paletteLight.grey[300]}`,
+              bgcolor: darkMode ? dialog.dark.cardWash : paletteLight.grey[100],
             }}
           >
             <MDTypography variant="button" fontWeight="bold" display="block" mb={0.5}>
-              Akilli Karar Notu
+              {t("optimize.smartNote")}
             </MDTypography>
             <MDTypography variant="caption" color="text">
               {scoreMemo}
@@ -472,6 +499,8 @@ function VehicleRowHeader({
 }
 
 function OptimizeTask(): JSX.Element {
+  const { t, lang } = useT();
+  const { notifyToast } = useNotifications();
   const navigate = useNavigate();
   const { data: vehicles = [], isLoading: loadingVehicles } = useVehicles();
   const [controller] = useMaterialUIController();
@@ -482,7 +511,7 @@ function OptimizeTask(): JSX.Element {
   const [pickup, setPickup] = useState<LocationValue>(emptyLocation);
   const [dropoff, setDropoff] = useState<LocationValue>(emptyLocation);
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
-  const [formError, setFormError] = useState("");
+  const [fieldError, setFieldError] = useState<{ pickup?: string; dropoff?: string; vehicles?: string }>({});
   const [jobId, setJobId] = useState<string | null>(null);
   // BUG-2: conflicts alani eklendi — kismi basari ozeti bu state'ten beslenir.
   const [approveSuccess, setApproveSuccess] = useState<{
@@ -568,8 +597,8 @@ function OptimizeTask(): JSX.Element {
   // Form state'inden StrictTaskConstraints uretir (tek kontrat).
   const collectConstraints = (): StrictTaskConstraints => ({
     capacity_required: {
-      volume_m3: volumeM3.trim() === "" ? null : Number(volumeM3),
-      weight_kg: weightKg.trim() === "" ? null : Number(weightKg),
+      volume_m3: volumeM3.trim() === "" ? null : parseDecimal(volumeM3, lang),
+      weight_kg: weightKg.trim() === "" ? null : parseDecimal(weightKg, lang),
       hazmat_classes: hazmatClasses,
     },
     skill_required: skills,
@@ -618,20 +647,23 @@ function OptimizeTask(): JSX.Element {
         onSuccess: (data) => {
           setJobId(data.jobId);
         },
+        onError: () => {
+          notifyToast({ type: "form_err", title: t("notifyForm.submitFailed"), severity: "high" });
+        },
       }
     );
   };
 
   const handleSubmit = () => {
-    setFormError("");
+    setFieldError({});
     setApproveSuccess(null);
 
-    if (!validLocation(pickup) || !validLocation(dropoff)) {
-      setFormError("Pickup and dropoff must be selected from the search suggestions.");
-      return;
-    }
-    if (selectedVehicleIds.length === 0) {
-      setFormError("Select at least one vehicle.");
+    const next: { pickup?: string; dropoff?: string; vehicles?: string } = {};
+    if (!validLocation(pickup)) next.pickup = t("optimize.errorPickupDropoff");
+    if (!validLocation(dropoff)) next.dropoff = t("optimize.errorPickupDropoff");
+    if (selectedVehicleIds.length === 0) next.vehicles = t("optimize.errorVehicles");
+    if (next.pickup || next.dropoff || next.vehicles) {
+      setFieldError(next);
       return;
     }
 
@@ -739,7 +771,11 @@ function OptimizeTask(): JSX.Element {
                     scoringTasks[0].pickup.lat,
                     scoringTasks[0].pickup.lng
                   );
-                  badges.push({ icon: "place", text: `${km.toFixed(1)} km`, tone: "neutral" });
+                  badges.push({
+                    icon: "place",
+                    text: t("common.distanceKm", { value: formatNumber(km, lang, { maximumFractionDigits: 1 }) }),
+                    tone: "neutral",
+                  });
                 }
                 const cRow = s?.compliance;
                 if (cRow) {
@@ -748,11 +784,11 @@ function OptimizeTask(): JSX.Element {
                     cRow.status === "exempt_auto" ||
                     cRow.status === "exempt_granted"
                   ) {
-                    badges.push({ icon: "eco", text: "ZE Uyumlu", tone: "good" });
+                    badges.push({ icon: "eco", text: t("optimize.zeCompliant"), tone: "good" });
                   } else if (cRow.status === "needs_exemption") {
-                    badges.push({ icon: "report_problem", text: "Muafiyet Gerekli", tone: "warn" });
+                    badges.push({ icon: "report_problem", text: t("optimize.exemptionNeeded"), tone: "warn" });
                   } else if (cRow.status === "blocked") {
-                    badges.push({ icon: "block", text: "Giris Engelli", tone: "warn" });
+                    badges.push({ icon: "block", text: t("optimize.entryBlocked"), tone: "warn" });
                   }
                   if (cRow.heffing && cRow.heffing.matched) {
                     badges.push({
@@ -772,7 +808,7 @@ function OptimizeTask(): JSX.Element {
       setInitialBoard(buildBoard(result.tasks, orderedIds, vehicleLabels, currentAssignments, scoreById));
       setBoardEpoch((e) => e + 1);
     },
-    [result, scoringTasks, vehicleLabels, buildSnapshots, locationsQuery.data]
+    [result, scoringTasks, vehicleLabels, buildSnapshots, locationsQuery.data, t]
   );
 
   // Regulasyon (04.08): assess sonucu board kurulumundan SONRA gelirse
@@ -902,6 +938,11 @@ function OptimizeTask(): JSX.Element {
             pushed: (prev?.pushed ?? 0) + data.pushed,
             conflicts: data.conflicts ?? [],
           }));
+          notifyToast({
+            type: "form_ok",
+            title: t("notifyForm.approved"),
+            body: t("optimize.approved", { count: (0 + data.pushed) }),
+          });
           // FEAT-010:FN-18 - karar logu, approve BASARISINDAN sonra, best-effort
           // (no-throw sozlesmesi postDecisionLog icinde; approve asla bloke olmaz).
           const lr = lastRankedRef.current;
@@ -980,7 +1021,7 @@ function OptimizeTask(): JSX.Element {
     setSelectedVehicleIds([]);
     setJobId(null);
     setApproveSuccess(null);
-    setFormError("");
+    setFieldError({});
     setInitialBoard(null);
     setAssignments(new Map());
     setRankingMode("spatial");
@@ -1022,44 +1063,57 @@ function OptimizeTask(): JSX.Element {
       <DashboardNavbar />
       <MDBox p={3}>
         <MDBox display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-          <MDTypography variant="h5">New Task — Route Optimization</MDTypography>
+          <MDTypography variant="h5" component="h2">
+            {t("optimize.title")}
+          </MDTypography>
           <MDButton variant="outlined" color="dark" size="small" onClick={() => navigate("/dispatcher/tasks")}>
-            back to tasks
+            {t("optimize.back")}
           </MDButton>
         </MDBox>
 
         <Alert severity="info" sx={{ mb: 3 }}>
-          Test mode active: the optimization engine is currently a mock (HERE Tour Planning
-          integration is planned but not yet built). The initial vehicle layout below is
-          simulated to match the backend, but you can drag any task to a different vehicle
-          before approving.
+          {t("optimize.mockBanner")}
         </Alert>
 
         {!jobId && (
           <Card sx={{ p: 3 }}>
             <MDTypography variant="h6" mb={2}>
-              Pickup
+              {t("optimize.pickup")} *
             </MDTypography>
             <Grid container spacing={2} mb={3}>
               <Grid item xs={12}>
-                <LocationSearchInput label="Search pickup address" value={pickup} onValueChange={setPickup} />
+                <LocationSearchInput
+                  label={t("optimize.pickupSearch")}
+                  value={pickup}
+                  onValueChange={setPickup}
+                  required
+                  error={Boolean(fieldError.pickup)}
+                  helperText={fieldError.pickup}
+                />
               </Grid>
             </Grid>
 
             <MDTypography variant="h6" mb={2}>
-              Dropoff
+              {t("optimize.dropoff")} *
             </MDTypography>
             <Grid container spacing={2} mb={3}>
               <Grid item xs={12}>
-                <LocationSearchInput label="Search dropoff address" value={dropoff} onValueChange={setDropoff} />
+                <LocationSearchInput
+                  label={t("optimize.dropoffSearch")}
+                  value={dropoff}
+                  onValueChange={setDropoff}
+                  required
+                  error={Boolean(fieldError.dropoff)}
+                  helperText={fieldError.dropoff}
+                />
               </Grid>
             </Grid>
 
             <MDTypography variant="h6" mb={1}>
-              Vehicles
+              {t("optimize.vehicles")} *
             </MDTypography>
-            {loadingVehicles && <MDTypography variant="caption">Loading vehicles...</MDTypography>}
-            <MDBox display="flex" flexWrap="wrap" gap={1} mb={3}>
+            {loadingVehicles && <MDTypography variant="caption">{t("optimize.loadingVehicles")}</MDTypography>}
+            <MDBox display="flex" flexWrap="wrap" gap={1} mb={1} role="group" aria-label={t("optimize.vehicles")}>
               {vehicles.map((v: Vehicle) => (
                 <FormControlLabel
                   key={v.id}
@@ -1073,24 +1127,25 @@ function OptimizeTask(): JSX.Element {
                 />
               ))}
             </MDBox>
+            {fieldError.vehicles && (
+              <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
+                {fieldError.vehicles}
+              </MDTypography>
+            )}
 
             <Divider sx={{ my: 2 }} />
 
-            {/* ===== Logistics & Constraints (Strateji 3 + Form UX v2) ===== */}
             <MDTypography variant="h6" mb={0.5}>
-              Logistics &amp; Constraints
+              {t("optimize.constraintsTitle")}
             </MDTypography>
             <MDTypography variant="caption" color="text" display="block" mb={2}>
-              Kapasite ve yetkinlik goreve muhurlenir (capacity_required jsonb + skill_required).
-              Yon, konum tipi ve teslim penceresi bu oturumda Karar Destek Asistanina beslenir
-              (frontend-state) — DB semasi degismez.
+              {t("optimize.constraintsHint")}
             </MDTypography>
 
             <Grid container spacing={2} mb={1}>
-              {/* --- Yon: ikonlu segmented toggle (Form UX v2) --- */}
               <Grid item xs={12} md={5}>
                 <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
-                  Yon
+                  {t("optimize.direction")}
                 </MDTypography>
                 <ToggleButtonGroup
                   value={direction}
@@ -1101,19 +1156,18 @@ function OptimizeTask(): JSX.Element {
                 >
                   {DIRECTION_OPTIONS.map((o) => (
                     <ToggleButton key={o.value} value={o.value} sx={{ textTransform: "none" }}>
-                      <Icon sx={{ mr: 0.5 }} fontSize="small">
+                      <Icon sx={{ mr: 0.5 }} fontSize="small" aria-hidden>
                         {DIRECTION_ICONS[o.value]}
                       </Icon>
-                      {o.label}
+                      {directionLabel(o.value, t)}
                     </ToggleButton>
                   ))}
                 </ToggleButtonGroup>
               </Grid>
 
-              {/* --- Konum Tipi: ikonlu segmented toggle (Form UX v2) --- */}
               <Grid item xs={12} md={7}>
                 <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
-                  Konum Tipi
+                  {t("optimize.locationType")}
                 </MDTypography>
                 <ToggleButtonGroup
                   value={locationType}
@@ -1124,10 +1178,10 @@ function OptimizeTask(): JSX.Element {
                 >
                   {LOCATION_TYPE_OPTIONS.map((o) => (
                     <ToggleButton key={o.value} value={o.value} sx={{ textTransform: "none" }}>
-                      <Icon sx={{ mr: 0.5 }} fontSize="small">
+                      <Icon sx={{ mr: 0.5 }} fontSize="small" aria-hidden>
                         {LOCTYPE_ICONS[o.value]}
                       </Icon>
-                      {o.label}
+                      {locationLabel(o.value, t)}
                     </ToggleButton>
                   ))}
                 </ToggleButtonGroup>
@@ -1136,29 +1190,28 @@ function OptimizeTask(): JSX.Element {
               <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   fullWidth
-                  type="number"
-                  label="Hacim (m³)"
+                  label={t("optimize.volume")}
                   value={volumeM3}
                   onChange={(e) => setVolumeM3(e.target.value)}
-                  inputProps={{ min: 0, step: "0.1" }}
+                  inputProps={{ inputMode: "decimal", min: 0 }}
+                  sx={{ "& input": { fontVariantNumeric: "tabular-nums" } }}
                 />
               </Grid>
 
               <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   fullWidth
-                  type="number"
-                  label="Agirlik (kg)"
+                  label={t("optimize.weight")}
                   value={weightKg}
                   onChange={(e) => setWeightKg(e.target.value)}
-                  inputProps={{ min: 0, step: "1" }}
+                  inputProps={{ inputMode: "decimal", min: 0 }}
+                  sx={{ "& input": { fontVariantNumeric: "tabular-nums" } }}
                 />
               </Grid>
 
-              {/* --- Hazmat: tiklanabilir chip-grid (Form UX v2). Hicbiri secili = yok --- */}
               <Grid item xs={12} md={6}>
                 <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
-                  Hazmat siniflari (ADR) — secili yoksa tehlikeli madde yok
+                  {t("optimize.hazmatTitle")}
                 </MDTypography>
                 <MDBox display="flex" flexWrap="wrap" gap={0.75}>
                   {HAZMAT_CLASS_OPTIONS.map((cls) => {
@@ -1166,7 +1219,7 @@ function OptimizeTask(): JSX.Element {
                     return (
                       <Chip
                         key={cls}
-                        label={cls}
+                        label={hazmatLabel(cls, t)}
                         size="small"
                         clickable
                         color={selected ? "warning" : "default"}
@@ -1178,10 +1231,9 @@ function OptimizeTask(): JSX.Element {
                 </MDBox>
               </Grid>
 
-              {/* --- Yetkinlik: chip-grid + serbest ekleme (Form UX v2) --- */}
               <Grid item xs={12}>
                 <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
-                  Surucu yetkinlikleri — secili yoksa yetkinlik aranmiyor
+                  {t("optimize.skillsTitle")}
                 </MDTypography>
                 <MDBox display="flex" flexWrap="wrap" gap={0.75} alignItems="center">
                   {SKILL_OPTIONS.map((s) => {
@@ -1189,7 +1241,7 @@ function OptimizeTask(): JSX.Element {
                     return (
                       <Chip
                         key={s}
-                        label={s}
+                        label={skillLabel(s, t)}
                         size="small"
                         clickable
                         color={selected ? "info" : "default"}
@@ -1198,7 +1250,6 @@ function OptimizeTask(): JSX.Element {
                       />
                     );
                   })}
-                  {/* Ozel (listede olmayan) yetkinlikler - silinebilir */}
                   {skills
                     .filter((s) => !SKILL_OPTIONS.includes(s))
                     .map((s) => (
@@ -1212,7 +1263,7 @@ function OptimizeTask(): JSX.Element {
                     ))}
                   <TextField
                     size="small"
-                    placeholder="Ozel yetkinlik ekle"
+                    placeholder={t("optimize.skillPlaceholder")}
                     value={customSkill}
                     onChange={(e) => setCustomSkill(e.target.value)}
                     onKeyDown={(e) => {
@@ -1223,30 +1274,31 @@ function OptimizeTask(): JSX.Element {
                     }}
                     sx={{ width: 190 }}
                   />
-                  <IconButton size="small" onClick={addCustomSkill} aria-label="yetkinlik ekle">
-                    <Icon fontSize="small">add_circle_outline</Icon>
+                  <IconButton size="small" onClick={addCustomSkill} aria-label={t("optimize.skillAddAria")}>
+                    <Icon fontSize="small" aria-hidden>
+                      add_circle_outline
+                    </Icon>
                   </IconButton>
                 </MDBox>
               </Grid>
 
-              {/* --- VRPTW zaman penceresi: MDDatePicker + preset chip'ler (Form UX v2) --- */}
               <Grid item xs={12} sm={6}>
                 <MDDatePicker
                   value={timeWindowStart ?? ""}
                   onChange={(dates: Date[]) => setTimeWindowStart(dates[0] ?? null)}
                   options={pickerOptions}
                   input={{
-                    label: "Teslim penceresi baslangic (VRPTW)",
+                    label: t("optimize.windowStart"),
                     fullWidth: true,
                     InputLabelProps: { shrink: true },
                   }}
                 />
                 <MDBox display="flex" flexWrap="wrap" gap={0.5} mt={0.75}>
-                  <Chip label="Simdi" size="small" clickable variant="outlined" onClick={() => setTimeWindowStart(new Date())} />
-                  <Chip label="+1 saat" size="small" clickable variant="outlined" onClick={() => setTimeWindowStart(hoursFromNow(1))} />
+                  <Chip label={t("optimize.presetNow")} size="small" clickable variant="outlined" onClick={() => setTimeWindowStart(new Date())} />
+                  <Chip label={t("optimize.presetPlus1h")} size="small" clickable variant="outlined" onClick={() => setTimeWindowStart(hoursFromNow(1))} />
                   {timeWindowStart && (
                     <Chip
-                      label={`Secili: ${fmtChip(timeWindowStart)}`}
+                      label={t("optimize.selectedWhen", { when: fmtChip(timeWindowStart) ?? "" })}
                       size="small"
                       color="info"
                       onDelete={() => setTimeWindowStart(null)}
@@ -1261,18 +1313,18 @@ function OptimizeTask(): JSX.Element {
                   onChange={(dates: Date[]) => setTimeWindowEnd(dates[0] ?? null)}
                   options={{ ...pickerOptions, minDate: timeWindowStart ?? undefined }}
                   input={{
-                    label: "Teslim penceresi bitis (VRPTW)",
+                    label: t("optimize.windowEnd"),
                     fullWidth: true,
                     InputLabelProps: { shrink: true },
                   }}
                 />
                 <MDBox display="flex" flexWrap="wrap" gap={0.5} mt={0.75}>
-                  <Chip label="Bugun 17:00" size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(todayAt(17))} />
-                  <Chip label="+2 saat" size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(hoursFromNow(2))} />
-                  <Chip label="Yarin 09:00" size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(tomorrowAt(9))} />
+                  <Chip label={t("optimize.presetToday17")} size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(todayAt(17))} />
+                  <Chip label={t("optimize.presetPlus2h")} size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(hoursFromNow(2))} />
+                  <Chip label={t("optimize.presetTomorrow09")} size="small" clickable variant="outlined" onClick={() => setTimeWindowEnd(tomorrowAt(9))} />
                   {timeWindowEnd && (
                     <Chip
-                      label={`Secili: ${fmtChip(timeWindowEnd)}`}
+                      label={t("optimize.selectedWhen", { when: fmtChip(timeWindowEnd) ?? "" })}
                       size="small"
                       color="info"
                       onDelete={() => setTimeWindowEnd(null)}
@@ -1283,14 +1335,9 @@ function OptimizeTask(): JSX.Element {
             </Grid>
 
             <MDBox mt={2}>
-              {formError && (
-                <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
-                  {formError}
-                </MDTypography>
-              )}
               {submitMutation.isError && (
                 <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
-                  Could not submit optimization — try again
+                  {t("optimize.submitFailed")}
                 </MDTypography>
               )}
 
@@ -1300,7 +1347,7 @@ function OptimizeTask(): JSX.Element {
                 onClick={handleSubmit}
                 disabled={submitMutation.isPending}
               >
-                {submitMutation.isPending ? "Submitting..." : "Optimize Route"}
+                {submitMutation.isPending ? t("optimize.submitting") : t("optimize.submit")}
               </MDButton>
             </MDBox>
           </Card>
@@ -1309,11 +1356,10 @@ function OptimizeTask(): JSX.Element {
         {jobId && (
           <Card sx={{ p: 3 }}>
             <MDBox display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-              <MDTypography variant="h6">Optimization Job</MDTypography>
-              {/* UX (04.08): Job ID odak disina — silik, tikla-kopyala (tam ID panoya) */}
+              <MDTypography variant="h6">{t("optimize.jobTitle")}</MDTypography>
               <MDTypography
                 variant="caption"
-                title={jobId ? `Panoya kopyala: ${jobId}` : ""}
+                title={jobId ? t("optimize.copyJobId", { id: jobId }) : ""}
                 onClick={() => {
                   if (jobId && navigator.clipboard) {
                     navigator.clipboard.writeText(jobId).catch(() => {});
@@ -1334,7 +1380,7 @@ function OptimizeTask(): JSX.Element {
               <MDBox display="flex" alignItems="center" gap={2} mb={2}>
                 <CircularProgress size={20} />
                 <MDTypography variant="body2">
-                  Status: {status || "submitted"}...
+                  {t("optimize.statusLine", { status: status || "submitted" })}
                 </MDTypography>
               </MDBox>
             )}
@@ -1348,18 +1394,18 @@ function OptimizeTask(): JSX.Element {
                     <ComplexStatisticsCard
                       color="info"
                       icon="route"
-                      title="Toplam Mesafe"
-                      count={`${(result.summary.total_distance_meters / 1000).toFixed(1)} km`}
-                      percentage={{ color: "secondary", amount: "", label: "rota özeti" }}
+                      title={t("optimize.kpiDistance")}
+                      count={`${formatNumber(result.summary.total_distance_meters / 1000, lang, { maximumFractionDigits: 1 })} km`}
+                      percentage={{ color: "secondary", amount: "", label: t("optimize.kpiDistanceHint") }}
                     />
                   </MDBox>
                   <MDBox sx={{ width: 240 }}>
                     <ComplexStatisticsCard
                       color="primary"
                       icon="schedule"
-                      title="Tahmini Süre"
-                      count={fmtDurationMin(Math.round(result.summary.total_duration_seconds / 60))}
-                      percentage={{ color: "secondary", amount: "", label: "optimizasyon çıktısı" }}
+                      title={t("optimize.kpiDuration")}
+                      count={formatDurationMinutes(Math.round(result.summary.total_duration_seconds / 60), lang)}
+                      percentage={{ color: "secondary", amount: "", label: t("optimize.kpiDurationHint") }}
                     />
                   </MDBox>
                 </MDBox>
@@ -1374,8 +1420,8 @@ function OptimizeTask(): JSX.Element {
                 {assessQuery.data?.eu_hint && (
                   <MDBox
                     sx={{
-                      border: "1px solid #7C3AED",
-                      bgcolor: "rgba(124,58,237,0.08)",
+                      border: `1px solid ${brand.primary}`,
+                      bgcolor: dialog.accentBg,
                       borderRadius: "10px",
                       p: 1.5,
                       mb: 2,
@@ -1391,7 +1437,7 @@ function OptimizeTask(): JSX.Element {
                   <>
                     <MDBox display="flex" alignItems="center" flexWrap="wrap" gap={2} mb={1}>
                       <MDTypography variant="button" fontWeight="bold">
-                        Rank vehicles by
+                        {t("optimize.rankBy")}
                       </MDTypography>
                       {/* UX (04.08): notifications sayfasi deseni — renkli
                           gradyan butonlar; secili=dolu, digerleri=outlined,
@@ -1415,7 +1461,7 @@ function OptimizeTask(): JSX.Element {
                               disabled={!s.available}
                               onClick={() => handleModeChange(null, s.id as RankingMode)}
                             >
-                              {s.available ? s.label : s.label + " 🔒 Yakinda"}
+                              {s.available ? scorerLabel(s.id, t) : t("optimize.comingSoon", { label: scorerLabel(s.id, t) })}
                             </MDButton>
                           );
                         })}
@@ -1426,13 +1472,11 @@ function OptimizeTask(): JSX.Element {
                         size="small"
                         onClick={handleRefreshRanking}
                       >
-                        Siralamayi Guncelle
+                        {t("optimize.refreshRanking")}
                       </MDButton>
                     </MDBox>
                     <MDTypography variant="button" fontWeight="bold" display="block" mt={1.5} mb={2}>
-                      Vehicles are listed top to bottom, best match first for the selected
-                      criterion. Drag a task onto another vehicle row to reassign it — ranking
-                      never changes assignments; only you do.
+                      {t("optimize.kanbanHint")}
                     </MDTypography>
                     <MDBox
                       position="relative"
@@ -1455,8 +1499,8 @@ function OptimizeTask(): JSX.Element {
                           margin: "0 0 12px 0 !important",
                           padding: "12px 16px",
                           borderRadius: "8px",
-                          backgroundColor: darkMode ? "rgba(255, 255, 255, 0.06)" : "#f8f9fa",
-                          border: darkMode ? "1px solid rgba(255, 255, 255, 0.15)" : "1px solid #d2d6da",
+                          backgroundColor: darkMode ? dialog.dark.cardWash : paletteLight.grey[100],
+                          border: darkMode ? `1px solid ${dialog.dark.border}` : `1px solid ${paletteLight.grey[300]}`,
                           boxShadow: "none",
                         },
                       }}
@@ -1473,7 +1517,7 @@ function OptimizeTask(): JSX.Element {
                           <MDBox
                             key={id}
                             display="block"
-                            bgColor={darkMode ? "#2c3c58" : "white"}
+                            bgColor={darkMode ? paletteDark.darkFocus : "white"}
                             color="text"
                             borderRadius="md"
                             mt={1}
@@ -1481,8 +1525,8 @@ function OptimizeTask(): JSX.Element {
                             px={1.25}
                             sx={{
                               border: darkMode
-                                ? "1px solid rgba(255, 255, 255, 0.2)"
-                                : "1px solid #d2d6da",
+                                ? `1px solid ${dialog.dark.border}`
+                                : `1px solid ${paletteLight.grey[300]}`,
                               boxShadow: "none",
                               fontSize: ({ typography: { size } }: any) => size.sm,
                               cursor: "grab",
@@ -1502,14 +1546,14 @@ function OptimizeTask(): JSX.Element {
                   </>
                 ) : (
                   <MDTypography variant="button" fontWeight="bold" display="block" mb={1}>
-                    Vehicles available for assignment ({result.available_vehicles.length})
+                    {t("optimize.vehiclesAvailable", { count: result.available_vehicles.length })}
                   </MDTypography>
                 )}
 
                 {approveMutation.isError &&
                   !(approveMutation.error instanceof ApproveConflictError) && (
                     <MDTypography variant="caption" color="error" fontWeight="bold" display="block" mb={2}>
-                      Could not approve plan — try again
+                      {t("optimize.approveFailed")}
                     </MDTypography>
                   )}
                 <MDButton
@@ -1518,7 +1562,7 @@ function OptimizeTask(): JSX.Element {
                   onClick={handleApprove}
                   disabled={approveMutation.isPending}
                 >
-                  {approveMutation.isPending ? "Approving..." : "Approve Plan"}
+                  {approveMutation.isPending ? t("optimize.approving") : t("optimize.approve")}
                 </MDButton>
               </MDBox>
             )}
@@ -1556,7 +1600,7 @@ function OptimizeTask(): JSX.Element {
             {approveSuccess && (
               <MDBox>
                 <MDTypography variant="body2" color="success" fontWeight="bold" mb={2}>
-                  Plan approved — {approveSuccess.pushed} task(s) pushed to the fleet system.
+                  {t("optimize.approved", { count: approveSuccess.pushed })}
                 </MDTypography>
                 {/* BUG-2: kismi basari — cakismaya takilip draft kalanlarin ozeti
                     + ayni routing_job_id ile override:true retry kapisi. */}
@@ -1568,8 +1612,7 @@ function OptimizeTask(): JSX.Element {
                       fontWeight="bold"
                       mb={1}
                     >
-                      {approveSuccess.conflicts.length} task(s) blocked by
-                      time-window conflicts:
+                      {t("optimize.conflictsBlocked", { count: approveSuccess.conflicts.length })}
                     </MDTypography>
                     {approveSuccess.conflicts.map((c) => (
                       <MDTypography
@@ -1578,14 +1621,13 @@ function OptimizeTask(): JSX.Element {
                         color="text"
                         display="block"
                       >
-                        {vehicleLabels[c.vehicle_id] || c.vehicle_id.slice(0, 8)}
                         {c.conflict_metadata
-                          ? " · " +
-                            c.conflict_metadata.conflicting_task_no +
-                            " · ~" +
-                            c.conflict_metadata.overlap_minutes +
-                            " dk"
-                          : ""}
+                          ? t("optimize.conflictLine", {
+                              plate: vehicleLabels[c.vehicle_id] || c.vehicle_id.slice(0, 8),
+                              task: c.conflict_metadata.conflicting_task_no,
+                              n: c.conflict_metadata.overlap_minutes,
+                            })
+                          : vehicleLabels[c.vehicle_id] || c.vehicle_id.slice(0, 8)}
                       </MDTypography>
                     ))}
                     <MDBox mt={1.5}>
@@ -1603,20 +1645,22 @@ function OptimizeTask(): JSX.Element {
                           })
                         }
                       >
-                        Çakışanları Gerekçeli Onayla
+                        {t("optimize.overrideConflicts")}
                       </MDButton>
                     </MDBox>
                   </MDBox>
                 )}
                 <MDButton variant="gradient" color="info" onClick={handleReset}>
-                  Create Another Task
+                  {t("optimize.createAnother")}
                 </MDButton>
               </MDBox>
             )}
 
             {status === "failed" && (
               <MDTypography variant="body2" color="error" fontWeight="bold">
-                Optimization failed: {pollQuery.data?.error || "Unknown error"}
+                {t("optimize.failed", {
+                  error: pollQuery.data?.error || t("optimize.unknownError"),
+                })}
               </MDTypography>
             )}
           </Card>

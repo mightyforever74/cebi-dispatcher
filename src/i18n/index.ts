@@ -99,6 +99,29 @@ export function t(key: TranslationKey, vars?: TVars): string {
   return translate(currentLang, key, vars);
 }
 
+/**
+ * Single relative-time helper for dispatcher UI (D3 map badge, later D4 tables).
+ * Epoch/invalid timestamps map to `map.relativeNever`.
+ */
+export function formatRelative(
+  then: Date | number | string | null | undefined,
+  now: number = Date.now(),
+  lang: Lang = currentLang
+): string {
+  if (then == null) return translate(lang, "map.relativeNever");
+  const t0 = typeof then === "number" ? then : new Date(then).getTime();
+  if (!Number.isFinite(t0) || t0 <= 0) return translate(lang, "map.relativeNever");
+  const diffSec = Math.round((t0 - now) / 1000);
+  const rtf = new Intl.RelativeTimeFormat(LOCALE_BY_LANG[lang], { numeric: "auto" });
+  const abs = Math.abs(diffSec);
+  if (abs < 60) return rtf.format(diffSec, "second");
+  const min = Math.round(diffSec / 60);
+  if (Math.abs(min) < 60) return rtf.format(min, "minute");
+  const hr = Math.round(min / 60);
+  if (Math.abs(hr) < 24) return rtf.format(hr, "hour");
+  return rtf.format(Math.round(hr / 24), "day");
+}
+
 type LanguageApi = {
   t: TFunction;
   lang: Lang;

@@ -276,6 +276,14 @@ export type AlertSeverity = "low" | "medium" | "high" | "critical";
  * (available/in_use/maintenance/retired) ile KARIŞTIRILMAMALI, ayrı ad alanı. */
 export type VehicleConnectivityStatus = "online" | "stale" | "offline" | "maintenance";
 
+/** `public.vehicles.status` — liste ekranı (D4 StatusChip kind=vehicle ops). */
+export type VehicleOpsStatus = "available" | "in_use" | "maintenance" | "retired";
+
+/** `public.drivers.status` — liste ekranı (D4 StatusChip kind=vehicle lookup). */
+export type DriverDutyStatus = "available" | "on_task" | "task_pending" | "on_leave" | "offline";
+
+export type TaskPriority = "high" | "normal" | "low";
+
 /** 6 tip — src/layouts/dispatcher/exceptions/index.tsx:38-45 (`TYPE_LABEL`) */
 export type ExceptionType =
   | "eta_delay"
@@ -316,7 +324,11 @@ export const status: {
   task: Record<TaskStatus, StatusColorSet>;
   alert: Record<AlertSeverity, StatusColorSet>;
   vehicle: Record<VehicleConnectivityStatus, StatusColorSet>;
+  vehicleOps: Record<VehicleOpsStatus, StatusColorSet>;
+  driver: Record<DriverDutyStatus, StatusColorSet>;
   exception: Record<ExceptionType, StatusColorSet>;
+  priority: Record<TaskPriority, StatusColorSet>;
+  unknown: StatusColorSet;
 } = {
   // Renk eşlemesi src/layouts/dispatcher/tasks/index.tsx:56-78 ile birebir.
   task: {
@@ -357,6 +369,27 @@ export const status: {
     traffic_impact: fromBadge("info", main.info),
     dock_conflict: fromBadge("info", main.info),
   },
+  // public.vehicles.status — eski vehicles/index.tsx statusColor ile birebir.
+  vehicleOps: {
+    available: fromBadge("success", main.success),
+    in_use: fromBadge("info", main.info),
+    maintenance: fromBadge("warning", main.warning),
+    retired: fromBadge("error", main.error),
+  },
+  // public.drivers.status — eski drivers/index.tsx statusColor ile birebir.
+  driver: {
+    available: fromBadge("success", main.success),
+    on_task: fromBadge("info", main.info),
+    task_pending: fromBadge("warning", main.warning),
+    on_leave: fromBadge("warning", main.warning),
+    offline: fromBadge("error", main.error),
+  },
+  priority: {
+    high: fromBadge("error", main.error),
+    normal: fromBadge("info", main.info),
+    low: fromBadge("secondary", main.secondary),
+  },
+  unknown: fromBadge("secondary", main.secondary),
 };
 
 // =========================================================================

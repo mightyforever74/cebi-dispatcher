@@ -34,6 +34,11 @@ export const landing = {
   navyInk: "#070b18",
   navyFog: "#c5cde3",
   /**
+   * Light-theme secondary text on offwhite/white. Landing `--color-roadmap`
+   * (#64748b) — no navyFog-700 in landing; this is the ≥4.5:1 counterpart.
+   */
+  navyFog700: "#64748b",
+  /**
    * Landing'in `color-mix(in srgb, var(--color-navy-elevated) 62%, white 16%)`
    * (global.css:9) ifadesinin JS/MUI tarafı için statik yaklaşık karşılığı
    * (renk-hesabı derleme zamanında yapılamadığından elle hesaplanmıştır).
@@ -74,14 +79,14 @@ export const brand = {
 // =========================================================================
 export const paletteLight = {
   backgroundDefault: "#f0f2f5",
-  textMain: "#7b809a",
-  textFocus: "#7b809a",
+  textMain: landing.navyFog700,
+  textFocus: landing.navyFog700,
   white: "#ffffff",
   black: "#000000",
   primaryMain: "#7C3AED",
   primaryFocus: "#6D28D9",
-  secondaryMain: "#7b809a",
-  secondaryFocus: "#8f93a9",
+  secondaryMain: landing.navyFog700,
+  secondaryFocus: landing.navyFog700,
   infoMain: "#1A73E8",
   infoFocus: "#1662C4",
   successMain: "#4CAF50",
@@ -291,7 +296,8 @@ export type ExceptionType =
   | "driver_location_mismatch"
   | "compliance_zone_breach"
   | "traffic_impact"
-  | "dock_conflict";
+  | "dock_conflict"
+  | "rule_violation";
 
 export interface StatusColorSet {
   bg: string;
@@ -368,6 +374,7 @@ export const status: {
     compliance_zone_breach: fromBadge("error", main.error),
     traffic_impact: fromBadge("info", main.info),
     dock_conflict: fromBadge("info", main.info),
+    rule_violation: fromBadge("warning", main.warning),
   },
   // public.vehicles.status — eski vehicles/index.tsx statusColor ile birebir.
   vehicleOps: {

@@ -21,6 +21,8 @@ import { Link } from "react-router-dom";
 // @mui material components
 import { Breadcrumbs as MuiBreadcrumbs } from "@mui/material";
 import Icon from "@mui/material/Icon";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 
 // Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
@@ -61,14 +63,29 @@ const SEGMENT_KEY: Record<string, TranslationKey> = {
   basic: "crumb.basic",
 };
 
+const SHORT_KEY: Record<string, TranslationKey> = {
+  "live-fleet-map": "nav.short.liveFleet",
+  tasks: "nav.short.tasks",
+  exceptions: "nav.short.exceptions",
+  drivers: "nav.short.drivers",
+  vehicles: "nav.short.vehicles",
+  optimize: "nav.short.optimize",
+  settings: "nav.short.tenantSettings",
+  subscription: "nav.short.subscription",
+  supervisor: "nav.short.supervisor",
+};
+
 function Breadcrumbs({ icon, title, route, light }: Props): JSX.Element {
   const { t } = useT();
+  const theme = useTheme();
+  const compact = useMediaQuery(theme.breakpoints.down("sm"));
   const routes: string[] | any = route.slice(0, -1);
   const labelFor = (segment: string): string => {
     const key = SEGMENT_KEY[segment];
     return key ? t(key) : segment.replace(/-/g, " ");
   };
-  const pageTitle = labelFor(title);
+  const shortKey = SHORT_KEY[title];
+  const pageTitle = compact && shortKey ? t(shortKey) : labelFor(title);
 
   return (
     <MDBox mr={{ xs: 0, xl: 8 }}>
@@ -87,7 +104,7 @@ function Breadcrumbs({ icon, title, route, light }: Props): JSX.Element {
             opacity={light ? 0.8 : 0.5}
             sx={{ lineHeight: 0 }}
           >
-            <Icon>{icon}</Icon>
+            <Icon aria-hidden>{icon}</Icon>
           </MDTypography>
         </Link>
         {routes.map((el: string) => (
@@ -113,6 +130,7 @@ function Breadcrumbs({ icon, title, route, light }: Props): JSX.Element {
           variant="h6"
           color={light ? "white" : "dark"}
           noWrap
+          sx={{ fontSize: { xs: "1rem", sm: undefined } }}
         >
           {pageTitle}
         </MDTypography>

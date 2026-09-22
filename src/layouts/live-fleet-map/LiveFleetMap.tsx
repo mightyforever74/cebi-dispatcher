@@ -392,9 +392,9 @@ function LiveFleetMap(): JSX.Element {
         {filteredVehicles.map((v) => {
           const conn = vehicleConnectivity(v.last_update, now);
           return (
-            <Paper
-              elevation={0}
+            <ListItem
               key={v.id}
+              disablePadding
               onMouseEnter={() => setHoveredVehicle(v.id)}
               onMouseLeave={() => setHoveredVehicle(null)}
               sx={{
@@ -411,7 +411,6 @@ function LiveFleetMap(): JSX.Element {
                 transition: "all 0.2s linear",
               }}
             >
-              <ListItem disablePadding>
                 <ListItemButton
                   onClick={() => handleVehicleSelect(v.id)}
                   sx={{ p: 1.5, flexDirection: "column", alignItems: "stretch" }}
@@ -452,8 +451,7 @@ function LiveFleetMap(): JSX.Element {
                     {emissionChip(v.emission_class)}
                   </MDBox>
                 </ListItemButton>
-              </ListItem>
-            </Paper>
+            </ListItem>
           );
         })}
       </>
@@ -516,8 +514,8 @@ function LiveFleetMap(): JSX.Element {
                   label={t("map.activeCount", { count: filteredVehicles.length })}
                   size="small"
                   sx={{
-                    bgcolor: chrome.border,
-                    color: chrome.textMuted,
+                    bgcolor: chrome.chipBg,
+                    color: chrome.textOnChip,
                     fontWeight: "bold",
                     fontSize: "11px",
                   }}

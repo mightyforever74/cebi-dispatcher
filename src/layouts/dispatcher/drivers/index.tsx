@@ -84,6 +84,7 @@ function DriversLayout(): JSX.Element {
             <LinearProgress
               variant="determinate"
               value={safetyScorePercent(score ?? undefined)}
+              aria-label={t("drivers.progressLabel")}
               sx={{
                 backgroundColor: "action.hover",
                 "& .MuiLinearProgress-bar": {

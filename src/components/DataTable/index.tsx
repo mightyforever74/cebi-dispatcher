@@ -14,6 +14,7 @@ import MDBox from "components/MDBox";
 import MDInput from "components/MDInput";
 import MDPagination from "components/MDPagination";
 import MDTypography from "components/MDTypography";
+import { dialog } from "assets/theme/tokens";
 import { useDensity } from "context/density";
 import { emptyDash, useT } from "i18n";
 import {
@@ -382,14 +383,31 @@ function DataTable({
                         gap={2}
                         py={0.5}
                       >
-                        <MDTypography variant="caption" color="secondary">
+                        <MDTypography
+                          variant="caption"
+                          sx={{
+                            color: theme.palette.mode === "dark" ? dialog.dark.textMuted : dialog.light.textMuted,
+                            flexShrink: 0,
+                          }}
+                        >
                           {col.Header}
                         </MDTypography>
                         <MDBox
                           sx={{
                             ...columnWidthSx({ ...col, truncate: true, maxWidth: 220 }),
+                            minWidth: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                             textAlign: col.numeric ? "right" : "left",
                             fontVariantNumeric: col.numeric ? "tabular-nums" : undefined,
+                            "& > *": {
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              maxWidth: "100%",
+                              display: "block",
+                            },
                           }}
                         >
                           {cellContent(original[col.accessor], dash)}

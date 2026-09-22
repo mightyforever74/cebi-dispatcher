@@ -27,7 +27,7 @@ import BrandBlock from "layouts/authentication/components/BrandBlock";
 import { Link, useNavigate } from "react-router-dom";
 import { useT } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
-import { landing } from "assets/theme/tokens";
+import { a11y, landing } from "assets/theme/tokens";
 import LanguageSwitcher from "components/LanguageSwitcher";
 
 function Basic(): JSX.Element {
@@ -112,7 +112,9 @@ function Basic(): JSX.Element {
                 variant="button"
                 color="inherit"
                 fontWeight="medium"
-                sx={{ color: landing.emerald }}
+                sx={(theme: { palette: { mode: string } }) => ({
+                  color: theme.palette.mode === "dark" ? a11y.linkDark : a11y.linkLight,
+                })}
               >
                 {t("login.forgotPassword")}
               </MDTypography>

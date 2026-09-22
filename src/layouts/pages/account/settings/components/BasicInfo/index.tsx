@@ -37,9 +37,9 @@ function BasicInfo(): JSX.Element {
     saveMutation.mutate(
       { firstName, lastName, phone },
       {
-        onSuccess: () => notifyToast({ type: "form_ok", title: t("notifyForm.saved") }),
+        onSuccess: () => notifyToast({ type: "form_ok", titleKey: "notifyForm.saved" }),
         onError: () =>
-          notifyToast({ type: "form_err", title: t("notifyForm.saveFailed"), severity: "high" }),
+          notifyToast({ type: "form_err", titleKey: "notifyForm.saveFailed", severity: "high" }),
       }
     );
   };
@@ -59,6 +59,7 @@ function BasicInfo(): JSX.Element {
               placeholder={t("settings.firstName")}
               value={firstName}
               required
+              helperText={t("settings.helpRequired")}
               inputProps={{ "aria-required": true }}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
             />
@@ -69,6 +70,7 @@ function BasicInfo(): JSX.Element {
               placeholder={t("settings.lastName")}
               value={lastName}
               required
+              helperText={t("settings.helpRequired")}
               inputProps={{ "aria-required": true }}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
             />
@@ -77,6 +79,7 @@ function BasicInfo(): JSX.Element {
             <FormField
               label={t("settings.email")}
               placeholder="example@email.com"
+              helperText={t("settings.helpEmail")}
               inputProps={{ type: "email" }}
               value={email}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
@@ -86,6 +89,7 @@ function BasicInfo(): JSX.Element {
             <FormField
               label={t("settings.phone")}
               placeholder="+31 6 00 000 000"
+              helperText={t("settings.helpPhone")}
               value={phone}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
             />

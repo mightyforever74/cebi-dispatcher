@@ -32,7 +32,7 @@ function DeleteAccount(): JSX.Element {
     deleteMutation.mutate(password, {
       onSuccess: () => setOpen(false),
       onError: () =>
-        notifyToast({ type: "form_err", title: t("settings.deleteFailed"), severity: "high" }),
+        notifyToast({ type: "form_err", titleKey: "settings.deleteFailed", severity: "high" }),
     });
   };
 

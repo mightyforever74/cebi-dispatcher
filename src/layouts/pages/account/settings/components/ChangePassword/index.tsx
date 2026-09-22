@@ -51,12 +51,12 @@ function ChangePassword(): JSX.Element {
           setCurrentPassword("");
           setNewPassword("");
           setConfirmPassword("");
-          notifyToast({ type: "form_ok", title: t("notifyForm.passwordUpdated") });
+          notifyToast({ type: "form_ok", titleKey: "notifyForm.passwordUpdated" });
         },
         onError: () =>
           notifyToast({
             type: "form_err",
-            title: t("settings.passwordFailed"),
+            titleKey: "settings.passwordFailed",
             severity: "high",
           }),
       }
@@ -81,6 +81,7 @@ function ChangePassword(): JSX.Element {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setCurrentPassword(e.target.value)
               }
+              helperText={t("settings.helpRequired")}
               inputProps={{ type: "password", autoComplete: "", "aria-required": true }}
             />
           </Grid>
@@ -91,7 +92,7 @@ function ChangePassword(): JSX.Element {
               value={newPassword}
               required
               error={Boolean(formError)}
-              helperText={formError || undefined}
+              helperText={formError || t("settings.helpPassword")}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
               inputProps={{ type: "password", autoComplete: "", "aria-required": true }}
             />
@@ -105,6 +106,7 @@ function ChangePassword(): JSX.Element {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setConfirmPassword(e.target.value)
               }
+              helperText={t("settings.helpPassword")}
               inputProps={{ type: "password", autoComplete: "", "aria-required": true }}
             />
           </Grid>

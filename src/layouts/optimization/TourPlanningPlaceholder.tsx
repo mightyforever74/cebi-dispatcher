@@ -4,8 +4,10 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+import { useT } from "i18n";
 
 function TourPlanningPlaceholder(): JSX.Element {
+  const { t } = useT();
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -17,14 +19,12 @@ function TourPlanningPlaceholder(): JSX.Element {
             </Icon>
             <MDBox mt={2}>
               <MDTypography variant="h4" fontWeight="medium">
-                Akıllı Rota Optimizasyonu (VRP)
+                {t("tourPlanning.title")}
               </MDTypography>
             </MDBox>
             <MDBox mt={1}>
               <MDTypography variant="body2" color="text">
-                HERE Tour Planning motoru (FEAT-001) Phase 1.1 sprint'inde aktive edilecek. Çoklu
-                araç rota dağıtımı, zaman penceresi ve kapasite kısıtları bu ekranda yarı otonom
-                çalışacak.
+                {t("tourPlanning.body")}
               </MDTypography>
             </MDBox>
           </MDBox>

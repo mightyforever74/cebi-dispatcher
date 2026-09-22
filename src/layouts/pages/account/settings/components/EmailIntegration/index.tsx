@@ -9,7 +9,6 @@ import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Checkbox from "@mui/material/Checkbox";
-import Icon from "@mui/material/Icon";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -68,9 +67,9 @@ function EmailIntegration(): JSX.Element {
         alert_device_offline: alerts.deviceOffline,
       },
       {
-        onSuccess: () => notifyToast({ type: "form_ok", title: t("notifyForm.saved") }),
+        onSuccess: () => notifyToast({ type: "form_ok", titleKey: "notifyForm.saved" }),
         onError: () =>
-          notifyToast({ type: "form_err", title: t("notifyForm.saveFailed"), severity: "high" }),
+          notifyToast({ type: "form_err", titleKey: "notifyForm.saveFailed", severity: "high" }),
       }
     );
   };
@@ -99,6 +98,7 @@ function EmailIntegration(): JSX.Element {
               placeholder="dispatcher@tulipfleet.nl"
               value={email}
               required
+              helperText={t("settings.helpCorporateEmail")}
               inputProps={{ type: "email", "aria-required": true }}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
             />
@@ -114,30 +114,22 @@ function EmailIntegration(): JSX.Element {
             >
               <FormControlLabel
                 value="native"
-                control={<Radio />}
+                sx={{ alignItems: "flex-start", ml: 0, mr: 0 }}
+                control={<Radio sx={{ mt: 0.25 }} />}
                 label={
-                  <MDBox display="flex" alignItems="center" gap={0.5}>
-                    <Icon fontSize="small" aria-hidden>
-                      mail
-                    </Icon>
-                    <MDTypography variant="button" fontWeight="regular">
-                      {t("settings.clientNative")}
-                    </MDTypography>
-                  </MDBox>
+                  <MDTypography variant="button" fontWeight="regular" component="span">
+                    {t("settings.clientNative")}
+                  </MDTypography>
                 }
               />
               <FormControlLabel
                 value="web"
-                control={<Radio />}
+                sx={{ alignItems: "flex-start", ml: 0, mr: 0 }}
+                control={<Radio sx={{ mt: 0.25 }} />}
                 label={
-                  <MDBox display="flex" alignItems="center" gap={0.5}>
-                    <Icon fontSize="small" aria-hidden>
-                      language
-                    </Icon>
-                    <MDTypography variant="button" fontWeight="regular">
-                      {t("settings.clientWeb")}
-                    </MDTypography>
-                  </MDBox>
+                  <MDTypography variant="button" fontWeight="regular" component="span">
+                    {t("settings.clientWeb")}
+                  </MDTypography>
                 }
               />
             </RadioGroup>

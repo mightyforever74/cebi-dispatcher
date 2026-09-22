@@ -21,8 +21,9 @@ function Banner({ item }: { item: NotifyItem }) {
     item.severity === "critical" || item.family === "driver_offline" || item.family === "sos"
       ? status.alert.critical
       : status.alert.high;
+  const baseTitle = item.titleKey ? t(item.titleKey) : item.title;
   const title =
-    item.count > 1 ? `${item.title} ${t("notify.toastCount", { count: item.count })}` : item.title;
+    item.count > 1 ? `${baseTitle} ${t("notify.toastCount", { count: item.count })}` : baseTitle;
 
   return (
     <MDBox
@@ -127,13 +128,17 @@ function NotificationHost(): JSX.Element | null {
           key={item.id}
           open
           color={colorFor(item)}
+          role="status"
+          aria-live="polite"
           icon={
             <Icon aria-hidden>notifications</Icon>
           }
           title={
             item.count > 1
-              ? `${item.title} ${t("notify.toastCount", { count: item.count })}`
-              : item.title
+              ? `${item.titleKey ? t(item.titleKey) : item.title} ${t("notify.toastCount", { count: item.count })}`
+              : item.titleKey
+                ? t(item.titleKey)
+                : item.title
           }
           dateTime=""
           content={item.body}

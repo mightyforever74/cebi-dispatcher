@@ -33,6 +33,7 @@ export interface NotifyItem {
   family: string;
   severity: string;
   title: string;
+  titleKey?: TranslationKey;
   body: string;
   count: number;
   createdAt: number;
@@ -57,16 +58,21 @@ function isBannerType(type: string, severity: string): boolean {
   return severity === "critical" || family === "sos" || family === "driver_offline";
 }
 
-function titleFor(type: string, severity: string): string {
+function titleKeyFor(type: string, severity: string): TranslationKey {
   const family = typeFamily(type);
-  if (family === "sos") return t("notifications.sos.title");
+  if (family === "sos") return "notifications.sos.title";
   const exceptionKey = `status.exception.${family}` as TranslationKey;
-  const exceptionLabel = t(exceptionKey);
-  if (exceptionLabel !== exceptionKey) return exceptionLabel;
+  if (t(exceptionKey) !== exceptionKey) return exceptionKey;
   const notifyKey = `notify.${family}` as TranslationKey;
-  const notifyLabel = t(notifyKey);
-  if (notifyLabel !== notifyKey) return notifyLabel;
-  if (severity === "critical") return t("notify.bannerCritical");
+  if (t(notifyKey) !== notifyKey) return notifyKey;
+  if (severity === "critical") return "notify.bannerCritical";
+  return "notify.bannerCritical";
+}
+
+function titleFor(type: string, severity: string): string {
+  const key = titleKeyFor(type, severity);
+  const label = t(key);
+  if (label !== key) return label;
   return type || t("notify.bannerCritical");
 }
 
@@ -97,7 +103,7 @@ function sameBannerSnapshot(a: NotifyItem[], b: NotifyItem[]): boolean {
     (item, i) =>
       item.id === b[i].id &&
       item.count === b[i].count &&
-      item.title === b[i].title &&
+      item.titleKey === b[i].titleKey &&
       item.body === b[i].body &&
       item.severity === b[i].severity &&
       item.family === b[i].family
@@ -127,7 +133,8 @@ type Api = {
   acknowledge: (item: NotifyItem) => Promise<void>;
   notifyToast: (opts: {
     type: string;
-    title: string;
+    title?: string;
+    titleKey?: TranslationKey;
     body?: string;
     severity?: string;
   }) => void;
@@ -197,6 +204,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         family,
         severity: e.severity,
         title: titleFor(e.exception_type, e.severity),
+        titleKey: titleKeyFor(e.exception_type, e.severity),
         body: bodyForException(e),
         count: 1,
         createdAt: new Date(e.occurred_at).getTime(),
@@ -218,6 +226,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         family,
         severity: severity || "critical",
         title: titleFor(type, severity || "critical"),
+        titleKey: titleKeyFor(type, severity || "critical"),
         body: bodyForAlert(a),
         count: 1,
         createdAt: a.created_at ? new Date(a.created_at).getTime() : Date.now(),
@@ -268,6 +277,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         family: typeFamily(e.exception_type),
         severity: e.severity,
         title: titleFor(e.exception_type, e.severity),
+        titleKey: titleKeyFor(e.exception_type, e.severity),
         body: bodyForException(e),
         count: 1,
         createdAt: Date.now(),
@@ -301,6 +311,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         family: typeFamily(type),
         severity: severity || "info",
         title: titleFor(type, severity),
+        titleKey: titleKeyFor(type, severity),
         body: bodyForAlert(a),
         count: 1,
         createdAt: Date.now(),
@@ -324,6 +335,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           family: i < 5 ? "geofence" : "speed",
           severity: "medium",
           title: titleFor(i < 5 ? "geofence" : "speed", "medium"),
+          titleKey: titleKeyFor(i < 5 ? "geofence" : "speed", "medium"),
           body: `storm ${i + 1}`,
           count: 1,
           createdAt: now,
@@ -365,7 +377,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   );
 
   const notifyToast = useCallback(
-    (opts: { type: string; title: string; body?: string; severity?: string }) => {
+    (opts: { type: string; title?: string; titleKey?: TranslationKey; body?: string; severity?: string }) => {
       enqueueToasts([
         {
           id: `form:${Date.now()}:${opts.type}`,
@@ -374,7 +386,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           type: opts.type,
           family: typeFamily(opts.type),
           severity: opts.severity || "info",
-          title: opts.title,
+          title: opts.title || "",
+          titleKey: opts.titleKey,
           body: opts.body || "",
           count: 1,
           createdAt: Date.now(),

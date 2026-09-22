@@ -41,7 +41,7 @@ interface Props {
 const SEGMENT_KEY: Record<string, TranslationKey> = {
   dashboards: "crumb.dashboards",
   "live-fleet-map": "nav.liveFleet",
-  dispatcher: "crumb.dispatcher",
+  dispatcher: "nav.dispatcher",
   tasks: "tasks.title",
   optimize: "crumb.optimize",
   exceptions: "nav.exceptions",

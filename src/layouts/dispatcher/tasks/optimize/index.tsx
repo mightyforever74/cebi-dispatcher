@@ -661,7 +661,7 @@ function OptimizeTask(): JSX.Element {
           setJobId(data.jobId);
         },
         onError: () => {
-          notifyToast({ type: "form_err", title: t("notifyForm.submitFailed"), severity: "high" });
+          notifyToast({ type: "form_err", titleKey: "notifyForm.submitFailed", severity: "high" });
         },
       }
     );
@@ -963,7 +963,7 @@ function OptimizeTask(): JSX.Element {
           }));
           notifyToast({
             type: "form_ok",
-            title: t("notifyForm.approved"),
+            titleKey: "notifyForm.approved",
             body: t("optimize.approved", { count: (0 + data.pushed) }),
           });
           // FEAT-010:FN-18 - karar logu, approve BASARISINDAN sonra, best-effort

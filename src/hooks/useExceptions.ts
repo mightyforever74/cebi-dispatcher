@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ENTERPRISE_API_URL } from "config/api";
+import { EMPTY_OBJECT } from "utils/empty";
 
 const POLL_MS = 20 * 1000;
 
@@ -28,6 +29,8 @@ export interface ExceptionEvent {
   occurred_at: string;
 }
 
+export const EMPTY_EXCEPTIONS: ExceptionEvent[] = [];
+
 function sameExceptionSnapshot(a: ExceptionEvent[], b: ExceptionEvent[]): boolean {
   if (a.length !== b.length) return false;
   return a.every(
@@ -46,7 +49,7 @@ async function fetchExceptions(token: string | null): Promise<ExceptionEvent[]> 
   });
   if (!res.ok) throw new Error(`FN-10 HTTP ${res.status}`);
   const data = await res.json();
-  return data.exceptions || [];
+  return data.exceptions || EMPTY_EXCEPTIONS;
 }
 
 export async function resolveException(
@@ -64,7 +67,7 @@ export async function resolveException(
     body: JSON.stringify({ action, comment: comment || undefined }),
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+    const body = await res.json().catch(() => EMPTY_OBJECT);
     throw new Error(body.message || `FN-11 HTTP ${res.status}`);
   }
 }

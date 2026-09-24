@@ -17,7 +17,7 @@ import Skeleton from "@mui/material/Skeleton";
 import TextField from "@mui/material/TextField";
 import { alpha } from "@mui/material/styles";
 
-import { density, map as mapTokens, status, type VehicleConnectivityStatus } from "assets/theme/tokens";
+import { density, map as mapTokens, prefersReducedMotion, status, type VehicleConnectivityStatus } from "assets/theme/tokens";
 import MapControlWidget from "components/MapControlWidget";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -392,9 +392,9 @@ function LiveFleetMap(): JSX.Element {
         {filteredVehicles.map((v) => {
           const conn = vehicleConnectivity(v.last_update, now);
           return (
-            <Paper
-              elevation={0}
+            <ListItem
               key={v.id}
+              disablePadding
               onMouseEnter={() => setHoveredVehicle(v.id)}
               onMouseLeave={() => setHoveredVehicle(null)}
               sx={{
@@ -411,7 +411,6 @@ function LiveFleetMap(): JSX.Element {
                 transition: "all 0.2s linear",
               }}
             >
-              <ListItem disablePadding>
                 <ListItemButton
                   onClick={() => handleVehicleSelect(v.id)}
                   sx={{ p: 1.5, flexDirection: "column", alignItems: "stretch" }}
@@ -452,8 +451,7 @@ function LiveFleetMap(): JSX.Element {
                     {emissionChip(v.emission_class)}
                   </MDBox>
                 </ListItemButton>
-              </ListItem>
-            </Paper>
+            </ListItem>
           );
         })}
       </>
@@ -516,8 +514,8 @@ function LiveFleetMap(): JSX.Element {
                   label={t("map.activeCount", { count: filteredVehicles.length })}
                   size="small"
                   sx={{
-                    bgcolor: chrome.border,
-                    color: chrome.textMuted,
+                    bgcolor: chrome.chipBg,
+                    color: chrome.textOnChip,
                     fontWeight: "bold",
                     fontSize: "11px",
                   }}
@@ -633,7 +631,14 @@ function LiveFleetMap(): JSX.Element {
                 },
               }}
             >
-              <MapContainer center={INITIAL_CENTER} zoom={8} scrollWheelZoom zoomControl={false}>
+              <MapContainer
+                center={INITIAL_CENTER}
+                zoom={8}
+                scrollWheelZoom
+                zoomControl={false}
+                zoomAnimation={!prefersReducedMotion()}
+                markerZoomAnimation={!prefersReducedMotion()}
+              >
                 <Basemap darkMode={darkMode} />
                 <MapViewport
                   cmd={viewportCmd}

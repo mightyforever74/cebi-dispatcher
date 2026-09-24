@@ -1,5 +1,5 @@
 /**
- * FEAT-SaaS S4 — Sayfa 4: Müşteri Detay & Yönetim (/admin/supervisor/customer-detail).
+ * FEAT-SaaS S4 — Sayfa 4: Musteri Detay & Yonetim (/admin/supervisor/customer-detail).
  * Kaynak desen: ecommerce/orders/order-details (Card ici sol/sag Grid bloklari).
  * Sol: bekleyen talepler (Onayla→approve APPROVED+kota+mail / Reddet→reject).
  *   api_package satirinda aksiyon DISABLED + "FEAT-Connect — Yakinda" rozeti
@@ -26,6 +26,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
+import { formatDateTime, useT } from "i18n";
 import SupervisorGate from "layouts/supervisor/SupervisorGate";
 import { SUPERVISOR_API_URL } from "layouts/supervisor/supervisorSession";
 
@@ -43,6 +44,7 @@ interface PendingReq {
 }
 
 function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
+  const { t, lang } = useT();
   const [searchParams] = useSearchParams();
   const companyId = searchParams.get("companyId") || "";
   const [requests, setRequests] = useState<PendingReq[]>([]);
@@ -71,8 +73,8 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
           setActiveVehicles(mine[0].active_vehicles);
         }
       })
-      .catch(() => setFlash({ sev: "error", msg: "Talep listesi alinamadi." }));
-    // Talep yoksa firma ozeti companies listesinden
+      .catch(() => setFlash({ sev: "error", msg: t("supervisor.errorRequests") }));
+    // When no request exists, company summary comes from the companies list
     fetch(`${SUPERVISOR_API_URL}/api/superadmin/companies`, { headers })
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data) => {
@@ -106,16 +108,19 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
           sev: "success",
           msg:
             action === "approve"
-              ? `Onaylandi — yeni kota: ${body.approved.new_max_vehicles}`
-              : "Talep reddedildi.",
+              ? t("supervisor.approved", { max: body.approved.new_max_vehicles })
+              : t("supervisor.rejected"),
         });
         setDecisionNote("");
         load();
       } else {
-        setFlash({ sev: "error", msg: (body && body.message) || `Islem basarisiz (${res.status})` });
+        setFlash({
+          sev: "error",
+          msg: (body && body.message) || t("supervisor.actionFailed", { status: res.status }),
+        });
       }
     } catch {
-      setFlash({ sev: "error", msg: "Sunucuya ulasilamadi." });
+      setFlash({ sev: "error", msg: t("supervisor.errorNetwork") });
     } finally {
       setBusy(false);
     }
@@ -141,16 +146,22 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
       if (res.ok) {
         setFlash({
           sev: "success",
-          msg: `Kota mühürlendi: ${body.updated.old_max_vehicles} → ${body.updated.new_max_vehicles}`,
+          msg: t("supervisor.quotaSealed", {
+            old: body.updated.old_max_vehicles,
+            new: body.updated.new_max_vehicles,
+          }),
         });
         setNewMax("");
         setManualReason("");
         load();
       } else {
-        setFlash({ sev: "error", msg: (body && body.message) || `Islem basarisiz (${res.status})` });
+        setFlash({
+          sev: "error",
+          msg: (body && body.message) || t("supervisor.actionFailed", { status: res.status }),
+        });
       }
     } catch {
-      setFlash({ sev: "error", msg: "Sunucuya ulasilamadi." });
+      setFlash({ sev: "error", msg: t("supervisor.errorNetwork") });
     } finally {
       setBusy(false);
     }
@@ -165,15 +176,18 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
             <MDBox pt={2} px={2} display="flex" justifyContent="space-between" alignItems="center">
               <MDBox>
                 <MDTypography variant="h5" fontWeight="bold">
-                  🔍 {companyName || "Müşteri Detay"}
+                  {companyName || t("supervisor.customerTitle")}
                 </MDTypography>
                 <MDTypography variant="caption" color="text">
-                  Araç: {activeVehicles ?? "—"} / {maxVehicles ?? "—"} · company_id:{" "}
+                  {t("supervisor.vehiclesLine", {
+                    active: activeVehicles ?? "—",
+                    max: maxVehicles ?? "—",
+                  })}{" "}
                   <span style={{ fontFamily: "monospace" }}>{companyId.slice(0, 8)}</span>
                 </MDTypography>
               </MDBox>
               <MDBadge
-                badgeContent={`${requests.length} bekleyen`}
+                badgeContent={t("supervisor.pendingBadge", { count: requests.length })}
                 color={requests.length > 0 ? "warning" : "secondary"}
                 container
               />
@@ -189,11 +203,11 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
                 {/* SOL BLOK — bekleyen talepler */}
                 <Grid item xs={12} md={7}>
                   <MDTypography variant="h6" fontWeight="bold" mb={1}>
-                    Bekleyen Talepler
+                    {t("supervisor.pendingTitle")}
                   </MDTypography>
                   {requests.length === 0 && (
                     <MDTypography variant="button" color="text">
-                      Bu firmanın bekleyen talebi yok.
+                      {t("supervisor.pendingEmpty")}
                     </MDTypography>
                   )}
                   {requests.map((r) => (
@@ -202,12 +216,12 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
                         <MDBox>
                           <MDTypography variant="button" fontWeight="bold" display="block">
                             {r.request_type === "vehicle_increase"
-                              ? `+${r.requested_amount} Araç Kotası`
-                              : `${r.requested_amount} API Paketi`}
+                              ? t("supervisor.vehicleQuota", { count: r.requested_amount })
+                              : t("supervisor.apiPackage", { count: r.requested_amount })}
                           </MDTypography>
                           <MDTypography variant="caption" color="text" display="block">
-                            {r.payment_note || "Ödeme notu yok"} ·{" "}
-                            {new Date(r.created_at).toLocaleString("tr-TR")} ·{" "}
+                            {r.payment_note || t("supervisor.noPaymentNote")} ·{" "}
+                            {formatDateTime(r.created_at, lang)} ·{" "}
                             {r.requested_by_email || "—"}
                           </MDTypography>
                         </MDBox>
@@ -220,7 +234,7 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
                               disabled={busy}
                               onClick={() => decide(r.id, "approve")}
                             >
-                              Onayla ve Kotayı Tanımla
+                              {t("supervisor.approveQuota")}
                             </MDButton>
                             <MDButton
                               variant="outlined"
@@ -229,18 +243,18 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
                               disabled={busy}
                               onClick={() => decide(r.id, "reject")}
                             >
-                              Reddet
+                              {t("supervisor.reject")}
                             </MDButton>
                           </MDBox>
                         ) : (
-                          <MDBadge badgeContent="FEAT-Connect — Yakında" color="secondary" container />
+                          <MDBadge badgeContent={t("supervisor.featConnectSoon")} color="secondary" container />
                         )}
                       </MDBox>
                     </Card>
                   ))}
                   <MDInput
                     fullWidth
-                    label="Karar Notu (opsiyonel — audit'e mühürlenir)"
+                    label={t("supervisor.decisionNote")}
                     value={decisionNote}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setDecisionNote(e.target.value)
@@ -254,18 +268,17 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
                     <MDBox display="flex" alignItems="center" mb={1}>
                       <Icon sx={{ mr: 1 }}>tune</Icon>
                       <MDTypography variant="h6" fontWeight="bold">
-                        Manuel Kota Kontrolü
+                        {t("supervisor.manualTitle")}
                       </MDTypography>
                     </MDBox>
                     <MDTypography variant="caption" color="text" display="block" mb={2}>
-                      Mevcut kota: <b>{maxVehicles ?? "—"}</b>. Değişiklik gerekçesiyle birlikte
-                      denetim kaydına (Audit Log) mühürlenir — gerekçesiz güncelleme yapılamaz.
+                      {t("supervisor.manualHint", { max: maxVehicles ?? "—" })}
                     </MDTypography>
                     <MDBox mb={2}>
                       <MDInput
                         fullWidth
                         type="number"
-                        label="Yeni Araç Kotası"
+                        label={t("supervisor.newQuota")}
                         value={newMax}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setNewMax(e.target.value)
@@ -275,7 +288,7 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
                     <MDBox mb={2}>
                       <MDInput
                         fullWidth
-                        label="Gerekçe (zorunlu, min. 5 karakter)"
+                        label={t("supervisor.reason")}
                         value={manualReason}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setManualReason(e.target.value)
@@ -289,7 +302,7 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
                       disabled={busy || !manualOk}
                       onClick={manualUpdate}
                     >
-                      Güncelle &amp; Mühürle
+                      {t("supervisor.seal")}
                     </MDButton>
                   </Card>
                 </Grid>

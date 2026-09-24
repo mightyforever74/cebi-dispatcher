@@ -1,0 +1,21 @@
+---
+description: Yeni UI/UX işinden önce docs/UI_UX_CONTRACT.md oku. Ekran, bileşen, tema, form, tablo, i18n kopyası.
+alwaysApply: true
+---
+
+# UI/UX — önce sözleşme
+
+Görev şunlardan birini ekliyor veya değiştiriyorsa, **ilk araç çağrısından önce** `docs/UI_UX_CONTRACT.md` dosyasını oku. Okumadan kod, stil veya i18n yazma.
+
+- `src/layouts/**`, `src/components/**`, `src/assets/theme/**`, `src/assets/css/**`, `src/i18n/**`
+- Yeni ekran, modal, form, tablo, çip, toast, harita overlay, skip-link, breakpoint
+
+Sözleşme + `.cursorrules` prompttan üstündür. İstisna yalnız kullanıcı açıkça yazdıysa.
+
+Kısa hatırlatma (ayrıntı belgede):
+
+- Hex yalnız `src/assets/theme/tokens.ts`. Yeni paket yok.
+- `StatusChip`, `DataTable`, `DataState`, `ConfirmDialogShell`, `notifyToast` + `titleKey`, `useT()`.
+- `lg` = 992, `xl` = 1200 → `breakpoints` token. Hook `= []` yasak (`utils/empty` / `EMPTY_*`).
+- Üç backend `src/config/api.ts`. Harita `LiveFleetMap.tsx`; `index.tsx`’e kopyalama.
+- Glossary (taak/görev, ikaz/uyarı) P3’e kadar donduruldu.

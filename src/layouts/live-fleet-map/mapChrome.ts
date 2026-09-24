@@ -11,6 +11,7 @@ export interface MapChrome {
   text: string;
   textMuted: string;
   textFaint: string;
+  textOnChip: string;
   leafletBg: string;
   chipBg: string;
 }

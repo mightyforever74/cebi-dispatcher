@@ -1,4 +1,5 @@
 import Icon from "@mui/material/Icon";
+import { useMediaQuery, useTheme } from "@mui/material";
 import { a11y, density, status } from "assets/theme/tokens";
 import { useMaterialUIController } from "context";
 import MDBox from "components/MDBox";
@@ -32,26 +33,29 @@ function Banner({ item }: { item: NotifyItem }) {
       display="flex"
       alignItems="center"
       justifyContent="space-between"
-      gap={2}
+      flexWrap="wrap"
+      gap={1}
       px={2}
       py={1}
       mb={0.75}
+      width="100%"
       borderRadius="md"
       sx={{
         bgcolor: tone.bg,
         color: tone.fg,
         border: `1px solid ${tone.border}`,
+        boxSizing: "border-box",
       }}
     >
-      <MDBox minWidth={0}>
-        <MDTypography variant="button" fontWeight="bold" noWrap sx={{ color: tone.fg }}>
+      <MDBox minWidth={0} flex="1 1 180px">
+        <MDTypography variant="button" fontWeight="bold" noWrap sx={{ color: tone.fg, display: "block" }}>
           {title}
         </MDTypography>
         <MDTypography variant="caption" display="block" noWrap title={item.body} sx={{ color: tone.fg }}>
           {item.body}
         </MDTypography>
       </MDBox>
-      <MDBox display="flex" gap={1} flexShrink={0}>
+      <MDBox display="flex" flexWrap="wrap" gap={1} flex="0 1 auto">
         <MDButton
           size="small"
           variant="outlined"
@@ -81,9 +85,11 @@ function NotificationHost(): JSX.Element | null {
   const { pathname } = useLocation();
   const { banners, toasts, dismissToast } = useNotifications();
   const [controller] = useMaterialUIController();
+  const theme = useTheme();
+  const compact = useMediaQuery(theme.breakpoints.down("lg"));
   const moreLinkColor = controller.darkMode ? a11y.linkDark : a11y.linkLight;
   const reduced = useMemo(() => prefersReducedMotion(), []);
-  const overlay = pathname.includes("live-fleet-map");
+  const overlay = pathname.includes("live-fleet-map") && !compact;
   const visible = banners.slice(0, MAX_VISIBLE_BANNERS);
   const overflow = banners.length - visible.length;
 

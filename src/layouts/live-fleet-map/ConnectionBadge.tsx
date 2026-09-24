@@ -1,8 +1,8 @@
 import Chip from "@mui/material/Chip";
-import { alpha } from "@mui/material/styles";
 import { status } from "assets/theme/tokens";
+import { useMaterialUIController } from "context";
 import { formatRelative, useT } from "i18n";
-import type { FleetLinkState } from "./mapChrome";
+import { mapChrome, type FleetLinkState } from "./mapChrome";
 
 const BADGE_STATUS: Record<FleetLinkState, keyof typeof status.vehicle> = {
   live: "online",
@@ -40,6 +40,8 @@ interface ConnectionBadgeProps {
 
 function ConnectionBadge({ link, when, now, lang }: ConnectionBadgeProps): JSX.Element {
   const { t } = useT();
+  const [controller] = useMaterialUIController();
+  const chrome = mapChrome(controller.darkMode);
   const tone = status.vehicle[BADGE_STATUS[link]];
   const relative = formatRelative(when, now, lang);
   return (
@@ -52,8 +54,8 @@ function ConnectionBadge({ link, when, now, lang }: ConnectionBadgeProps): JSX.E
         height: 22,
         fontSize: "11px",
         fontWeight: 700,
-        bgcolor: alpha(tone.border, 0.16),
-        color: tone.border,
+        bgcolor: chrome.chipBg,
+        color: chrome.textOnChip,
         border: `1px solid ${tone.border}`,
       }}
     />

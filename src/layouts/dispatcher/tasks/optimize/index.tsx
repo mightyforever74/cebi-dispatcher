@@ -95,7 +95,8 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 
 // Real API
-import useVehicles, { Vehicle } from "hooks/useVehicles";
+import useVehicles, { EMPTY_VEHICLES, Vehicle } from "hooks/useVehicles";
+import { EMPTY_ARRAY } from "utils/empty";
 import {
   useSubmitOptimization,
   usePollOptimization,
@@ -502,7 +503,7 @@ function OptimizeTask(): JSX.Element {
   const { t, lang, locale } = useT();
   const { notifyToast } = useNotifications();
   const navigate = useNavigate();
-  const { data: vehicles = [], isLoading: loadingVehicles } = useVehicles();
+  const { data: vehicles = EMPTY_VEHICLES, isLoading: loadingVehicles } = useVehicles();
   const [controller] = useMaterialUIController();
   const { darkMode } = controller;
 
@@ -714,7 +715,7 @@ function OptimizeTask(): JSX.Element {
       : null;
   const assessQuery = useComplianceAssessment(
     assessPoint,
-    result?.available_vehicles ?? [],
+    result?.available_vehicles ?? EMPTY_ARRAY,
     result ? result.summary.total_distance_meters / 1000 : null
   );
 
@@ -744,7 +745,7 @@ function OptimizeTask(): JSX.Element {
       availableVehicles: string[],
       frames: DispatchLocationFrame[] | undefined
     ): ScoringVehicleSnapshot[] => {
-      const frameByVehicleId = new Map((frames ?? []).map((f) => [f.vehicle_id, f]));
+      const frameByVehicleId = new Map((frames ?? EMPTY_ARRAY).map((f) => [f.vehicle_id, f]));
       return availableVehicles.map((vehicleId) => {
         const plate = vehicleLabels[vehicleId] || vehicleId.slice(0, 8);
         const frame = frameByVehicleId.get(vehicleId);
@@ -831,7 +832,7 @@ function OptimizeTask(): JSX.Element {
       setInitialBoard(buildBoard(result.tasks, orderedIds, vehicleLabels, currentAssignments, scoreById));
       setBoardEpoch((e) => e + 1);
     },
-    [result, scoringTasks, vehicleLabels, buildSnapshots, locationsQuery.data, t]
+    [result, scoringTasks, vehicleLabels, buildSnapshots, locationsQuery.data, t, lang]
   );
 
   // Regulasyon (04.08): assess sonucu board kurulumundan SONRA gelirse
@@ -894,7 +895,7 @@ function OptimizeTask(): JSX.Element {
       }
       rebuildBoard(rankingMode, initialAssignments);
     }
-  }, [status, result, initialBoard, rankingMode, rebuildBoard, locationsQuery.isFetched, submittedConstraints]);
+  }, [status, result, initialBoard, rankingMode, rebuildBoard, locationsQuery.isFetched, locationsQuery.data, submittedConstraints, buildSnapshots, scoringTasks]);
 
   const handleModeChange = (_e: unknown, newMode: RankingMode | null) => {
     if (!newMode) return;

@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
+import { EMPTY_ARRAY } from "utils/empty";
 
 const POLL_MS = 30 * 1000;
 
@@ -65,7 +66,7 @@ export function useActiveRoutes(): Record<string, ActiveRoute> {
         const data = await res.json();
         if (stopped) return;
         const next: Record<string, ActiveRoute> = {};
-        (data.routes || []).forEach((r: ApiRouteRow) => {
+        (data.routes || EMPTY_ARRAY).forEach((r: ApiRouteRow) => {
           const pickup = numPair(r.pickup_location);
           const dropoff = numPair(r.dropoff_location);
           if (pickup && dropoff) {

@@ -8,6 +8,7 @@
 */
 
 import { useState, useEffect } from "react";
+import { breakpoints } from "assets/theme/tokens";
 
 // @mui material components
 import Divider from "@mui/material/Divider";
@@ -45,7 +46,7 @@ function Configurator(): JSX.Element {
   useEffect(() => {
     // A function that sets the disabled state of the buttons for the sidenav type.
     function handleDisabled() {
-      return window.innerWidth > 1200 ? setDisabled(false) : setDisabled(true);
+      return window.innerWidth > breakpoints.xl ? setDisabled(false) : setDisabled(true);
     }
 
     // The event listener that's calling the handleDisabled function when resizing the window.

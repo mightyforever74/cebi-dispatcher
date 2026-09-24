@@ -2,29 +2,29 @@
 =========================================================
 * TulipFleet Dispatcher — Design Tokens (Single Source of Truth)
 =========================================================
-* D1 "Tema Köprüsü" (docs/UI_D1_REPORT.md).
+* D1 "Tema Koprusu" (docs/UI_D1_REPORT.md).
 *
 * KURAL: Bu paketten sonra `src/assets/theme/**` ve `src/assets/theme-dark/**`
-* altında YENİ hex/rgba literal EKLENMEZ. Her renk buradan içe aktarılır.
-* Kanıt: `Select-String -Path src\assets\theme\components -Pattern "#[0-9a-f]{3,8}"` → 0 sonuç
+* altinda YENI hex/rgba literal EKLENMEZ. Her renk buradan ice aktarilir.
+* Kanit: `Select-String -Path src\assets\theme\components -Pattern "#[0-9a-f]{3,8}"` → 0 sonuc
 * (docs/UI_D1_REPORT.md §2).
 *
-* Kaynaklar (D0 kanıtlı):
-*  - Landing token adları/değerleri: C:\tulipfleet-landing\src\styles\global.css:1-38 (Tailwind v4 @theme)
-*  - MD2 PRO taban palet: src/assets/theme/base/colors.ts (D1 öncesi hali) — değerler
-*    BİREBİR korunarak buraya taşındı (görsel regresyon yok).
+* Kaynaklar (D0 kanitli):
+*  - Landing token adlari/degerleri: C:\tulipfleet-landing\src\styles\global.css:1-38 (Tailwind v4 @theme)
+*  - MD2 PRO taban palet: src/assets/theme/base/colors.ts (D1 oncesi hali) — degerler
+*    BIREBIR korunarak buraya tasindi (gorsel regresyon yok).
 *  - TaskStatus (9 CHECK): src/layouts/dispatcher/tasks/index.tsx:56-78 (`public.tasks` CHECK constraint)
-*  - AlertSeverity: src/hooks/useExceptions.ts:10 (`ExceptionSeverity`) — repo içinde bulunan TEK
-*    "severity" sözleşmesi; ayrı bir mobil-manifest dokümanı bu D1 turunda repo içinde bulunamadı
-*    (bkz. docs/UI_D0_DISCOVERY.md §6). Değerler bu tip ile birebir aynı tutuldu.
+*  - AlertSeverity: src/hooks/useExceptions.ts:10 (`ExceptionSeverity`) — repo icinde bulunan TEK
+*    "severity" sozlesmesi; ayri bir mobil-manifest dokumani bu D1 turunda repo icinde bulunamadi
+*    (bkz. docs/UI_D0_DISCOVERY.md §6). Degerler bu tip ile birebir ayni tutuldu.
 *  - ExceptionType (6 tip): src/layouts/dispatcher/exceptions/index.tsx:38-45 (`TYPE_LABEL`)
-*  - VehicleConnectivityStatus: D1 görev tanımında verilen 4 değer (online/stale/offline/maintenance) —
+*  - VehicleConnectivityStatus: D1 gorev taniminda verilen 4 deger (online/stale/offline/maintenance) —
 *    mevcut `VehicleRow.status` (available/in_use/maintenance/retired, src/types/dispatcher.ts) ile
-*    KARIŞTIRILMAMALI; bu, bağlantı/telemetri durumu için AYRI bir ad alanıdır.
+*    KARISTIRILMAMALI; bu, baglanti/telemetri durumu icin AYRI bir ad alanidir.
 */
 
 // =========================================================================
-// 1) LANDING KÖPRÜSÜ — token adları landing'den korunmuştur (camelCase)
+// 1) LANDING KOPRUSU — token adlari landing'den korunmustur (camelCase)
 //    Kaynak: C:\tulipfleet-landing\src\styles\global.css:3-38
 // =========================================================================
 export const landing = {
@@ -40,19 +40,19 @@ export const landing = {
   navyFog700: "#5b6577",
   /**
    * Landing'in `color-mix(in srgb, var(--color-navy-elevated) 62%, white 16%)`
-   * (global.css:9) ifadesinin JS/MUI tarafı için statik yaklaşık karşılığı
-   * (renk-hesabı derleme zamanında yapılamadığından elle hesaplanmıştır).
-   * global.css'teki CSS Custom Property karşılığı `color-mix()` ile BİREBİR
-   * landing sözdizimini kullanır (bkz. bu paketteki global.css).
+   * (global.css:9) ifadesinin JS/MUI tarafi icin statik yaklasik karsiligi
+   * (renk-hesabi derleme zamaninda yapilamadigindan elle hesaplanmistir).
+   * global.css'teki CSS Custom Property karsiligi `color-mix()` ile BIREBIR
+   * landing sozdizimini kullanir (bkz. bu paketteki global.css).
    */
   navyLine: "#43495c",
   offwhite: "#f8fafc",
   emerald: "#10b981",
   emeraldDim: "rgba(16, 185, 129, 0.1)",
-  /** Landing pazarlama vurgu rengi (turuncu-kırmızı). D1'de MUI `primary`e
-   * BAĞLANMADI — TulipFleet ürün markası (mor, aşağıdaki `brand`) zaten
-   * tüm ekranlarda kurulu; bu bir rebrand kararı değildir (Cem onayı gerekir,
-   * bkz. docs/UI_D0_DISCOVERY.md §2 A4). Yalnızca köprü/referans amaçlı taşındı. */
+  /** Landing pazarlama vurgu rengi (turuncu-kirmizi). D1'de MUI `primary`e
+   * BAGLANMADI — TulipFleet urun markasi (mor, asagidaki `brand`) zaten
+   * tum ekranlarda kurulu; bu bir rebrand karari degildir (Cem onayi gerekir,
+   * bkz. docs/UI_D0_DISCOVERY.md §2 A4). Yalnizca kopru/referans amacli tasindi. */
   accent: "#ff5722",
   accentSoft: "#ff7043",
   accentDim: "rgba(255, 87, 34, 0.14)",
@@ -63,8 +63,8 @@ export const landing = {
 } as const;
 
 // =========================================================================
-// 2) ÜRÜN MARKASI — TulipFleet mor/turuncu gradyanı (ADR-0001).
-//    Değerler mevcut src/assets/theme/base/colors.ts'ten BİREBİR taşındı.
+// 2) URUN MARKASI — TulipFleet mor/turuncu gradyani (ADR-0001).
+//    Degerler mevcut src/assets/theme/base/colors.ts'ten BIREBIR tasindi.
 // =========================================================================
 export const brand = {
   primary: "#7C3AED",
@@ -75,7 +75,7 @@ export const brand = {
 
 // =========================================================================
 // 3) MD2 PRO TABAN PALET — LIGHT (src/assets/theme/base/colors.ts'in D1
-//    ÖNCESİ literal değerleri; görsel fark yaratmamak için birebir kopyalandı)
+//    ONCESI literal degerleri; gorsel fark yaratmamak icin birebir kopyalandi)
 // =========================================================================
 export const paletteLight = {
   backgroundDefault: "#f0f2f5",
@@ -161,7 +161,7 @@ export const paletteLight = {
 
 // =========================================================================
 // 4) MD2 PRO TABAN PALET — DARK (src/assets/theme-dark/base/colors.ts'in
-//    D1 ÖNCESİ literal değerleri; görsel fark yaratmamak için birebir kopyalandı)
+//    D1 ONCESI literal degerleri; gorsel fark yaratmamak icin birebir kopyalandi)
 // =========================================================================
 export const paletteDark = {
   backgroundDefault: "#1a2035",
@@ -250,19 +250,19 @@ export const paletteDark = {
   tabsIndicatorShadow: "#ddd",
 } as const;
 
-/** Stepper bileşenlerindeki (Mui-inactive) tek-off vurgu rengi.
- * D1 öncesi `src/assets/theme/components/stepper/{stepIcon,stepConnector,stepLabel}.ts`
- * ve theme-dark eşdeğerlerinde literal `"#9fc9ff"` idi; görsel fark yaratmadan
- * buraya taşındı (D0 §2 A2 hex-sızıntı bulgusu, adım 2.6 kanıtı). */
+/** Stepper bilesenlerindeki (Mui-inactive) tek-off vurgu rengi.
+ * D1 oncesi `src/assets/theme/components/stepper/{stepIcon,stepConnector,stepLabel}.ts`
+ * ve theme-dark esdegerlerinde literal `"#9fc9ff"` idi; gorsel fark yaratmadan
+ * buraya tasindi (D0 §2 A2 hex-sizinti bulgusu, adim 2.6 kaniti). */
 export const misc = {
   stepperInactive: "#9fc9ff",
 } as const;
 
 // =========================================================================
-// 5) OPERASYONEL DURUM TOKEN'LARI (prod/manifest sözleşmesiyle birebir)
+// 5) OPERASYONEL DURUM TOKEN'LARI (prod/manifest sozlesmesiyle birebir)
 // =========================================================================
 
-/** 9 CHECK değeri — src/layouts/dispatcher/tasks/index.tsx:56-78 (`public.tasks` CHECK constraint) */
+/** 9 CHECK degeri — src/layouts/dispatcher/tasks/index.tsx:56-78 (`public.tasks` CHECK constraint) */
 export type TaskStatus =
   | "pending"
   | "pending_review"
@@ -277,14 +277,14 @@ export type TaskStatus =
 /** src/hooks/useExceptions.ts:10 `ExceptionSeverity` ile birebir. */
 export type AlertSeverity = "low" | "medium" | "high" | "critical";
 
-/** Araç bağlantı/telemetri durumu (D1 görev tanımı) — VehicleRow.status
- * (available/in_use/maintenance/retired) ile KARIŞTIRILMAMALI, ayrı ad alanı. */
+/** Arac baglanti/telemetri durumu (D1 gorev tanimi) — VehicleRow.status
+ * (available/in_use/maintenance/retired) ile KARISTIRILMAMALI, ayri ad alani. */
 export type VehicleConnectivityStatus = "online" | "stale" | "offline" | "maintenance";
 
-/** `public.vehicles.status` — liste ekranı (D4 StatusChip kind=vehicle ops). */
+/** `public.vehicles.status` — liste ekrani (D4 StatusChip kind=vehicle ops). */
 export type VehicleOpsStatus = "available" | "in_use" | "maintenance" | "retired";
 
-/** `public.drivers.status` — liste ekranı (D4 StatusChip kind=vehicle lookup). */
+/** `public.drivers.status` — liste ekrani (D4 StatusChip kind=vehicle lookup). */
 export type DriverDutyStatus = "available" | "on_task" | "task_pending" | "on_leave" | "offline";
 
 export type TaskPriority = "high" | "normal" | "low";
@@ -306,10 +306,10 @@ export interface StatusColorSet {
 }
 
 /**
- * Her durum kümesi mevcut MD2 `badgeColors`/`main` çiftlerinden türetilmiştir
- * (D0'da tespit edilen 4 bağımsız `statusColor()` fonksiyonunun — tasks/vehicles/
+ * Her durum kumesi mevcut MD2 `badgeColors`/`main` ciftlerinden turetilmistir
+ * (D0'da tespit edilen 4 bagimsiz `statusColor()` fonksiyonunun — tasks/vehicles/
  * drivers/exceptions — TEK kaynaktan beslenmesi hedeflenir; bkz. docs/UI_D0_DISCOVERY.md
- * §4 C1). Ekran dosyaları bu D1 paketinde DEĞİŞTİRİLMEDİ — tüketim D2 işidir.
+ * §4 C1). Ekran dosyalari bu D1 paketinde DEGISTIRILMEDI — tuketim D2 isidir.
  */
 const badge = paletteLight.badgeColors;
 const main = {
@@ -336,37 +336,37 @@ export const status: {
   priority: Record<TaskPriority, StatusColorSet>;
   unknown: StatusColorSet;
 } = {
-  // Renk eşlemesi src/layouts/dispatcher/tasks/index.tsx:56-78 ile birebir.
+  // Renk eslemesi src/layouts/dispatcher/tasks/index.tsx:56-78 ile birebir.
   task: {
-    pending: fromBadge("secondary", main.secondary),
+    pending: { bg: badge.secondary.background, fg: paletteLight.grey[800], border: main.secondary },
     pending_review: fromBadge("warning", main.warning),
     accepted: fromBadge("info", main.info),
     assigned: fromBadge("info", main.info),
-    in_progress: fromBadge("primary", main.primary),
+    in_progress: { bg: badge.primary.background, fg: "#6d0830", border: main.primary },
     completed: fromBadge("success", main.success),
     rejected: fromBadge("error", main.error),
     cancelled: fromBadge("error", main.error),
     withdrawn: fromBadge("dark", main.dark),
   },
-  // Renk eşlemesi src/layouts/dispatcher/exceptions/index.tsx:31-36 (SEVERITY_COLOR) ile birebir.
+  // Renk eslemesi src/layouts/dispatcher/exceptions/index.tsx:31-36 (SEVERITY_COLOR) ile birebir.
   alert: {
     critical: fromBadge("error", main.error),
     high: fromBadge("warning", main.warning),
     medium: fromBadge("info", main.info),
     low: fromBadge("dark", main.dark),
   },
-  // Yeni ad alanı (bağlantı durumu) — gerekçe: online=success, stale=warning
-  // (veri gecikmiş ama bağlı), offline=error, maintenance=secondary (planlı/
-  // acil olmayan, "stale" ile karışmasın diye ayrı tonlandı). Karar D2'de
-  // Cem tarafından değiştirilebilir.
+  // Yeni ad alani (baglanti durumu) — gerekce: online=success, stale=warning
+  // (veri gecikmis ama bagli), offline=error, maintenance=secondary (planli/
+  // acil olmayan, "stale" ile karismasin diye ayri tonlandi). Karar D2'de
+  // Cem tarafindan degistirilebilir.
   vehicle: {
     online: fromBadge("success", main.success),
     stale: fromBadge("warning", main.warning),
     offline: fromBadge("error", main.error),
     maintenance: fromBadge("secondary", main.secondary),
   },
-  // 6 tip için nötr bilgi tonu (mevcut ekranda TYPE_LABEL renksiz metindi —
-  // D0'da ayrı bir renk kodlaması yoktu; burada info tonunda tutarlı hale getirildi).
+  // 6 tip icin notr bilgi tonu (mevcut ekranda TYPE_LABEL renksiz metindi —
+  // D0'da ayri bir renk kodlamasi yoktu; burada info tonunda tutarli hale getirildi).
   exception: {
     eta_delay: fromBadge("warning", main.warning),
     driver_offline: fromBadge("error", main.error),
@@ -399,7 +399,7 @@ export const status: {
   unknown: fromBadge("secondary", main.secondary),
 };
 
-/** ConfirmDialogShell — D5. Hex yalnız burada; light/dark chrome + severity. */
+/** ConfirmDialogShell — D5. Hex yalniz burada; light/dark chrome + severity. */
 export const dialog = {
   danger: "#f44336",
   dangerDark: "#b71c1c",
@@ -445,20 +445,20 @@ export const a11y = {
 } as const;
 
 // =========================================================================
-// 5b) LIVE MAP — D3 (basemap, chrome, eşikler). Hex yalnız burada.
+// 5b) LIVE MAP — D3 (basemap, chrome, esikler). Hex yalniz burada.
 //     Marker renkleri `status.vehicle.*` (online/stale/offline); bu nesne
-//     panel/basemap/rota/küme ve tek stale eşiğini taşır.
+//     panel/basemap/rota/kume ve tek stale esigini tasir.
 // =========================================================================
 
 export const map = {
-  /** Son telemetri bu süreyi aşınca araç marker'ı `stale`. Tek kaynak. */
+  /** Son telemetri bu sureyi asinca arac marker'i `stale`. Tek kaynak. */
   staleMs: 2 * 60 * 1000,
-  /** MQTT son mesaj bu süreden yeniyse bağlantı rozeti `live`. */
+  /** MQTT son mesaj bu sureden yeniyse baglanti rozeti `live`. */
   liveMs: 30 * 1000,
-  /** REST snapshot yedekleme aralığı — `useFleetSnapshot` ile aynı. */
+  /** REST snapshot yedekleme araligi — `useFleetSnapshot` ile ayni. */
   restPollMs: 20 * 1000,
   clusterMinVehicles: 20,
-  /** Şehir ölçeği — bu zoom ve üstünde küme kapanır. */
+  /** Sehir olcegi — bu zoom ve ustunde kume kapanir. */
   clusterDisableZoom: 14,
   panelWidthPx: 280,
   tiles: {
@@ -484,6 +484,8 @@ export const map = {
     text: paletteDark.white,
     textMuted: paletteDark.textSecondary,
     textFaint: paletteDark.textDisabled,
+    /** Chip / badge label on `chipBg` — ≥4.5:1 (white / navyDeep). */
+    textOnChip: paletteDark.white,
     leafletBg: "#191a1a",
     chipBg: landing.navyDeep,
   },
@@ -496,25 +498,27 @@ export const map = {
     text: paletteLight.darkMain,
     textMuted: paletteLight.grey[600],
     textFaint: paletteLight.grey[500],
+    /** Chip / badge label on `chipBg` — ≥4.5:1 (darkMain / grey.200). */
+    textOnChip: paletteLight.darkMain,
     leafletBg: paletteLight.backgroundDefault,
     chipBg: paletteLight.grey[200],
   },
 } as const;
 
 // =========================================================================
-// 6) YOĞUNLUK / RADIUS / SHADOW / GLASS
+// 6) YOGUNLUK / RADIUS / SHADOW / GLASS
 // =========================================================================
 
-/** Satır yüksekliği (px) — DataTable "compact/comfortable" anahtarı D2'de bağlanacak.
- * `navbar` D2 kabuk yüksekliği (landing Header paritesi, 64px). */
+/** Satir yuksekligi (px) — DataTable "compact/comfortable" anahtari D2'de baglanacak.
+ * `navbar` D2 kabuk yuksekligi (landing Header paritesi, 64px). */
 export const density = {
   compact: 40,
   comfortable: 56,
   navbar: 64,
 } as const;
 
-/** src/assets/theme/base/borders.ts + theme-dark eşdeğerinin px değerleriyle
- * BİREBİR (görsel fark yok) — artık bu dosyalar da buradan besleniyor. */
+/** src/assets/theme/base/borders.ts + theme-dark esdegerinin px degerleriyle
+ * BIREBIR (gorsel fark yok) — artik bu dosyalar da buradan besleniyor. */
 export const radius = {
   xs: 1.6,
   sm: 2,
@@ -525,9 +529,9 @@ export const radius = {
   section: 160,
 } as const;
 
-/** Landing köprüsü — kart/nav/consent gölgeleri (global.css:23-31). MD2'nin
- * kendi prosedürel `boxShadows.*` sistemi (theme/base/boxShadows.ts) AYRI ve
- * dokunulmadı; bu set yalnızca gelecekteki glass/landing-hizalı bileşenler içindir. */
+/** Landing koprusu — kart/nav/consent golgeleri (global.css:23-31). MD2'nin
+ * kendi prosedurel `boxShadows.*` sistemi (theme/base/boxShadows.ts) AYRI ve
+ * dokunulmadi; bu set yalnizca gelecekteki glass/landing-hizali bilesenler icindir. */
 export const shadow = {
   nav: "0 8px 32px rgb(7 11 24 / 0.45)",
   consent: "0 -8px 40px rgb(7 11 24 / 0.45)",
@@ -536,22 +540,22 @@ export const shadow = {
   glowAccentSoft: landing.glow.accentSoft,
 } as const;
 
-/** GlassPanel (src/components/GlassPanel/index.tsx:44-53) ile BİREBİR aynı
- * sayısal değerler — D2'de o bileşen bu token'ı tüketecek şekilde
- * refactor edilebilir (bu pakette dokunulmadı). */
+/** GlassPanel (src/components/GlassPanel/index.tsx:44-53) ile BIREBIR ayni
+ * sayisal degerler — D2'de o bilesen bu token'i tuketecek sekilde
+ * refactor edilebilir (bu pakette dokunulmadi). */
 export const glass = {
   blurPx: 16,
   saturatePct: 140,
   opacity: { dark: 0.62, light: 0.7 },
-  /** `prefers-reduced-transparency: reduce` aktifken düşülecek opak fallback. */
+  /** `prefers-reduced-transparency: reduce` aktifken dusulecek opak fallback. */
   reducedOpacity: { dark: 0.96, light: 0.96 },
 } as const;
 
 // =========================================================================
-// 7) A11Y — prefers-reduced-motion → MUI transition süreleri (Adım 4.1)
+// 7) A11Y — prefers-reduced-motion → MUI transition sureleri (Adim 4.1)
 // =========================================================================
 
-/** SSR-safe `prefers-reduced-motion: reduce` kontrolü. */
+/** SSR-safe `prefers-reduced-motion: reduce` kontrolu. */
 export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
   try {
@@ -561,9 +565,18 @@ export function prefersReducedMotion(): boolean {
   }
 }
 
-/** `theme.transitions.duration` için — reduced-motion aktifse tüm süreler 0
- * olur (MUI'nin kendi `transitions.create()` çıktısı da 0ms üretir). Aktif
- * DEĞİLSE `undefined` döner; `createTheme()` kendi varsayılanlarını kullanır. */
+/** MD2 breakpoint table (theme `lg` is 992, not MUI default 1200). */
+export const breakpoints = {
+  sm: 576,
+  md: 768,
+  lg: 992,
+  xl: 1200,
+  xxl: 1400,
+} as const;
+
+/** `theme.transitions.duration` icin — reduced-motion aktifse tum sureler 0
+ * olur (MUI'nin kendi `transitions.create()` ciktisi da 0ms uretir). Aktif
+ * DEGILSE `undefined` doner; `createTheme()` kendi varsayilanlarini kullanir. */
 export function motionDurationOverrides():
   | {
       shortest: number;

@@ -31,11 +31,13 @@ function DashboardLayout({ children }: { children: ReactNode }): JSX.Element {
 
   useEffect(() => {
     setLayout(dispatch, "dashboard");
-  }, [pathname]);
+  }, [pathname, dispatch]);
 
   return (
     <MDBox
       component="main"
+      id="main-content"
+      tabIndex={-1}
       sx={({ breakpoints, transitions, functions: { pxToRem } }) => ({
         p: 3,
         position: "relative",

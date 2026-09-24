@@ -11,6 +11,8 @@ export interface Vehicle {
   [key: string]: any;
 }
 
+export const EMPTY_VEHICLES: Vehicle[] = [];
+
 export function useVehicles() {
   const token = useAuthStore((s) => s.token);
 
@@ -31,12 +33,13 @@ export function useVehicles() {
 
       const body = await res.json();
       // Route returns { vehicles: [...], count }. Verified against routes/vehicles.js.
-      return Array.isArray(body) ? body : body.vehicles || [];
+      return Array.isArray(body) ? body : body.vehicles || EMPTY_VEHICLES;
     },
     enabled: Boolean(token),
     staleTime: 1000 * 60 * 2, // 2 dakika
     retry: 1,
     networkMode: "always",
+    placeholderData: EMPTY_VEHICLES,
   });
 }
 

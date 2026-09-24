@@ -14,7 +14,7 @@ import { ReactNode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, useLocation } from "react-router-dom";
 
-import { LanguageProvider } from "i18n";
+import { LanguageProvider, useT } from "i18n";
 import { DensityProvider } from "context/density";
 import { NotificationsProvider } from "components/Notifications";
 import { useLatestLocations } from "hooks/useLatestLocations";
@@ -65,6 +65,15 @@ function ThemedApp({ children }: { children: ReactNode }) {
   );
 }
 
+function SkipLink(): JSX.Element {
+  const { t } = useT();
+  return (
+    <a className="tf-skip-link" href="#main-content">
+      {t("common.skipToMain")}
+    </a>
+  );
+}
+
 function AuthGate() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { pathname } = useLocation();
@@ -73,17 +82,20 @@ function AuthGate() {
   // ilk-durum snapshot'ı burada; iki ayrı sorumluluk, tek çağrı noktası.
   useLatestLocations();
 
-  if (isAuthenticated) {
-    return <App />;
-  }
+  const page = isAuthenticated ? (
+    <App />
+  ) : pathname === "/authentication/forgot-password" ? (
+    <ForgotPassword />
+  ) : (
+    <Basic />
+  );
 
-  // Unauthenticated users never reach App Routes — forgot-password must
-  // render here or the trial welcome-mail link has nowhere to land.
-  if (pathname === "/authentication/forgot-password") {
-    return <ForgotPassword />;
-  }
-
-  return <Basic />;
+  return (
+    <>
+      <SkipLink />
+      {page}
+    </>
+  );
 }
 
 root.render(

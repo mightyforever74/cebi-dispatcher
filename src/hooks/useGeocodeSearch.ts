@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
+import { EMPTY_ARRAY } from "utils/empty";
 
 // FIX (2026-07-18): HERE Discover proxy'sine (routes/geocode.js,
 // tulipfleet-enterprise-backend) debounce'lu istek atan hook. Spec geregi:
@@ -49,11 +50,11 @@ export function useGeocodeSearch(query: string) {
           return res.json();
         })
         .then((data: { results: GeocodeResult[] }) => {
-          setResults(data.results || []);
+          setResults(data.results || EMPTY_ARRAY);
         })
         .catch((err) => {
           if (err.name !== "AbortError") {
-            setResults([]);
+            setResults(EMPTY_ARRAY);
           }
         })
         .finally(() => setLoading(false));

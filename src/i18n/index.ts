@@ -15,6 +15,7 @@ import { tr } from "./tr";
 import type { Lang, Locale, TFunction, TranslationKey, TVars } from "./types";
 
 export type { Lang, Locale, TFunction, TranslationKey, TranslationSchema, TVars } from "./types";
+export { localizeBackendAlert, BACKEND_TASK_ACCEPTED_PREFIX } from "./backendCopy";
 
 const LOCALE_BY_LANG: Record<Lang, Locale> = {
   en: "en-US",

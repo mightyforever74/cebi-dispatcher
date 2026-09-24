@@ -2,8 +2,8 @@
 =========================================================
 * TulipFleet Dispatcher — Auth Footer
 =========================================================
-* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 3): tek satır, navyFog metin;
-* sol "© {year} TulipFleet B.V.", sağ Gizlilik/Şartlar + uygulama sürümü.
+* D2 "Kabuk" (docs/UI_D2_REPORT.md, Adim 3): tek satir, navyFog metin;
+* sol "© {year} TulipFleet B.V.", sag Gizlilik/Sartlar + uygulama surumu.
 */
 
 import Container from "@mui/material/Container";
@@ -25,7 +25,14 @@ function Footer(): JSX.Element {
   const year = new Date().getFullYear();
 
   return (
-    <MDBox component="footer" position="absolute" width="100%" bottom={0} py={3}>
+    <MDBox
+      component="footer"
+      position="absolute"
+      width="100%"
+      bottom={0}
+      py={3}
+      sx={{ backgroundColor: landing.navyInk }}
+    >
       <Container>
         <MDBox
           width="100%"

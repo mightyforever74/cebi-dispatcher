@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ENTERPRISE_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
 import { ComplianceAssessRow } from "services/dispatch/scoring/types";
+import { EMPTY_ARRAY, EMPTY_OBJECT } from "utils/empty";
 
 
 export interface AssessZone {
@@ -55,7 +56,7 @@ export default function useComplianceAssessment(
         body: JSON.stringify({
           point,
           vehicle_ids: vehicleIds,
-          ...(distanceKm && distanceKm > 0 ? { distance_km: distanceKm } : {}),
+          ...(distanceKm && distanceKm > 0 ? { distance_km: distanceKm } : EMPTY_OBJECT),
         }),
       });
       if (!res.ok) {
@@ -64,7 +65,7 @@ export default function useComplianceAssessment(
       }
       const data = await res.json();
       const byVehicle = new Map<string, ComplianceAssessRow>();
-      (data.results ?? []).forEach((r: AssessApiRow) => byVehicle.set(r.vehicle_id, r));
+      (data.results ?? EMPTY_ARRAY).forEach((r: AssessApiRow) => byVehicle.set(r.vehicle_id, r));
       return { zone: data.zone ?? null, eu_hint: data.eu_hint ?? null, byVehicle };
     },
     enabled: !!token && !!point && vehicleIds.length > 0,

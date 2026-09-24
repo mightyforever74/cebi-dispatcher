@@ -4,8 +4,10 @@ import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+import { useT } from "i18n";
 
 function TollAnalyticsPlaceholder(): JSX.Element {
+  const { t } = useT();
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -17,13 +19,12 @@ function TollAnalyticsPlaceholder(): JSX.Element {
             </Icon>
             <MDBox mt={2}>
               <MDTypography variant="h4" fontWeight="medium">
-                Maliyet & Otoban Teftişi (Toll)
+                {t("tollAnalytics.title")}
               </MDTypography>
             </MDBox>
             <MDBox mt={1}>
               <MDTypography variant="body2" color="text">
-                Vrachtwagenheffing yol vergisi ve rota maliyet kırılımları (FEAT-008) Temmuz 2026
-                HERE API canlıya geçince aktive edilecek.
+                {t("tollAnalytics.body")}
               </MDTypography>
             </MDBox>
           </MDBox>

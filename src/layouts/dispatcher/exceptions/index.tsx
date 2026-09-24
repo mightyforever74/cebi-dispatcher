@@ -22,6 +22,7 @@ import { useNotifications } from "components/Notifications";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { ExceptionEvent, ResolveAction } from "hooks/useExceptions";
+import { breakpoints } from "assets/theme/tokens";
 import { formatDateTime, useT, type TFunction, type TranslationKey } from "i18n";
 
 const RESOLVE_OPTIONS: ResolveAction[] = ["manual_replan", "manual_reassign", "dismiss"];
@@ -63,9 +64,7 @@ function statusLabel(status: string, translate: (key: TranslationKey) => string)
 export default function Exceptions(): JSX.Element {
   const { t, lang } = useT();
   const theme = useTheme();
-  // MD2 breakpoints: lg=992, xl=1200. Preview 1045 still showed labels because
-  // `up("lg")` is min-width 992 — not MUI's default lg (1200).
-  const iconOnly = useMediaQuery(theme.breakpoints.down(1200));
+  const iconOnly = useMediaQuery(theme.breakpoints.down(breakpoints.xl));
   const {
     exceptions,
     loading,

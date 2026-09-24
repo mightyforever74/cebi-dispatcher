@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AUTH_API_URL } from "config/api";
 import { useAuthStore } from "store/useAuthStore";
+import { EMPTY_OBJECT } from "utils/empty";
 
 // Desen: src/hooks/useTasks.ts'ten kanitli (fetch + Authorization header).
 // Ana backend'e (api.tulipfleet.com) DOGRUDAN baglanir - enterprise-api'ye degil.
@@ -29,6 +30,8 @@ export interface Alert {
   [key: string]: unknown;
 }
 
+export const EMPTY_ALERTS: Alert[] = [];
+
 function authHeaders(token: string | null) {
   return {
     Authorization: token ? `Bearer ${token}` : "",
@@ -50,12 +53,13 @@ export function useAlerts() {
         throw new Error(`Alerts fetch failed: ${res.status} ${text}`);
       }
       const body = await res.json();
-      return body.alerts || (Array.isArray(body) ? body : []);
+      return body.alerts || (Array.isArray(body) ? body : EMPTY_ALERTS);
     },
     enabled: !!token,
     staleTime: 1000 * 30,
     retry: 1,
     refetchInterval: 1000 * 60, // 1 dk - "sicak uyari" hissi icin periyodik yenileme
+    placeholderData: EMPTY_ALERTS,
   });
 }
 
@@ -74,7 +78,7 @@ export function useResolveAlert() {
         const text = await res.text();
         throw new Error(`Alert resolve failed: ${res.status} ${text}`);
       }
-      return res.json().catch(() => ({}));
+      return res.json().catch(() => EMPTY_OBJECT);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alerts"] });

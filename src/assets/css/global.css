@@ -106,6 +106,31 @@
   outline-offset: var(--tf-focus-ring-offset);
 }
 
+.tf-skip-link {
+  position: fixed;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 10000;
+  background: var(--tf-brand-primary);
+  color: var(--tf-offwhite);
+  border-radius: 4px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tf-skip-link:focus-visible {
+  clip: auto;
+  clip-path: none;
+  height: auto;
+  width: auto;
+  padding: 0.5rem 0.75rem;
+  overflow: visible;
+}
+
 /* =========================================================
    D3 Live map — Leaflet popup/tooltip/zoom + küme ikonu.
    Değerler tokens.ts `map.*` / `status.vehicle.*` ile birebir;
@@ -204,4 +229,13 @@
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow {
   transition: transform 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-cluster-anim .leaflet-marker-icon,
+  .leaflet-cluster-anim .leaflet-marker-shadow,
+  .leaflet-fade-anim .leaflet-map-pane .leaflet-popup,
+  .leaflet-zoom-anim .leaflet-zoom-animated {
+    transition: none !important;
+  }
 }

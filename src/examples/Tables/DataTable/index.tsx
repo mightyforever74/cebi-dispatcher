@@ -105,8 +105,12 @@ function DataTable({
     state: { pageIndex, pageSize, globalFilter },
   }: any = tableInstance;
 
-  // Set the default value for the entries per page when component mounts
-  useEffect(() => setPageSize(defaultValue || 10), [defaultValue]);
+  // Bail out when the size already matches — setPageSize from react-table is
+  // not referentially stable (D5 #185).
+  useEffect(() => {
+    const next = defaultValue || 10;
+    if (pageSize !== next) setPageSize(next);
+  }, [defaultValue, pageSize, setPageSize]);
 
   // Set the entries per page value based on the select value
   const setEntriesPerPage = (value: any) => setPageSize(value);

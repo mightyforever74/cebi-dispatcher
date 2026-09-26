@@ -29,19 +29,27 @@ Kritik yolda üçüncü taraf istek 0; fontlar HTML ile paralel (preload) ve ayn
 Türkçe karakterler latin-ext alt kümesinden gelir (ğ ş İ ı ç ö ü) — TR ekranlarında
 glyph kaybı olmamalı; kontrol maddesi aşağıda.
 
-## Doğrulama (doldurulacak)
-- [ ] `npm run build` temiz; `build/index.html` içinde `googleapis` geçmiyor
-- [ ] Preview alias'ta Network: `fonts.googleapis`/`gstatic` isteği 0; `/fonts/*.woff2` 200, `cache-control: immutable`
-- [ ] TR dilinde Tasks/Drivers: ğ ş İ ı ç ö ü doğru glyph (fallback Arial değil) — ekran görüntüsü
-- [ ] İkonlar (sidenav, tablo aksiyonları, StatusChip) Round varyantında, ligatür metni görünmüyor
-- [ ] Lighthouse Desktop (gizli, Shields kapalı) Live map / Tasks / Exceptions: Perf, LCP, CLS — önce/sonra tablosu
-- [ ] axe Login/Live map/Tasks × dark/light: crit/ser 0 korunuyor
+## Doğrulama (2026-09-26, preview host dispatcher-preview.tulipfleet.com → CNAME ui-d7-fonts, commit 658f600)
+- [x] `npm run build` temiz; `build/index.html` içinde `googleapis` 0, `font-face` 1 (minify)
+- [x] Network (yan panel): googleapis/gstatic 0; 5 woff2 aynı origin, `cache-control: public, max-age=31536000, immutable`, CF MISS→HIT; konsol hatasız
+- [x] TR Tasks/Drivers: ğ Ş İ ı ç Ç ö Ö ü Ü Manrope ile çiziliyor, `document.fonts.check` true; latin-ext dosyası yükleniyor
+- [x] 29 ikon `Material Icons Round`; sıfırdan yüklemede ligatür metni 0 (font-display: block + preload)
+- [x] Lighthouse Desktop (Brave gizli, Shields kapalı) Live map; Tasks/Exceptions merge sonrası prod'da ölçülecek
+- [ ] axe Login/Live map/Tasks × dark/light: crit/ser 0 — merge sonrası prod turunda
 
 | Ekran | Perf önce → sonra | LCP | CLS |
 |---|---|---|---|
-| Live map | 74 → | 2.3 s → | 0.203 → |
-| Tasks | 89 → | 1.2 s → | 0.101 → |
-| Exceptions | 79 → | 1.4 s → | 0.129 → |
+| Live map | 74 → **87** | 2.3 s → **1.9 s** | 0.203 → **0.078** |  (TBT 100 → 60 ms, SI 1.8 → 1.3 s, A11y 100)
+| Tasks | 89 → (prod'da) | 1.2 s → | 0.101 → |
+| Exceptions | 79 → (prod'da) | 1.4 s → | 0.129 → |
+
+Insights (sonra): "Font display" ve Google Fonts zinciri kalmadı; render-blocking yalnızca main.css (turuncu).
+Kalan kırmızılar: görsel 207 KiB (logo PNG + cartocdn tile), LCP öğesi harita tile'ı, legacy JS 8 KiB.
+
+## D7-1 sırasında bulunan, D7-1'den BAĞIMSIZ (prod'da birebir aynı) üç kusur → D7-2
+1. DataTable başlık/gövde genişlik uyumsuzluğu: Tasks başlık 730 px / gövde 934 px, Drivers 650 / 949; sütun sol kenarları tutmuyor.
+2. Drivers ilk yüklemede ~200 ms "Sürücü yok" boş-durumu, veri 370–550 ms'de geliyor → DataState `isLoading` ile boş-durum ayrımı.
+3. Sidenav yatay scrollbar: Paper 235 px, içerik 251 px (TR uzun etiket "Akıllı Rota Optimizas…", overflow-x: auto).
 
 ## Notlar / sonraki adım
 - İkon fontu 170 KiB'nin tamamı; kullanılan ligatürlerle alt küme (pyftsubset) D7-2 adayı.

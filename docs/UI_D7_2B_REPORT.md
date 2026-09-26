@@ -38,34 +38,44 @@ Tasks ikinci kayma (pagination `dy: 280`, 0.018) iskelet 5 → 10 satır; LH dü
 | Dosya | Ne |
 |---|---|
 | `DashboardNavbar` | `navbarType` ilk state `fixedNavbar ? "sticky" : "static"` — `fixed` ara karesi yok |
-| `tokens.density.banner` | 56; slot `56 × MAX_VISIBLE_BANNERS` (112) |
-| `NotificationHost` | Slot her zaman var; `min-height: 112px`, `contain: layout`. Overlay yalnız live-map ≥lg (önceki kural) |
-| `Banner` | `minHeight: density.banner - 6` — slot içinde taşmadan oturur |
+| `tokens.density.banner` | 56; tek satır banner yüksekliği (boş slot rezervi yok) |
+| `NotificationHost` | Slot her zaman var; **`min-height` yok**, `contain: layout` kalır. Overlay yalnız live-map ≥lg |
+| `Banner` | `minHeight: density.banner - 6` — ikaz varken içeriği iter (bilinçli) |
 | Exceptions / Tasks / Drivers başlık | `contain: layout` + `minHeight` (chip/başlık satırı sabit) |
-| `DataTable` | Skeleton satır sayısı = `pageSize` |
+| `DashboardNavbar` | İlk state `sticky` — duruyor |
+| `DataTable` | Skeleton satır sayısı = `pageSize` — duruyor |
 
 ## 3. Kanıt — sonra
 
+İlk tur (112 px rezervliyken): AppBar sticky 64; slot `minHeight: 112` / `height: 112`. CLS Exceptions 0.0008 / Tasks 0 / Drivers 0. JPEG: `docs/screenshots/d7-2b/cls-after.jpg`.
+
+### Düzeltme — rezerv yükseklik kalktı (2026-09-26)
+
+Alarmsız sayfada 112 px boş bant kabul edilmez. `contain: layout` kaldı; `min-height` yok.
+
+**Karar:** Kritik ikaz nadir / anlamlı; CLS baseline **alarmsız** durum. Banner varken içeriğin itilmesi bilinçli — slot önceden şişirilmez.
+
 ```
 AppBar position: sticky  height: 64
-[data-banner-slot] minHeight: 112px  height: 112
+[data-banner-slot] minHeight: 0px  height: 0  contain: layout
+[role=alert] count: 0
+h2 gapFromNavbar: 48  (breadcrumb + padding; 112 değil)
 ```
 
-| Ekran | Layout Shift toplamı |
+| Ekran | Layout Shift toplamı (alarmsız) |
 |---|---|
-| Exceptions (mount) | **0.0008** (toast; dy 0) |
+| Exceptions (1280 + 1045) | **0.0000** |
 | Tasks | **0.0000** |
-| Drivers | **0.0000** |
-| Exceptions (yeniden) | **0.0000** |
+| Drivers | **0.0380** (pagination; iskelet 10 → 4 satır, `dy` 540 — slot değil) |
 
-Hepsi **< 0.05**. JPEG: `docs/screenshots/d7-2b/cls-after.jpg`.
+Hepsi **< 0.05**. 1045 px JPEG (üstte boş bant yok): `docs/screenshots/d7-2b/no-banner-slot.jpg`. Sağdaki boşluk 1045 sidebar örtüşmesi (D7, kapsam dışı).
 
 ## 4. Doğrulama
 
 - `npx tsc --noEmit` 0
 - `npm run i18n:gate` 0
 - `npm run verify:i18n` 599 keys
-- `npm run build` temiz; gzip **535.49 kB** `main.f5535b91.js`, CSS 10.2 kB
+- `npm run build` temiz; gzip **535.47 kB** `main.bb8134d3.js` (−16 B), CSS 10.2 kB
 
 axe-core 4.10.3 WCAG 2.1 A/AA:
 

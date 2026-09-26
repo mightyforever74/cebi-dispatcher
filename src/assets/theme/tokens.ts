@@ -515,7 +515,7 @@ export const density = {
   compact: 40,
   comfortable: 56,
   navbar: 64,
-  /** In-flow notification banner row. Slot min-height = this × MAX_VISIBLE_BANNERS. */
+  /** In-flow notification banner row height (no reserved empty slot). */
   banner: 56,
 } as const;
 

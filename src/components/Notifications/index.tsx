@@ -94,8 +94,6 @@ function NotificationHost(): JSX.Element | null {
   const visible = banners.slice(0, MAX_VISIBLE_BANNERS);
   const overflow = banners.length - visible.length;
 
-  const slotPx = density.banner * MAX_VISIBLE_BANNERS;
-
   return (
     <>
       <MDBox
@@ -104,7 +102,6 @@ function NotificationHost(): JSX.Element | null {
         pt={overlay ? 1 : 0}
         pb={overflow > 0 ? 0.5 : 0}
         sx={{
-          minHeight: overlay ? 0 : slotPx,
           contain: "layout",
           boxSizing: "border-box",
           ...(overlay

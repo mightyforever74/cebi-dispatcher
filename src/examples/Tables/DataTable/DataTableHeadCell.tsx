@@ -45,6 +45,10 @@ function DataTableHeadCell({ width, children, sorted, align, ...rest }: Props): 
       px={3}
       sx={({ palette: { light }, borders: { borderWidth } }: Theme) => ({
         borderBottom: `${borderWidth[1]} solid ${light.main}`,
+        boxSizing: "border-box",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
       })}
     >
       <MDBox

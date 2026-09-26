@@ -91,6 +91,8 @@ export default styled(Drawer)(({ theme, ownerState }: { theme?: Theme | any; own
     "& .MuiDrawer-paper": {
       boxShadow: xxl,
       border: "none",
+      overflowX: "hidden",
+      boxSizing: "border-box",
       backdropFilter:
         darkMode && !transparentSidenav && !whiteSidenav
           ? "saturate(var(--tf-glass-saturate, 140%)) blur(var(--tf-glass-blur, 18px))"

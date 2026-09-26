@@ -31,7 +31,18 @@ function safetyScoreColor(
 
 function DriversLayout(): JSX.Element {
   const { t, lang } = useT();
-  const { data, isLoading, isError, isPaused, error, dataUpdatedAt, refetch } = useDrivers();
+  const {
+    data,
+    isLoading,
+    isPending,
+    isSuccess,
+    isPlaceholderData,
+    isError,
+    isPaused,
+    error,
+    dataUpdatedAt,
+    refetch,
+  } = useDrivers();
   const drivers = data ?? EMPTY_DRIVERS_LIST;
   const { data: vehicles = EMPTY_VEHICLES } = useVehicles();
 
@@ -117,6 +128,9 @@ function DriversLayout(): JSX.Element {
 
   const status = listFetchState({
     isLoading,
+    isPending,
+    isSuccess,
+    isPlaceholderData,
     isError,
     isPaused,
     data,
@@ -145,7 +159,7 @@ function DriversLayout(): JSX.Element {
           <DataTable
             table={table}
             canSearch
-            loading={isLoading}
+            loading={status === "loading"}
             ariaLabel={t("drivers.title")}
             entriesPerPage={{ defaultValue: 10, entries: [5, 10, 25, 50] }}
           />

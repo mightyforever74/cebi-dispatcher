@@ -471,8 +471,25 @@ function DataTable({
             {t("table.scrollHint")}
           </MDTypography>
         ) : null}
-        <Table {...getTableProps()} role="table" aria-label={ariaLabel} sx={{ tableLayout: "fixed", width: "100%" }}>
-          <TableHead>
+        <Table
+          {...getTableProps()}
+          role="table"
+          aria-label={ariaLabel}
+          aria-busy={loading || undefined}
+          sx={{ tableLayout: "fixed", width: "100%" }}
+        >
+          <colgroup>
+            {table.columns.map((col) => (
+              <col
+                key={col.accessor}
+                style={{
+                  width: col.width ?? col.minWidth,
+                  minWidth: col.minWidth,
+                }}
+              />
+            ))}
+          </colgroup>
+          <TableHead sx={{ display: "table-header-group", p: 0 }}>
             {headerGroups.map((headerGroup: HeaderGroup<DataRow>) => {
               const headerGroupProps = headerGroup.getHeaderGroupProps();
               const { key: hgKey, ...hgRest } = headerGroupProps;
@@ -510,9 +527,9 @@ function DataTable({
               );
             })}
           </TableHead>
-          <TableBody {...getTableBodyProps()}>
+          <TableBody {...getTableBodyProps()} sx={{ display: "table-row-group" }}>
             {loading
-              ? Array.from({ length: 8 }).map((_, i) => (
+              ? Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={`sk-${i}`} role="row" sx={{ height: rowPx, maxHeight: rowPx }}>
                     {table.columns.map((col) => (
                       <TableCell

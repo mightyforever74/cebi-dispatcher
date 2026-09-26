@@ -24,6 +24,7 @@ import Icon from "@mui/material/Icon";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 
 // Material Dashboard 2 PRO React TS components
@@ -212,8 +213,8 @@ function DataTable({
           )}
         </MDBox>
       ) : null}
-      <Table {...getTableProps()}>
-        <MDBox component="thead">
+      <Table {...getTableProps()} sx={{ tableLayout: "fixed", width: "100%" }}>
+        <TableHead sx={{ display: "table-header-group", p: 0 }}>
           {headerGroups.map((headerGroup: any, key: any) => (
             <TableRow key={key} {...headerGroup.getHeaderGroupProps()}>
               {headerGroup.headers.map((column: any, key: any) => (
@@ -229,7 +230,7 @@ function DataTable({
               ))}
             </TableRow>
           ))}
-        </MDBox>
+        </TableHead>
         <TableBody {...getTableBodyProps()}>
           {page.map((row: any, key: any) => {
             prepareRow(row);

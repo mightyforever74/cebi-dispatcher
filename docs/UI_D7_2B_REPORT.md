@@ -44,6 +44,7 @@ Tasks ikinci kayma (pagination `dy: 280`, 0.018) iskelet 5 → 10 satır; LH dü
 | Exceptions / Tasks / Drivers başlık | `contain: layout` + `minHeight` (chip/başlık satırı sabit) |
 | `DashboardNavbar` | İlk state `sticky` — duruyor |
 | `DataTable` | Skeleton satır sayısı = `pageSize` — duruyor |
+| `global.css` | `html { scrollbar-gutter: stable; }` — iskelet scrollbar’ı kapanınca 620→635 yatay kayma yok |
 
 ## 3. Kanıt — sonra
 
@@ -69,6 +70,22 @@ h2 gapFromNavbar: 48  (breadcrumb + padding; 112 değil)
 | Drivers | **0.0380** (pagination; iskelet 10 → 4 satır, `dy` 540 — slot değil) |
 
 Hepsi **< 0.05**. 1045 px JPEG (üstte boş bant yok): `docs/screenshots/d7-2b/no-banner-slot.jpg`. Sağdaki boşluk 1045 sidebar örtüşmesi (D7, kapsam dışı).
+
+### Düzeltme — `scrollbar-gutter: stable` (2026-09-27)
+
+Drivers iskelet (`pageSize=10`) sayfayı uzatıp klasik scrollbar açıyordu; 4 satır gelince bar kaybolup içerik **620→635** (≈15 px, CLS **0.0645**). `html { scrollbar-gutter: stable; }` gutter’ı ilk boyada rezerve eder.
+
+| Ekran | Layout Shift (sıfırdan, gutter sonrası) |
+|---|---|
+| Drivers (1280 + 1045) | **0.0000** |
+| Exceptions | **0.0000** |
+| Tasks | **0.0000** |
+
+```
+html scrollbar-gutter: stable
+```
+
+1045 px kalıcı gutter (dark / light): `docs/screenshots/d7-2b/gutter-dark.jpg`, `docs/screenshots/d7-2b/gutter-light.jpg`.
 
 ## 4. Doğrulama
 

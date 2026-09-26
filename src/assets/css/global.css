@@ -131,6 +131,11 @@
   overflow: visible;
 }
 
+/* D7-2b: pageSize skeleton can open a classic scrollbar; when the short
+   Drivers list lands the bar vanishes and content shifts ~15px (620→635).
+   Reserve the gutter so first paint equals last layout. */
+html { scrollbar-gutter: stable; }
+
 /* =========================================================
    D3 Live map — Leaflet popup/tooltip/zoom + küme ikonu.
    Değerler tokens.ts `map.*` / `status.vehicle.*` ile birebir;

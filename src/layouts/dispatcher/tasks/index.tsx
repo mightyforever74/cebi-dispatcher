@@ -10,6 +10,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import useDrivers, { type Driver } from "hooks/useDrivers";
 import useTasks, { type Task, type TaskFilter } from "hooks/useTasks";
 import useVehicles, { type Vehicle } from "hooks/useVehicles";
+import { density } from "assets/theme/tokens";
 import { formatDateTime, formatNumber, useT } from "i18n";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -156,7 +157,13 @@ function TasksLayout(): JSX.Element {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
-        <MDBox display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+        <MDBox
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={1}
+          sx={{ contain: "layout", minHeight: density.comfortable }}
+        >
           <MDTypography variant="h5" component="h2" gutterBottom>
             {t("tasks.title")}
           </MDTypography>

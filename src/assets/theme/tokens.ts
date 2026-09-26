@@ -515,6 +515,8 @@ export const density = {
   compact: 40,
   comfortable: 56,
   navbar: 64,
+  /** In-flow notification banner row. Slot min-height = this × MAX_VISIBLE_BANNERS. */
+  banner: 56,
 } as const;
 
 /** src/assets/theme/base/borders.ts + theme-dark esdegerinin px degerleriyle

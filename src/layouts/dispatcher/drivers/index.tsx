@@ -8,6 +8,7 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import useDrivers, { type Driver } from "hooks/useDrivers";
 import useVehicles, { EMPTY_VEHICLES, type Vehicle } from "hooks/useVehicles";
+import { density } from "assets/theme/tokens";
 import { formatDate, formatNumber, useT } from "i18n";
 import { useMemo } from "react";
 import { toNum } from "utils/toNum";
@@ -141,7 +142,12 @@ function DriversLayout(): JSX.Element {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox p={3}>
-        <MDTypography variant="h5" component="h2" gutterBottom>
+        <MDTypography
+          variant="h5"
+          component="h2"
+          gutterBottom
+          sx={{ contain: "layout", minHeight: density.comfortable }}
+        >
           {t("drivers.title")}
         </MDTypography>
 

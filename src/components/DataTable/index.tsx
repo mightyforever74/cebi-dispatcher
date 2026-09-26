@@ -529,7 +529,7 @@ function DataTable({
           </TableHead>
           <TableBody {...getTableBodyProps()} sx={{ display: "table-row-group" }}>
             {loading
-              ? Array.from({ length: 5 }).map((_, i) => (
+              ? Array.from({ length: pageSize || 10 }).map((_, i) => (
                     <TableRow key={`sk-${i}`} role="row" sx={{ height: rowPx, maxHeight: rowPx }}>
                     {table.columns.map((col) => (
                       <TableCell

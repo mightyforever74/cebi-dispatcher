@@ -34,14 +34,14 @@ glyph kaybı olmamalı; kontrol maddesi aşağıda.
 - [x] Network (yan panel): googleapis/gstatic 0; 5 woff2 aynı origin, `cache-control: public, max-age=31536000, immutable`, CF MISS→HIT; konsol hatasız
 - [x] TR Tasks/Drivers: ğ Ş İ ı ç Ç ö Ö ü Ü Manrope ile çiziliyor, `document.fonts.check` true; latin-ext dosyası yükleniyor
 - [x] 29 ikon `Material Icons Round`; sıfırdan yüklemede ligatür metni 0 (font-display: block + preload)
-- [x] Lighthouse Desktop (Brave gizli, Shields kapalı) Live map; Tasks/Exceptions merge sonrası prod'da ölçülecek
+- [x] Lighthouse Desktop (Brave gizli, Shields kapalı): Live map preview'da, Tasks/Exceptions prod 3aebb4b'de ölçüldü
 - [ ] axe Login/Live map/Tasks × dark/light: crit/ser 0 — merge sonrası prod turunda
 
 | Ekran | Perf önce → sonra | LCP | CLS |
 |---|---|---|---|
 | Live map | 74 → **87** | 2.3 s → **1.9 s** | 0.203 → **0.078** |  (TBT 100 → 60 ms, SI 1.8 → 1.3 s, A11y 100)
-| Tasks | 89 → (prod'da) | 1.2 s → | 0.101 → |
-| Exceptions | 79 → (prod'da) | 1.4 s → | 0.129 → |
+| Tasks (prod 3aebb4b) | 89 → **93** | 1.2 s → **1.4 s** | 0.101 → **0.056** |  (FCP 1.0 s, TBT 40 ms, SI 1.3 s)
+| Exceptions (prod 3aebb4b) | 79 → **89** | 1.4 s → **1.1 s** | 0.129 → **0.168 (kötü)** |  (FCP 0.9 s, TBT 30 ms, SI 1.1 s) — font dışı: boş-durum→veri değişimi + tablo başlık/gövde; D7-2 #1
 
 Insights (sonra): "Font display" ve Google Fonts zinciri kalmadı; render-blocking yalnızca main.css (turuncu).
 Kalan kırmızılar: görsel 207 KiB (logo PNG + cartocdn tile), LCP öğesi harita tile'ı, legacy JS 8 KiB.

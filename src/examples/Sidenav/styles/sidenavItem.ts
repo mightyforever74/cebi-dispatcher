@@ -27,10 +27,15 @@ function item(theme: Theme | any, ownerState: any) {
   const { rgba: withAlpha } = functions;
 
   return {
-    pl: 3,
+    pl: 2,
+    pr: 1,
     mt: 0.375,
     mb: 0.3,
-    width: "100%",
+    width: "auto",
+    maxWidth: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+    overflow: "hidden",
     borderRadius: borderRadius.md,
     cursor: "pointer",
     backgroundColor: () => {

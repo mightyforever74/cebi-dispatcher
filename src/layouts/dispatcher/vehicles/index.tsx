@@ -32,7 +32,18 @@ function emissionClassColor(emissionClass?: string): "success" | "info" | "warni
 
 function VehiclesLayout(): JSX.Element {
   const { t, lang } = useT();
-  const { data, isLoading, isError, isPaused, error, dataUpdatedAt, refetch } = useVehicles();
+  const {
+    data,
+    isLoading,
+    isPending,
+    isSuccess,
+    isPlaceholderData,
+    isError,
+    isPaused,
+    error,
+    dataUpdatedAt,
+    refetch,
+  } = useVehicles();
   const { data: driversData } = useDrivers();
   const vehicles = data ?? EMPTY_VEHICLES;
   const drivers = driversData ?? EMPTY_DRIVERS;
@@ -208,6 +219,9 @@ function VehiclesLayout(): JSX.Element {
 
   const status = listFetchState({
     isLoading,
+    isPending,
+    isSuccess,
+    isPlaceholderData,
     isError,
     isPaused,
     data,
@@ -264,7 +278,7 @@ function VehiclesLayout(): JSX.Element {
           <DataTable
             table={table}
             canSearch
-            loading={isLoading}
+            loading={status === "loading"}
             ariaLabel={t("vehicles.title")}
             entriesPerPage={VEHICLES_PAGE_SIZE}
           />

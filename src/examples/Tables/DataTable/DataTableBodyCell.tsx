@@ -38,13 +38,21 @@ function DataTableBodyCell({ noBorder, align, children }: Props): JSX.Element {
       sx={({ palette: { light }, typography: { size }, borders: { borderWidth } }: Theme) => ({
         fontSize: size.sm,
         borderBottom: noBorder ? "none" : `${borderWidth[1]} solid ${light.main}`,
+        boxSizing: "border-box",
+        overflow: "hidden",
+        maxWidth: 0,
       })}
     >
       <MDBox
-        display="inline-block"
-        width="max-content"
+        display="block"
+        width="100%"
         color="text"
-        sx={{ verticalAlign: "middle" }}
+        sx={{
+          verticalAlign: "middle",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
       >
         {children}
       </MDBox>

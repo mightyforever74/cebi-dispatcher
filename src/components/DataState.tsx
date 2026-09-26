@@ -40,9 +40,16 @@ export function dataStateOf(opts: {
   return "ready";
 }
 
-/** Empty only when the query succeeded with zero rows — never on fetch failure / pause. */
+/**
+ * Empty only when the query succeeded with zero rows.
+ * placeholderData: [] must not count as empty — treat pending / loading /
+ * placeholder as skeleton.
+ */
 export function listFetchState(q: {
-  isLoading: boolean;
+  isLoading?: boolean;
+  isPending?: boolean;
+  isSuccess?: boolean;
+  isPlaceholderData?: boolean;
   isError: boolean;
   isPaused?: boolean;
   data: readonly unknown[] | undefined;
@@ -52,11 +59,26 @@ export function listFetchState(q: {
   const isError =
     Boolean(q.isError) ||
     Boolean(q.error) ||
-    Boolean(q.isPaused && !hasData && !q.isLoading);
+    Boolean(q.isPaused && !hasData && !q.isLoading && !q.isPending);
+  if (isError) return "error";
+
+  const succeeded = q.isSuccess === true && q.isPlaceholderData !== true;
+  if (succeeded) {
+    return (q.data?.length ?? 0) === 0 ? "empty" : "ready";
+  }
+
+  const busy =
+    q.isPending === true ||
+    q.isLoading === true ||
+    q.isPlaceholderData === true ||
+    q.isSuccess === false ||
+    q.isSuccess === undefined;
+  if (busy) return "loading";
+
   return dataStateOf({
-    isLoading: q.isLoading && !isError,
-    isError,
-    isEmpty: hasData && q.data.length === 0 && !isError,
+    isLoading: false,
+    isError: false,
+    isEmpty: hasData && q.data.length === 0,
   });
 }
 

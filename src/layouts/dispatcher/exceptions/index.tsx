@@ -219,6 +219,8 @@ export default function Exceptions(): JSX.Element {
 
   const state = listFetchState({
     isLoading: loading,
+    isPending: loading,
+    isSuccess: !loading && !error,
     isError: Boolean(error),
     data: loading ? undefined : exceptions,
     error,
@@ -265,7 +267,7 @@ export default function Exceptions(): JSX.Element {
           >
             <DataTable
               table={table}
-              loading={loading}
+              loading={state === "loading"}
               ariaLabel={t("exceptions.title")}
               entriesPerPage={false}
               showTotalEntries={false}

@@ -16,11 +16,13 @@ function BrandBlock(): JSX.Element {
 
   return (
     <MDBox textAlign="center" pt={3} pb={0.5} px={3}>
-      <MDBox
-        component="img"
+      <img
         src={`${process.env.PUBLIC_URL || ""}/tulipfleet-logo.png`}
         alt=""
-        sx={{ height: 48, width: "auto", mb: 1.5, display: "inline-block" }}
+        width={178}
+        height={240}
+        decoding="async"
+        style={{ height: 48, width: "auto", marginBottom: 12, display: "inline-block" }}
       />
       <MDTypography
         variant="h4"

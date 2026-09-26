@@ -305,7 +305,16 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
           </MDTypography>
         </MDBox>
         <MDBox component={NavLink} to="/" display="flex" alignItems="center">
-          {brand && <MDBox component="img" src={brand} alt="" width="2rem" />}
+          {brand ? (
+            <img
+              src={brand}
+              alt=""
+              width={178}
+              height={240}
+              decoding="async"
+              style={{ width: "2rem", height: "auto", display: "block", flexShrink: 0 }}
+            />
+          ) : null}
           <MDBox
             width={!brandName && "100%"}
             sx={(theme: any) => sidenavLogoLabel(theme, { miniSidenav })}
@@ -328,7 +337,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
           (darkMode && !transparentSidenav && whiteSidenav)
         }
       />
-      <List component="ul" sx={{ py: 0, flex: 1 }}>
+      <List component="ul" sx={{ py: 0, flex: 1, overflowX: "hidden", minWidth: 0 }}>
         {renderRoutes}
       </List>
       </MDBox>

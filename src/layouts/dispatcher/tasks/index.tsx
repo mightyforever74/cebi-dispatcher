@@ -27,6 +27,9 @@ function TasksLayout(): JSX.Element {
   const {
     data,
     isLoading,
+    isPending,
+    isSuccess,
+    isPlaceholderData,
     isError,
     isPaused,
     error,
@@ -140,6 +143,9 @@ function TasksLayout(): JSX.Element {
 
   const status = listFetchState({
     isLoading,
+    isPending,
+    isSuccess,
+    isPlaceholderData,
     isError,
     isPaused,
     data,
@@ -194,7 +200,7 @@ function TasksLayout(): JSX.Element {
           <DataTable
             table={table}
             canSearch
-            loading={isLoading}
+            loading={status === "loading"}
             ariaLabel={t("tasks.title")}
             entriesPerPage={TASKS_PAGE_SIZE}
           />

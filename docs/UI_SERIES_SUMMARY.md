@@ -106,3 +106,15 @@ Ad: `{screen}-{lang}-{theme}-{width}.jpg`
 `lang` ∈ en | tr | nl · `theme` ∈ dark | light · `width` ∈ 1280 | 390
 
 Bu turda üretilenler: **login** (oturum gerekmez). Diğer 7 ekran `README.md` içinde “blocked: auth expired”.
+
+### Lighthouse baseline
+
+Prod `3aebb4b` (Desktop, Brave gizli, Shields kapalı) — D7-1 sonrası / D7-2 öncesi:
+
+| Ekran | Perf | LCP | CLS | Not |
+|---|---|---|---|---|
+| Live map | 87 | 1.9 s | 0.078 | preview CNAME; TBT 60 ms, SI 1.3 s, A11y 100 |
+| Tasks | 93 | 1.4 s | 0.056 | FCP 1.0 s, TBT 40 ms, SI 1.3 s |
+| Exceptions | 89 | 1.1 s | 0.168 | FCP 0.9 s, TBT 30 ms, SI 1.1 s |
+
+Kaynak: `docs/UI_D7_FONTS_REPORT.md` (e00bc01). Lighthouse bu turda Cem koşar.

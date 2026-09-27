@@ -22,7 +22,7 @@ import { useNotifications } from "components/Notifications";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { ExceptionEvent, ResolveAction } from "hooks/useExceptions";
-import { breakpoints } from "assets/theme/tokens";
+import { breakpoints, density } from "assets/theme/tokens";
 import { formatDateTime, useT, type TFunction, type TranslationKey } from "i18n";
 
 const RESOLVE_OPTIONS: ResolveAction[] = ["manual_replan", "manual_reassign", "dismiss"];
@@ -231,7 +231,13 @@ export default function Exceptions(): JSX.Element {
       <DashboardNavbar />
       <MDBox py={3}>
         <Card>
-          <MDBox p={3} display="flex" alignItems="center" justifyContent="space-between">
+          <MDBox
+            p={3}
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ contain: "layout", minHeight: density.comfortable + 48 }}
+          >
             <MDBox>
               <MDTypography variant="h5" component="h2">{t("exceptions.title")}</MDTypography>
               <MDTypography variant="caption" color="text">

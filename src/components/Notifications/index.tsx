@@ -39,6 +39,7 @@ function Banner({ item }: { item: NotifyItem }) {
       py={1}
       mb={0.75}
       width="100%"
+      minHeight={density.banner - 6}
       borderRadius="md"
       sx={{
         bgcolor: tone.bg,
@@ -93,45 +94,44 @@ function NotificationHost(): JSX.Element | null {
   const visible = banners.slice(0, MAX_VISIBLE_BANNERS);
   const overflow = banners.length - visible.length;
 
-  if (visible.length === 0 && toasts.length === 0) return null;
-
   return (
     <>
-      {visible.length > 0 && (
-        <MDBox
-          px={overlay ? 2 : 0}
-          pt={overlay ? 1 : 0}
-          pb={overflow > 0 ? 0.5 : 0}
-          sx={
-            overlay
-              ? {
-                  position: "fixed",
-                  top: density.navbar,
-                  left: 0,
-                  right: 0,
-                  zIndex: 1300,
-                  pointerEvents: "none",
-                  "& > *": { pointerEvents: "auto" },
-                }
-              : undefined
-          }
-        >
-          {visible.map((item) => (
-            <Banner key={item.id} item={item} />
-          ))}
-          {overflow > 0 && (
-            <MDTypography
-              variant="caption"
-              fontWeight="medium"
-              component={Link}
-              to="/dispatcher/exceptions"
-              sx={{ display: "inline-block", px: 2, pb: 1, color: moreLinkColor }}
-            >
-              {t("notifications.moreToExceptions", { count: overflow })}
-            </MDTypography>
-          )}
-        </MDBox>
-      )}
+      <MDBox
+        data-banner-slot=""
+        px={overlay ? 2 : 0}
+        pt={overlay ? 1 : 0}
+        pb={overflow > 0 ? 0.5 : 0}
+        sx={{
+          contain: "layout",
+          boxSizing: "border-box",
+          ...(overlay
+            ? {
+                position: "fixed",
+                top: density.navbar,
+                left: 0,
+                right: 0,
+                zIndex: 1300,
+                pointerEvents: "none",
+                "& > *": { pointerEvents: "auto" },
+              }
+            : undefined),
+        }}
+      >
+        {visible.map((item) => (
+          <Banner key={item.id} item={item} />
+        ))}
+        {overflow > 0 && (
+          <MDTypography
+            variant="caption"
+            fontWeight="medium"
+            component={Link}
+            to="/dispatcher/exceptions"
+            sx={{ display: "inline-block", px: 2, pb: 1, color: moreLinkColor }}
+          >
+            {t("notifications.moreToExceptions", { count: overflow })}
+          </MDTypography>
+        )}
+      </MDBox>
       {toasts.map((item, index) => (
         <MDSnackbar
           key={item.id}

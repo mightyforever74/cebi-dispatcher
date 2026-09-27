@@ -109,11 +109,14 @@ function getAlertConfig(type: string | undefined) {
 
 function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const { t } = useT();
-  const [navbarType, setNavbarType] = useState<
-    "fixed" | "absolute" | "relative" | "static" | "sticky"
-  >();
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, transparentNavbar, fixedNavbar, openConfigurator, darkMode } = controller;
+  // First paint must already be in-flow. MUI AppBar defaults to `fixed` when
+  // `position` is undefined, which inserts 64px on the later sticky effect
+  // and is the Exceptions/Tasks/Drivers CLS source (dy = density.navbar).
+  const [navbarType, setNavbarType] = useState<
+    "fixed" | "absolute" | "relative" | "static" | "sticky"
+  >(fixedNavbar ? "sticky" : "static");
   const [openMenu, setOpenMenu] = useState<any>(false);
   const [accountMenu, setAccountMenu] = useState<HTMLElement | null>(null);
   const navigate = useNavigate();

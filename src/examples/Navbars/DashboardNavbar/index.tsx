@@ -58,11 +58,35 @@ import {
 
 // Real API — GET/PUT /api/alerts (api.tulipfleet.com)
 import { useAlerts, useResolveAlert, Alert, EMPTY_ALERTS } from "hooks/useAlerts";
-import { localizeBackendAlert, useT } from "i18n";
+import { profileDisplayName, useUserProfile, type UserProfile } from "hooks/useUserAccount";
+import { localizeBackendAlert, useT, type TFunction } from "i18n";
 import LanguageSwitcher from "components/LanguageSwitcher";
 import { useDensity } from "context/density";
 import { useAuthStore } from "store/useAuthStore";
 import NotificationHost from "components/Notifications";
+
+const NOTIFICATION_MAILBOX = "info@tulipfleet.com";
+
+function roleLabel(role: string | undefined, t: TFunction): string {
+  if (role === "company_admin") return t("nav.role.company_admin");
+  if (role === "super_admin") return t("nav.role.super_admin");
+  if (role === "driver") return t("nav.role.driver");
+  return role || "";
+}
+
+function identityLines(profile: UserProfile | undefined, t: TFunction) {
+  const name = profileDisplayName(profile) || t("common.emptyDash");
+  const role = roleLabel(profile?.role, t);
+  const company = profile?.company_name || t("common.emptyDash");
+  const meta = role ? `${role} · ${company}` : company;
+  return {
+    name,
+    role,
+    company,
+    meta,
+    aria: t("nav.identityAria", { name, role: role || t("common.emptyDash"), company }),
+  };
+}
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -109,6 +133,8 @@ function getAlertConfig(type: string | undefined) {
 
 function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const { t } = useT();
+  const { data: profile } = useUserProfile();
+  const identity = identityLines(profile, t);
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, transparentNavbar, fixedNavbar, openConfigurator, darkMode } = controller;
   // First paint must already be in-flow. MUI AppBar defaults to `fixed` when
@@ -185,7 +211,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   // kutusu DEGIL: sadece kritik operasyonel olaylarin (gercek backend verisi)
   // listesi. Tiklaninca (a) PUT /api/alerts/:id/resolve cagrilir (is_resolved=true)
   // ve (b) mailto: ile mail programi acilir (dispatcher kayit tutabilsin diye).
-  const notificationEmail = "dispatcher@tulipfleet.nl";
+  const notificationEmail = NOTIFICATION_MAILBOX;
 
   const { data: alertsData, isLoading: loadingAlerts } = useAlerts();
   const resolveMutation = useResolveAlert();
@@ -343,6 +369,24 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
               <MDInput label={t("navbar.search")} />
             </MDBox>
             <MDBox color={light ? "white" : "inherit"}>
+              <MDBox
+                display={{ xs: "none", sm: "flex" }}
+                flexDirection="column"
+                justifyContent="center"
+                alignItems="flex-end"
+                minWidth={0}
+                maxWidth={{ sm: 160, md: 220 }}
+                mr={1}
+                role="group"
+                aria-label={identity.aria}
+              >
+                <MDTypography variant="button" fontWeight="medium" noWrap sx={{ lineHeight: 1.2 }}>
+                  {identity.name}
+                </MDTypography>
+                <MDTypography variant="caption" color="text" noWrap sx={{ lineHeight: 1.2 }}>
+                  {identity.meta}
+                </MDTypography>
+              </MDBox>
               <LanguageSwitcher variant="navbar" />
               <IconButton
                 size="small"
@@ -374,6 +418,15 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
                 transformOrigin={{ vertical: "top", horizontal: "right" }}
                 sx={{ mt: 1.5 }}
               >
+                <MDBox px={2} pt={1.5} pb={1} role="group" aria-label={identity.aria}>
+                  <MDTypography variant="button" fontWeight="medium" noWrap display="block">
+                    {identity.name}
+                  </MDTypography>
+                  <MDTypography variant="caption" color="text" noWrap display="block">
+                    {identity.meta}
+                  </MDTypography>
+                </MDBox>
+                <Divider sx={{ my: 0.5 }} />
                 <NotificationItem
                   icon={<Icon fontSize="small">settings</Icon>}
                   title={t("nav.tenantSettings")}

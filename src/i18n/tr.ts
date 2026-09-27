@@ -28,6 +28,12 @@ export const tr = {
     home: "Ana sayfa",
     sidenav: "Ana menü",
     language: "Dil: {code}",
+    identityAria: "{name}, {role}, {company}",
+    role: {
+      company_admin: "Şirket yöneticisi",
+      super_admin: "Süper yönetici",
+      driver: "Sürücü",
+    },
     short: {
       liveFleet: "Harita",
       tasks: "Görevler",
@@ -409,7 +415,7 @@ export const tr = {
     title: "Yeni görev — rota optimizasyonu",
     back: "Görevlere dön",
     mockBanner:
-      "Test modu: optimizasyon motoru şu an bir mock (HERE Tour Planning planlandı, henüz yok). İlk araç yerleşimi backend ile uyumlu; onaydan önce herhangi bir görevi başka araca sürükleyebilirsiniz.",
+      "HERE Tour Planning yapılmadı; mock, seçilen araçları kullanır (b1374ab).",
     pickup: "Alış",
     dropoff: "Bırakış",
     pickupSearch: "Alış adresi ara",
@@ -560,6 +566,7 @@ export const tr = {
     helpPhone: "Ülke kodu ile, örn. +31",
     helpPassword: "En az 6 karakter",
     helpCorporateEmail: "Sistem bildirimleri ve sevk özetleri için kullanılır",
+    emailPlaceholder: "info@tulipfleet.com",
   },
   tourPlanning: {
     title: "Akıllı Rota Optimizasyonu (VRP)",

@@ -28,6 +28,12 @@ export const nl = {
     home: "Home",
     sidenav: "Hoofdnavigatie",
     language: "Taal: {code}",
+    identityAria: "{name}, {role}, {company}",
+    role: {
+      company_admin: "Bedrijfsbeheerder",
+      super_admin: "Superbeheerder",
+      driver: "Chauffeur",
+    },
     short: {
       liveFleet: "Kaart",
       tasks: "Taken",
@@ -409,7 +415,7 @@ export const nl = {
     title: "Nieuwe taak — route-optimalisatie",
     back: "Terug naar taken",
     mockBanner:
-      "Testmodus: de optimalisatie-engine is nu een mock (HERE Tour Planning is gepland, nog niet gebouwd). De eerste voertuigindeling volgt de backend; u kunt een taak vóór goedkeuring naar een ander voertuig slepen.",
+      "HERE Tour Planning is niet gebouwd; de mock gebruikt de geselecteerde voertuigen (b1374ab).",
     pickup: "Ophalen",
     dropoff: "Afleveren",
     pickupSearch: "Ophaaladres zoeken",
@@ -560,6 +566,7 @@ export const nl = {
     helpPhone: "Inclusief landcode, bijv. +31",
     helpPassword: "Minimaal 6 tekens",
     helpCorporateEmail: "Voor systeemmeldingen en dispatch-samenvattingen",
+    emailPlaceholder: "info@tulipfleet.com",
   },
   tourPlanning: {
     title: "Slimme route-optimalisatie (VRP)",

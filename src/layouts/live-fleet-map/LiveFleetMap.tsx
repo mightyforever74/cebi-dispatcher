@@ -323,18 +323,20 @@ function LiveFleetMap(): JSX.Element {
       return (
         <>
           {[0, 1, 2, 3, 4].map((i) => (
-            <Skeleton
-              key={i}
-              variant="rounded"
-              height={64}
-              sx={{ mb: 1, bgcolor: alpha(chrome.text, 0.08) }}
-            />
+            <ListItem key={i} disablePadding sx={{ display: "block" }}>
+              <Skeleton
+                variant="rounded"
+                height={64}
+                sx={{ mb: 1, bgcolor: alpha(chrome.text, 0.08), width: "100%" }}
+              />
+            </ListItem>
           ))}
         </>
       );
     }
     if (snapshot.phase === "error" && !snapshot.bootstrapped) {
       return (
+        <ListItem disablePadding sx={{ display: "block" }}>
         <MDBox textAlign="center" mt={3} px={1}>
           <MDTypography variant="caption" sx={{ color: chrome.textMuted, display: "block", mb: 1 }}>
             {t("map.error")}
@@ -357,10 +359,12 @@ function LiveFleetMap(): JSX.Element {
             {t("map.retry")}
           </MDBox>
         </MDBox>
+        </ListItem>
       );
     }
     if (vehicleList.length === 0) {
       return (
+        <ListItem disablePadding sx={{ display: "block" }}>
         <MDBox textAlign="center" mt={3} px={1}>
           <MDTypography variant="caption" sx={{ color: chrome.textMuted, display: "block", mb: 1 }}>
             {t("map.empty")}
@@ -370,21 +374,24 @@ function LiveFleetMap(): JSX.Element {
             to="/dispatcher/vehicles"
             variant="caption"
             fontWeight="bold"
-            sx={{ color: mapTokens.selected }}
+            sx={{ color: chrome.text }}
           >
             {t("map.emptyCta")}
           </MDTypography>
         </MDBox>
+        </ListItem>
       );
     }
     if (filteredVehicles.length === 0) {
       return (
+        <ListItem disablePadding sx={{ display: "block" }}>
         <MDTypography
           variant="caption"
           sx={{ color: chrome.textFaint, display: "block", textAlign: "center", mt: 3 }}
         >
           {t("map.noMatch")}
         </MDTypography>
+        </ListItem>
       );
     }
     return (

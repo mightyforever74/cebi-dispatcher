@@ -2,7 +2,7 @@
 
 Dal: `ui-d8-identity` · Taban: main `4df8189` · Tarih: 2026-09-27  
 Yerel bundle: `main.24d7b9ce.js` **536.52 kB** gzip (+1.05 kB) / CSS `main.4800285c.css` 10.21 kB.  
-Deployments kimliği = **push sonrası commit** (Pages hash yerel hash’ten farklıdır). Preview CNAME: Cem.
+Deployments commit **`f46d0b9`** (Pages hash yerel hash’ten farklıdır). Preview CNAME: Cem.
 
 `SUPERVISOR_API_URL` **değiştirilmedi** (varsayılan `https://staging-api.tulipfleet.com`).
 

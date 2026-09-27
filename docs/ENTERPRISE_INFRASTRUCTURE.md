@@ -327,7 +327,7 @@ A request without the `Authorization` header must return `401 Unauthorized` with
 ### 6.4 Private network database reachability
 
 ```bash
-PGPASSWORD='...' psql -h 10.0.0.2 -p 5433 -U enterprise_backend -d fleet_tracking_staging -c "SELECT current_user, inet_client_addr();"
+PGPASSWORD='...' psql -h 10.0.0.2 -p 5433 -U enterprise_backend -d fleet_tracking -c "SELECT current_user, inet_client_addr();"   # since 2026-09-27 cutover: fleet_tracking (prod); was fleet_tracking_staging
 ```
 
 Expected: `enterprise_backend | 10.0.0.3`. The `inet_client_addr` of `10.0.0.3` confirms the connection travelled over the private network (not the public IP).

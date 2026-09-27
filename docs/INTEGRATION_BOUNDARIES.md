@@ -54,7 +54,7 @@ These resources are physically hosted on `fleet-prod-01` but consumed by both ba
 | Database | Primary consumer | Notes |
 |----------|------------------|-------|
 | `fleet_tracking` | `tulipfleet-backend` (production) | Mobile + admin + driver. Includes Timescale hypertables (locations, alerts, etc). |
-| `fleet_tracking_staging` | Both backends (staging today, production target for enterprise later) | Phase 1 dispatcher development connects here. Production cutover for enterprise is a separate decision recorded in ROADMAP. |
+| `fleet_tracking_staging` | fleet-backend staging only (enterprise **was** here until 2026-09-27) | Phase 1 dispatcher development connected here. **Cutover done 2026-09-27:** enterprise-api now connects to `fleet_tracking` (prod) — see tulipfleet-qa `CUTOVER_P0_DISCOVERY.md`. Staging keeps the PortXL demo dataset. |
 
 #### Schema split inside each database (per ADR-0004 v3)
 

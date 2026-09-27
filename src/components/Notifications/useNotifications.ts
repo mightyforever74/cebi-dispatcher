@@ -18,6 +18,7 @@ import {
 import { localizeBackendAlert, t, type TranslationKey } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
 import { useResolveAlert } from "hooks/useAlerts";
+import { loadAckedIds, persistAckedIds } from "utils/ackedAlerts";
 
 const MERGE_WINDOW_MS = 10_000;
 const MAX_VISIBLE_TOASTS = 3;
@@ -162,7 +163,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const [banners, setBanners] = useState<NotifyItem[]>([]);
   const [toastQueue, setToastQueue] = useState<NotifyItem[]>([]);
-  const dismissedRef = useRef<Set<string>>(new Set());
+  const dismissedRef = useRef<Set<string>>(loadAckedIds());
   const toastedRef = useRef<Set<string>>(new Set());
   const firstAlertsRef = useRef(true);
 
@@ -198,6 +199,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     exceptions.forEach((e) => {
       if (e.status !== "open") return;
+      if (dismissedRef.current.has(e.id) || dismissedRef.current.has(`ex:${e.id}`)) return;
       if (!isBannerType(e.exception_type, e.severity)) return;
       const family = typeFamily(e.exception_type);
       consider({
@@ -218,6 +220,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     });
     alerts.forEach((a) => {
       if (a.is_resolved) return;
+      if (dismissedRef.current.has(a.id) || dismissedRef.current.has(`al:${a.id}`)) return;
       const type = String(a.alert_type || a.type || "default");
       const severity = String(a.severity || "").toLowerCase();
       if (!isBannerType(type, severity)) return;
@@ -355,10 +358,25 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, [enqueueToasts]);
 
   const dismissBanner = useCallback((id: string) => {
+    const persist: string[] = [id];
     dismissedRef.current.add(id);
     setBanners((prev) => {
       const hit = prev.find((b) => b.id === id);
-      if (hit) dismissedRef.current.add(`family:${hit.family}`);
+      if (hit) {
+        persist.push(`family:${hit.family}`);
+        dismissedRef.current.add(`family:${hit.family}`);
+        (hit.exceptionIds ?? []).forEach((exId) => {
+          persist.push(exId, `ex:${exId}`);
+          dismissedRef.current.add(exId);
+          dismissedRef.current.add(`ex:${exId}`);
+        });
+        (hit.alertIds ?? []).forEach((alertId) => {
+          persist.push(alertId, `al:${alertId}`);
+          dismissedRef.current.add(alertId);
+          dismissedRef.current.add(`al:${alertId}`);
+        });
+      }
+      persistAckedIds(persist);
       return prev.filter((b) => b.id !== id);
     });
   }, []);
@@ -374,9 +392,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         : item.exceptionId
           ? [item.exceptionId]
           : [];
-      await Promise.all(exIds.map((id) => resolve(id, "acknowledge")));
       const alertIds = item.alertIds ?? [];
-      await Promise.all(alertIds.map((id) => resolveAlert.mutateAsync({ id })));
+      const persist = [
+        item.id,
+        `family:${item.family}`,
+        ...exIds,
+        ...exIds.map((id) => `ex:${id}`),
+        ...alertIds,
+        ...alertIds.map((id) => `al:${id}`),
+      ];
+      persist.forEach((id) => dismissedRef.current.add(id));
+      persistAckedIds(persist);
+      try {
+        await Promise.all(exIds.map((id) => resolve(id, "acknowledge")));
+        await Promise.all(alertIds.map((id) => resolveAlert.mutateAsync({ id })));
+      } catch {
+        // local ack already persisted — feed has no /ack; resolve may still fail
+      }
       dismissBanner(item.id);
     },
     [resolve, resolveAlert, dismissBanner]

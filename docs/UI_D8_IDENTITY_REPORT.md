@@ -4,7 +4,7 @@ Dal: `ui-d8-identity` · Taban: main `4df8189` · Tarih: 2026-09-27
 Yerel bundle: `main.24d7b9ce.js` **536.52 kB** gzip (+1.05 kB) / CSS `main.4800285c.css` 10.21 kB.  
 Deployments commit **`f46d0b9`** (Pages hash yerel hash’ten farklıdır). Preview CNAME: Cem.
 
-`SUPERVISOR_API_URL` **değiştirilmedi** (varsayılan `https://staging-api.tulipfleet.com`).
+`SUPERVISOR_API_URL` varsayılanı **`https://api.tulipfleet.com`** (Ortam Matrisi: tüm satırlar prod). Üç değişken ayrı durur.
 
 ---
 
@@ -50,19 +50,20 @@ X (`dismissBanner`) sunucuya yazmıyordu; Onayla resolve dener ama başarısız/
 
 ---
 
-## E) `SUPERVISOR_API_URL` — etki, değişiklik yok
+## E) `SUPERVISOR_API_URL` — prod core (Cem)
 
-Varsayılan: `https://staging-api.tulipfleet.com` (Milestone-0, `.cursorrules`).
+Varsayılan: `https://staging-api.tulipfleet.com` → **`https://api.tulipfleet.com`**.  
+`REACT_APP_SUPERVISOR_API_URL` hâlâ ezer. AUTH ile aynı host; değişken birleşmedi.
 
-Tüketen ekranlar (yalnız `src/layouts/supervisor/**`):
+Etkilenen ekranlar (yalnız `src/layouts/supervisor/**` — harita / görev / ayarlar değil):
 
-| Ekran | Çağrılar |
+| Ekran | Çağrılar (artık prod core) |
 |---|---|
-| `SupervisorGate` | `POST /api/auth/login` — `super_admin` JWT |
-| Supervisor listesi | `GET /api/superadmin/companies`, `GET /api/superadmin/subscriptions/requests?status=PENDING_APPROVAL` |
-| Müşteri detayı | aynı GET + `POST .../requests/:id/{approve\|reject}` + `PUT .../companies/:id/quota` |
+| Supervisor gate (`SupervisorGate`) | `POST /api/auth/login` — `super_admin` JWT |
+| Şirket listesi (`supervisor/index`) | `GET /api/superadmin/companies`, `GET /api/superadmin/subscriptions/requests?status=PENDING_APPROVAL` |
+| Müşteri detayı (`customerDetail`) | aynı GET + `POST .../requests/:id/{approve\|reject}` + `PUT .../companies/:id/quota` |
 
-**Komuta Merkezi prod core’a (`api.tulipfleet.com`) bakarsa:** gate ve abonelik kuyruğu **prod** şirket/istek yazar; staging-only kayıtlar kaybolur; staging JWT secret uyumsuzluğu biter (prod token ile local enterprise zaten eşleşiyor). Dispatcher operasyon ekranları (harita, görev, ayarlar) **etkilenmez** — onlar `AUTH_API_URL` / `ENTERPRISE_API_URL`. Karar Cem.
+Gate ve abonelik kuyruğu **prod** şirket/istek okur/yazar; staging-only kayıtlar bu UI’da görünmez. Staging JWT secret uyumsuzluğu biter.
 
 ---
 
@@ -112,7 +113,7 @@ Live map ihlalleri **kimlik alanı değil** (harita paneli `Araçlar` + `MuiList
 
 390: kimlik `display:none`; Hesap menüsü e-posta + rol + şirket. `docs/screenshots/d8/navbar-390.jpg`.
 
-Hex: yeni dosyalarda yok. `SUPERVISOR_API_URL` satırı aynı.
+Hex: yeni dosyalarda yok. `SUPERVISOR_API_URL` fallback `api.tulipfleet.com`.
 
 ---
 
@@ -121,5 +122,5 @@ Hex: yeni dosyalarda yok. `SUPERVISOR_API_URL` satırı aynı.
 - Live map `list` / `Araçlar` contrast (önceden var).
 - Core `GET /api/user/profile` prod deploy (bu turda 200 görüldü; 404 yolu duruyor).
 - `PUT /api/alerts/:id/ack` (yok — localStorage geçici).
-- SUPERVISOR host kesimi.
+- SUPERVISOR host kesimi (yapıldı: prod core).
 - `scripts/sim-portxl.js`, `docs/UI_D0_DISCOVERY.md` commit edilmedi.

@@ -2,7 +2,7 @@
 
 Dal: `ui-d8-identity` · Taban: main `4df8189` · Tarih: 2026-09-27  
 Yerel bundle: `main.3c88468d.js` **539.31 kB** gzip / CSS `main.c3bdafab.css` 10.26 kB.  
-Deployments commit: push sonrası yazılır.
+Deployments commit **`da10b0c`** (Pages hash yerel hash’ten farklıdır). Preview CNAME: Cem.
 
 `SUPERVISOR_API_URL` varsayılanı **`https://api.tulipfleet.com`** (Ortam Matrisi: tüm satırlar prod). Üç değişken ayrı durur.
 

@@ -28,7 +28,7 @@ export const tr = {
     home: "Ana sayfa",
     sidenav: "Ana menü",
     language: "Dil: {code}",
-    identityAria: "{name}, {role}, {company}",
+    identityAria: "{name}, {email}, {role}, {company}",
     role: {
       company_admin: "Şirket yöneticisi",
       super_admin: "Süper yönetici",

@@ -37,6 +37,7 @@ import SidenavItem from "examples/Sidenav/SidenavItem";
 // Custom styles for the Sidenav
 import SidenavRoot from "examples/Sidenav/SidenavRoot";
 import sidenavLogoLabel from "examples/Sidenav/styles/sidenav";
+import SidenavIdentity from "examples/Sidenav/SidenavIdentity";
 
 // Material Dashboard 2 PRO React context
 import {
@@ -330,6 +331,11 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
             </MDTypography>
           </MDBox>
         </MDBox>
+        <SidenavIdentity
+          miniSidenav={miniSidenav}
+          whiteSidenav={whiteSidenav}
+          transparentSidenav={transparentSidenav}
+        />
       </MDBox>
       <Divider
         light={

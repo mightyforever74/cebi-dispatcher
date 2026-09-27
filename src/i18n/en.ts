@@ -30,7 +30,7 @@ export const en = {
     home: "Home",
     sidenav: "Main navigation",
     language: "Language: {code}",
-    identityAria: "{name}, {role}, {company}",
+    identityAria: "{name}, {email}, {role}, {company}",
     role: {
       company_admin: "Company admin",
       super_admin: "Super admin",

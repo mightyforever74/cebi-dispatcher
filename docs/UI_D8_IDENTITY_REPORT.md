@@ -1,30 +1,48 @@
-# UI D8 — Kimlik, ack kalıcılığı, Optimize mock, e-posta varsayılanı
+# UI D8 — Kimlik sidenav, ack kalıcılığı, Optimize mock, e-posta, attribution
 
 Dal: `ui-d8-identity` · Taban: main `4df8189` · Tarih: 2026-09-27  
-Yerel bundle: `main.24d7b9ce.js` **536.52 kB** gzip (+1.05 kB) / CSS `main.4800285c.css` 10.21 kB.  
-Deployments commit **`f46d0b9`** (Pages hash yerel hash’ten farklıdır). Preview CNAME: Cem.
+Yerel bundle: `main.3c88468d.js` **539.31 kB** gzip / CSS `main.c3bdafab.css` 10.26 kB.  
+Deployments commit: push sonrası yazılır.
 
 `SUPERVISOR_API_URL` varsayılanı **`https://api.tulipfleet.com`** (Ortam Matrisi: tüm satırlar prod). Üç değişken ayrı durur.
 
 ---
 
-## B) Navbar kimlik
+## B) Kimlik — sidenav başlığı (navbar bloğu kalktı)
 
-Kaynak: `useUserProfile` → `GET ${AUTH_API_URL}/api/user/profile`.
+Kaynak aynı: `useUserProfile` → `GET ${AUTH_API_URL}/api/user/profile`.  
+Görünüm: `useIdentityDisplay()` (`src/hooks/useIdentityDisplay.ts`) — sidenav + hesap menüsü.
 
-| Durum | Ad | Rol | Şirket |
+Yer: `SidenavIdentity` logo / “TulipFleet Dispatcher” satırının **hemen altında**, `Divider` öncesi.
+
+| Durum | Birincil satır | İkinci satır | Meta |
 |---|---|---|---|
-| 200 | `firstName`+`lastName` (alias `first_name`/`last_name` + `user` sarmalayıcı) | sözlük `nav.role.*` | `company_name` |
-| ad yok | e-posta | sözlük | `company_name` veya `—` |
-| **404** (core A prod’da yokken) | JWT `email` | JWT `role` → sözlük | **`—`** (`common.emptyDash`) |
+| ad+soyad var | ad soyad | e-posta (küçük) | `nav.role.*` · şirket |
+| ad yok | e-posta | — | rol · şirket |
+| **404** | JWT `email` | — | JWT rol · `—` |
 
-JWT decode: `atob` payload, yeni paket yok. `placeholderData` aynı JWT profili — ilk boyada boş flaş yok.
+| Kural | Uygulama |
+|---|---|
+| Renk | `landing.offwhite` / `landing.navyFog` navy zeminde; `whiteSidenav`’da `navyFog700`. Hex yalnız `tokens.ts`. |
+| Kontrast | offwhite `#f8fafc` ve navyFog `#c5cde3` on navyInk `#070b18` — her iki tema sidenav zemini navy (SidenavRoot); ≥4.5:1. |
+| Uzun e-posta | `noWrap` + `ellipsis` + `title` |
+| Mini (≥xl, 96px) | metin gizli; `account_circle` + hover `Tooltip` (tam metin) |
+| 390 drawer | metin görünür (250px kâğıt) |
+| Navbar | kimlik bloğu **yok**; Hesap menüsünde aynı üç satır durur |
 
-Settings **BasicInfo** aynı hook (`["user-profile"]`). `demo@tulipfleet.com` oturumunda prod profil **200**: e-posta doldu, ad/soyad boş, şirket **Dobbe Transport**, rol `company_admin` → TR **Şirket yöneticisi**.
+`demo@tulipfleet.com`: profil 200, ad/soyad boş → birincil `demo@tulipfleet.com`, meta TR **Şirket yöneticisi · Dobbe Transport**. Navbar sağında yalnız avatar.
 
-390 (`<sm`): kimlik metni `display: none`; avatar + hesap menüsü. Menü başında aynı üç satır (`role=group` + `nav.identityAria`). JPEG: `docs/screenshots/d8/navbar-390.jpg` (69.5 KB).
+JPEG (q80, ≤150 KB):
 
-Rol anahtarları: `nav.role.company_admin` / `super_admin` / `driver` (EN+TR+NL). Bilinmeyen rol ham string.
+| Dosya | KB | Ne |
+|---|---|---|
+| `docs/screenshots/d8/sidenav-identity-light-1280.jpg` | 74.4 | 1280 light, kimlik logo altında |
+| `docs/screenshots/d8/sidenav-identity-dark-1280.jpg` | 67.1 | 1280 dark |
+| `docs/screenshots/d8/sidenav-identity-mini.jpg` | 49.2 | mini ray, yalnız ikon |
+| `docs/screenshots/d8/sidenav-identity-390.jpg` | 39.6 | 390 açık drawer |
+| `docs/screenshots/d8/navbar-390.jpg` | 69.5 | önceki tur (navbar menü özeti) |
+
+Rol anahtarları: `nav.role.company_admin` / `super_admin` / `driver`. `nav.identityAria`: `{name}, {email}, {role}, {company}`.
 
 ---
 
@@ -40,54 +58,42 @@ Rol anahtarları: `nav.role.company_admin` / `super_admin` / `driver` (EN+TR+NL)
 | Exception ack | `useExceptions.resolve(..., "acknowledge")` | enterprise exception resolve |
 | **`/api/alerts/:id/ack`** | **yok** | core’da ack uç yok |
 
-X (`dismissBanner`) sunucuya yazmıyordu; Onayla resolve dener ama başarısız/yenilemede `dismissedRef` bellek-içi olduğu için banner geri geliyordu.
+`localStorage` **`tf.alerts.acked`**: `{ ids: string[], exp: number }`, TTL **7 gün**. X ve Onayla: `banner:*` / `family:*` / `ex:` / `al:` / ham id.
 
-### Geçici bağ
-
-`localStorage` anahtarı **`tf.alerts.acked`**: `{ ids: string[], exp: number }`, TTL **7 gün** (her yazımda kayar). X ve Onayla: `banner:*` / `family:*` / `ex:` / `al:` / ham id. Yüklemede `dismissedRef = loadAckedIds()`.
-
-**Not — sunucu ack endpoint’i gerekli.** `PUT /api/alerts/:id/ack` (veya resolve’un dismiss ile aynı semantikte zorunlu başarı) olmadan ack tarayıcıya kilitli; başka cihaz / gizli sekme / 7 günden sonra banner geri gelir. Exception `acknowledge` enterprise’da duruyor; alert tarafında eşdeğer ack yok.
+**Not — sunucu ack endpoint’i gerekli.** `PUT /api/alerts/:id/ack` olmadan ack tarayıcıya kilitli.
 
 ---
 
-## E) `SUPERVISOR_API_URL` — prod core (Cem)
+## E) `SUPERVISOR_API_URL` — prod core
 
 Varsayılan: `https://staging-api.tulipfleet.com` → **`https://api.tulipfleet.com`**.  
 `REACT_APP_SUPERVISOR_API_URL` hâlâ ezer. AUTH ile aynı host; değişken birleşmedi.
 
-Etkilenen ekranlar (yalnız `src/layouts/supervisor/**` — harita / görev / ayarlar değil):
-
-| Ekran | Çağrılar (artık prod core) |
-|---|---|
-| Supervisor gate (`SupervisorGate`) | `POST /api/auth/login` — `super_admin` JWT |
-| Şirket listesi (`supervisor/index`) | `GET /api/superadmin/companies`, `GET /api/superadmin/subscriptions/requests?status=PENDING_APPROVAL` |
-| Müşteri detayı (`customerDetail`) | aynı GET + `POST .../requests/:id/{approve\|reject}` + `PUT .../companies/:id/quota` |
-
-Gate ve abonelik kuyruğu **prod** şirket/istek okur/yazar; staging-only kayıtlar bu UI’da görünmez. Staging JWT secret uyumsuzluğu biter.
+Etkilenen ekranlar (yalnız `src/layouts/supervisor/**`): gate login, şirket listesi, müşteri detayı (approve/reject/quota).
 
 ---
 
 ## H) Optimize mock uyarısı
 
-`optimize.mockBanner` (EN+TR+NL):
-
-- EN: *HERE Tour Planning was not implemented; the mock uses the selected vehicles (b1374ab).*
-- TR: *HERE Tour Planning yapılmadı; mock, seçilen araçları kullanır (b1374ab).*
-- NL: *HERE Tour Planning is niet gebouwd; de mock gebruikt de geselecteerde voertuigen (b1374ab).*
+`optimize.mockBanner` (EN+TR+NL): HERE Tour Planning yapılmadı; mock seçilen araçları kullanır (`b1374ab`).
 
 ---
 
 ## Ek) `dispatcher@tulipfleet.nl`
 
-**Kaynak: sabit (FE), DB değil.**
+**Kaynak: sabit (FE), DB değil.** `EmailIntegration` boş + `settings.emailPlaceholder` = `info@tulipfleet.com`. Navbar mailto aynı. `src/` içinde `tulipfleet.nl` kalmadı.
 
-| Yer | Önce | Sonra |
-|---|---|---|
-| `EmailIntegration` `useState` | `"dispatcher@tulipfleet.nl"` | `""` |
-| aynı, `placeholder` | aynı .nl | `settings.emailPlaceholder` = `info@tulipfleet.com` |
-| Navbar mailto | aynı .nl | `info@tulipfleet.com` |
+---
 
-Kayıtlı değer varsa `GET ${ENTERPRISE_API_URL}/api/dispatcher/notification-preferences` → `preferences.notification_email` (DB). `demo@` oturumunda alan **boş**, placeholder `info@tulipfleet.com`. `src/` içinde `tulipfleet.nl` kalmadı.
+## Live map dark — attribution kontrastı
+
+Leaflet varsayılanı `rgba(255,255,255,.8)` + `#0078A8` = **1.52:1**.  
+`[data-theme="dark"] .leaflet-container .leaflet-control-attribution` (+ `a`):
+
+- zemin: `color-mix(in srgb, var(--tf-navy-elevated) 85%, transparent)` → computed `color(srgb 0.07 0.10 0.20 / 0.85)`
+- metin/link: `var(--tf-navy-fog)` → `rgb(197, 205, 227)`
+
+Light kuralı değişmedi. Ek (aynı a11y turu, Live map 0/0 için): boş/yükleme/hata `ListItem` sarması (`ul` yalnız `li`); “Araçlar” CTA rengi `chrome.text` (eskiden `#7C3AED` 2.83:1).
 
 ---
 
@@ -98,6 +104,8 @@ npx tsc --noEmit          → 0
 npm run i18n:gate         → ok
 npm run verify:i18n       → 604 keys en/tr/nl
 npm run build             → Compiled successfully
+                            main.3c88468d.js  539.31 kB gzip
+                            main.c3bdafab.css 10.26 kB
 ```
 
 axe-core 4.10.3, WCAG 2.1 A/AA, `localhost:3000`, TR, `demo@tulipfleet.com`:
@@ -105,13 +113,9 @@ axe-core 4.10.3, WCAG 2.1 A/AA, `localhost:3000`, TR, `demo@tulipfleet.com`:
 | Ekran | Light crit/ser | Dark crit/ser |
 |---|---|---|
 | Login | **0 / 0** | **0 / 0** |
-| Live map | 0 / 1 (`list` ul>div, panel) | 0 / 2 (`list` + `Araçlar` contrast #7c3aed/#1a2035) |
+| Live map | **0 / 0** | **0 / 0** |
 | Tasks | **0 / 0** | **0 / 0** |
 | Settings | **0 / 0** | **0 / 0** |
-
-Live map ihlalleri **kimlik alanı değil** (harita paneli `Araçlar` + `MuiList`); D8 kapsamı dışı. Identity `role=group` axe’e düşmedi.
-
-390: kimlik `display:none`; Hesap menüsü e-posta + rol + şirket. `docs/screenshots/d8/navbar-390.jpg`.
 
 Hex: yeni dosyalarda yok. `SUPERVISOR_API_URL` fallback `api.tulipfleet.com`.
 
@@ -119,8 +123,6 @@ Hex: yeni dosyalarda yok. `SUPERVISOR_API_URL` fallback `api.tulipfleet.com`.
 
 ## Kapsam dışı
 
-- Live map `list` / `Araçlar` contrast (önceden var).
-- Core `GET /api/user/profile` prod deploy (bu turda 200 görüldü; 404 yolu duruyor).
+- Core `GET /api/user/profile` prod deploy (bu turda 200; 404 yolu duruyor).
 - `PUT /api/alerts/:id/ack` (yok — localStorage geçici).
-- SUPERVISOR host kesimi (yapıldı: prod core).
 - `scripts/sim-portxl.js`, `docs/UI_D0_DISCOVERY.md` commit edilmedi.

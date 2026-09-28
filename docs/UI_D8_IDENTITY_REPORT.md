@@ -26,7 +26,7 @@ Yer: `SidenavIdentity` logo / “TulipFleet Dispatcher” satırının **hemen a
 | Renk | `landing.offwhite` / `landing.navyFog` navy zeminde; `whiteSidenav`’da `navyFog700`. Hex yalnız `tokens.ts`. |
 | Kontrast | offwhite `#f8fafc` ve navyFog `#c5cde3` on navyInk `#070b18` — her iki tema sidenav zemini navy (SidenavRoot); ≥4.5:1. |
 | Uzun e-posta | `noWrap` + `ellipsis` + `title` |
-| Mini (≥xl, 96px) | metin gizli; `account_circle` + hover `Tooltip` (tam metin) |
+| Mini (≥xl, 96px) | metin gizli; `account_circle` + Tooltip `e-posta · rol · şirket`; aria e-posta **tek** (`nav.identityAriaEmail`) |
 | 390 drawer | metin görünür (250px kâğıt) |
 | Navbar | kimlik bloğu **yok**; Hesap menüsünde aynı üç satır durur |
 
@@ -41,8 +41,24 @@ JPEG (q80, ≤150 KB):
 | `docs/screenshots/d8/sidenav-identity-mini.jpg` | 49.2 | mini ray, yalnız ikon |
 | `docs/screenshots/d8/sidenav-identity-390.jpg` | 39.6 | 390 açık drawer |
 | `docs/screenshots/d8/navbar-390.jpg` | 69.5 | önceki tur (navbar menü özeti) |
+| `docs/screenshots/d8/sidenav-mini-titles-light.jpg` | 98.3 | D8-fix mini, başlık yok (ayraç) |
+| `docs/screenshots/d8/sidenav-mini-titles-dark.jpg` | 87.4 | D8-fix mini dark |
 
-Rol anahtarları: `nav.role.company_admin` / `super_admin` / `driver`. `nav.identityAria`: `{name}, {email}, {role}, {company}`.
+Rol anahtarları: `nav.role.company_admin` / `super_admin` / `driver`.  
+`nav.identityAria`: `{name}, {email}, {role}, {company}` (ad varken).  
+`nav.identityAriaEmail`: `{email}, {role}, {company}` (ad yok — e-posta tek). Mini Tooltip: `email · meta`.
+
+---
+
+## D8-fix) Mini sidenav başlık + kimlik tooltip
+
+Mini’de bölüm başlıkları (`OPERASYON MERKEZİ` …) `OPE…` ellipsis yerine **gizli**; yerinde ince `Divider` (96px ray, 7 ayraç). 390 drawer başlıkları durur.
+
+`demo@` mini: aria `demo@tulipfleet.com, Şirket yöneticisi, Dobbe Transport`; Tooltip `demo@tulipfleet.com · Şirket yöneticisi · Dobbe Transport`.
+
+axe Live map light/dark **0/0**. `verify:i18n` 605 keys.
+
+`dispatcher-preview` bu turda hâlâ `main.cc9d4693.js` (eski navbar kimlik; `SidenavIdentity` yok). Cloudflare dash oturumu yok; CNAME Cem.
 
 ---
 

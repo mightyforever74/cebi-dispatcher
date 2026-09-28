@@ -29,6 +29,7 @@ export const nl = {
     sidenav: "Hoofdnavigatie",
     language: "Taal: {code}",
     identityAria: "{name}, {email}, {role}, {company}",
+    identityAriaEmail: "{email}, {role}, {company}",
     role: {
       company_admin: "Bedrijfsbeheerder",
       super_admin: "Superbeheerder",

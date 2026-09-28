@@ -19,13 +19,21 @@ export function useIdentityDisplay() {
   const role = roleLabel(profile?.role, t);
   const company = profile?.company_name || t("common.emptyDash");
   const meta = role ? `${role} · ${company}` : company;
-  const aria = t("nav.identityAria", {
-    name: primary,
-    email: email || t("common.emptyDash"),
-    role: role || t("common.emptyDash"),
-    company,
-  });
-  const tooltip = [givenName || null, email || null, meta].filter(Boolean).join(" · ");
+  const dash = t("common.emptyDash");
+  const aria = givenName
+    ? t("nav.identityAria", {
+        name: givenName,
+        email: email || dash,
+        role: role || dash,
+        company,
+      })
+    : t("nav.identityAriaEmail", {
+        email: email || dash,
+        role: role || dash,
+        company,
+      });
+  /** Mini icon tooltip: e-posta + rol · şirket (e-posta tek kez). */
+  const tooltip = [email || primary, meta].filter(Boolean).join(" · ");
 
   return {
     profile,

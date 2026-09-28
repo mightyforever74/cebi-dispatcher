@@ -29,6 +29,7 @@ export const tr = {
     sidenav: "Ana menü",
     language: "Dil: {code}",
     identityAria: "{name}, {email}, {role}, {company}",
+    identityAriaEmail: "{email}, {role}, {company}",
     role: {
       company_admin: "Şirket yöneticisi",
       super_admin: "Süper yönetici",

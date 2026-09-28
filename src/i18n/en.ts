@@ -31,6 +31,7 @@ export const en = {
     sidenav: "Main navigation",
     language: "Language: {code}",
     identityAria: "{name}, {email}, {role}, {company}",
+    identityAriaEmail: "{email}, {role}, {company}",
     role: {
       company_admin: "Company admin",
       super_admin: "Super admin",

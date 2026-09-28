@@ -1,4 +1,5 @@
 import { Tab, Tabs } from "@mui/material";
+import Icon from "@mui/material/Icon";
 import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import MDBox from "components/MDBox";
@@ -12,9 +13,10 @@ import useTasks, { type Task, type TaskFilter } from "hooks/useTasks";
 import useVehicles, { type Vehicle } from "hooks/useVehicles";
 import { density } from "assets/theme/tokens";
 import { formatDateTime, formatNumber, useT } from "i18n";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toNum } from "utils/toNum";
+import TrackingLinkBlock from "layouts/dispatcher/tasks/TrackingLinkBlock";
 
 const EMPTY_TASKS: Task[] = [];
 const EMPTY_DRIVERS: Driver[] = [];
@@ -25,6 +27,7 @@ function TasksLayout(): JSX.Element {
   const { t, lang } = useT();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<TaskFilter>("all");
+  const [trackTask, setTrackTask] = useState<Task | null>(null);
   const {
     data,
     isLoading,
@@ -53,6 +56,15 @@ function TasksLayout(): JSX.Element {
     return m;
   }, [drivers]);
 
+  useEffect(() => {
+    setTrackTask((current) => {
+      if (!current) return current;
+      const fresh = tasks.find((task: Task) => task.id === current.id);
+      if (!fresh || fresh.status === current.status) return current;
+      return fresh;
+    });
+  }, [tasks]);
+
   const plateById = useMemo(() => {
     const m = new Map<string, string>();
     vehicles.forEach((v: Vehicle) => {
@@ -70,6 +82,7 @@ function TasksLayout(): JSX.Element {
       { Header: t("tasks.colDistance"), accessor: "distance_display", minWidth: 72, maxWidth: 88, numeric: true },
       { Header: t("tasks.colPriority"), accessor: "priority_badge", minWidth: 72, maxWidth: 90 },
       { Header: t("tasks.colStatus"), accessor: "status_badge", minWidth: 96, maxWidth: 120, primary: true },
+      { Header: t("tasks.colActions"), accessor: "actions", minWidth: 148, maxWidth: 188, pin: true },
     ];
 
     const rows: DataRow[] = tasks.map((task: Task) => {
@@ -134,6 +147,21 @@ function TasksLayout(): JSX.Element {
         distance_display: distanceDisplay,
         priority_badge: <PriorityChip value={task.priority} />,
         status_badge: <StatusChip kind="task" value={task.status} />,
+        actions: (
+          <MDButton
+            size="small"
+            variant="outlined"
+            color="info"
+            aria-label={t("tasks.trackingOpenAria", { task: taskNo })}
+            onClick={() => setTrackTask(task)}
+            sx={{ textTransform: "none", whiteSpace: "nowrap", minWidth: 0 }}
+          >
+            <Icon fontSize="small" aria-hidden>
+              link
+            </Icon>
+            {t("tasks.trackingOpen")}
+          </MDButton>
+        ),
         id: task.id,
         _ariaLabel: taskNo,
       };
@@ -213,6 +241,13 @@ function TasksLayout(): JSX.Element {
           />
         </DataState>
       </MDBox>
+      <TrackingLinkBlock
+        open={trackTask != null}
+        taskId={trackTask?.id ?? ""}
+        taskNo={trackTask?.task_no || ""}
+        status={trackTask?.status}
+        onClose={() => setTrackTask(null)}
+      />
     </DashboardLayout>
   );
 }

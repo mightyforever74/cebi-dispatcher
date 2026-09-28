@@ -49,6 +49,8 @@ export interface DataColumn {
   truncate?: boolean;
   primary?: boolean;
   numeric?: boolean;
+  /** Always shown on the <md card, after the three primary columns. */
+  pin?: boolean;
 }
 
 export interface DataRow {
@@ -243,7 +245,9 @@ function DataTable({
   else if (pageIndex === pageOptions.length - 1) entriesEnd = rows.length;
 
   const primaryColumns = table.columns.filter((c) => c.primary).slice(0, 3);
-  const mobileColumns = primaryColumns.length > 0 ? primaryColumns : table.columns.slice(0, 3);
+  const pinnedColumns = table.columns.filter((c) => c.pin);
+  const mobileColumns =
+    (primaryColumns.length > 0 ? primaryColumns : table.columns.slice(0, 3)).concat(pinnedColumns);
 
   const renderPagination = pageOptions.map((option: number) => (
     <MDPagination item key={option} onClick={() => gotoPage(Number(option))} active={pageIndex === option}>

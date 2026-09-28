@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import Drawer from "@mui/material/Drawer";
 import Icon from "@mui/material/Icon";
 
-import { a11y } from "assets/theme/tokens";
+import { a11y, paletteDark, paletteLight } from "assets/theme/tokens";
 import ConfirmDialogShell from "components/ConfirmDialogShell";
 import DataState from "components/DataState";
 import MDBox from "components/MDBox";
@@ -39,6 +39,24 @@ interface Props {
 
 function isClosed(status: string | undefined): boolean {
   return CLOSED_STATUS.has(String(status || ""));
+}
+
+/** Disabled Create/Copy/Revoke. `paletteDark.textDisabled` on a light token fill stays ≥4.5:1. */
+function disabledActionSx(darkMode: boolean) {
+  const color = paletteDark.textDisabled;
+  const background = darkMode ? paletteLight.grey[100] : paletteLight.white;
+  return {
+    textTransform: "none" as const,
+    "&:disabled, &.Mui-disabled": {
+      opacity: 1,
+      color,
+      WebkitTextFillColor: color,
+      background,
+      backgroundImage: "none",
+      border: `1px solid ${color}`,
+      boxShadow: "none",
+    },
+  };
 }
 
 async function publicLinkRequest(
@@ -165,6 +183,7 @@ function TrackingLinkBlock({ open, taskId, taskNo, status, onClose }: Props): JS
 
   const linkColor = controller.darkMode ? a11y.linkDark : a11y.linkLight;
   const titleId = "tracking-link-title";
+  const disabledSx = disabledActionSx(controller.darkMode);
 
   return (
     <Drawer
@@ -172,8 +191,16 @@ function TrackingLinkBlock({ open, taskId, taskNo, status, onClose }: Props): JS
       open={open}
       onClose={onClose}
       PaperProps={{
-        sx: { width: "min(100vw, 28rem)", maxWidth: "100vw", boxSizing: "border-box" },
+        role: "dialog",
+        "aria-modal": true,
         "aria-labelledby": titleId,
+        sx: {
+          width: "min(100vw, 28rem)",
+          maxWidth: "100vw",
+          boxSizing: "border-box",
+          overflowX: "hidden",
+          whiteSpace: "normal",
+        },
       }}
     >
       <MDBox p={2} display="flex" flexDirection="column" gap={2} minWidth={0}>
@@ -220,7 +247,16 @@ function TrackingLinkBlock({ open, taskId, taskNo, status, onClose }: Props): JS
               <MDBox display="flex" flexDirection="column" gap={1} minWidth={0}>
                 <MDTypography
                   variant="body2"
-                  sx={{ color: linkColor, wordBreak: "break-all", fontVariantNumeric: "tabular-nums" }}
+                  sx={{
+                    color: linkColor,
+                    display: "block",
+                    minWidth: 0,
+                    maxWidth: "100%",
+                    whiteSpace: "normal",
+                    overflowWrap: "anywhere",
+                    wordBreak: "break-word",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
                 >
                   {link.url}
                 </MDTypography>
@@ -239,7 +275,7 @@ function TrackingLinkBlock({ open, taskId, taskNo, status, onClose }: Props): JS
                 onClick={() => {
                   void create();
                 }}
-                sx={{ textTransform: "none" }}
+                sx={disabledSx}
               >
                 {t("tasks.trackingCreate")}
               </MDButton>
@@ -251,7 +287,7 @@ function TrackingLinkBlock({ open, taskId, taskNo, status, onClose }: Props): JS
                 onClick={() => {
                   void copy();
                 }}
-                sx={{ textTransform: "none" }}
+                sx={disabledSx}
               >
                 {t("tasks.trackingCopy")}
               </MDButton>
@@ -261,7 +297,7 @@ function TrackingLinkBlock({ open, taskId, taskNo, status, onClose }: Props): JS
                 size="small"
                 disabled={closed || pending != null || !link}
                 onClick={() => setConfirmOpen(true)}
-                sx={{ textTransform: "none" }}
+                sx={disabledSx}
               >
                 {t("tasks.trackingRevoke")}
               </MDButton>

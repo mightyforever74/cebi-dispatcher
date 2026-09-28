@@ -74,3 +74,53 @@ JPEG q80:
 - Enterprise'ın staging JWT kabulü (liste 401).
 - Preview CNAME. Merge Cem.
 - `main` üzerinde bırakılan stash: `pre-d9: UI_D0_DISCOVERY and sim-portxl` (`docs/UI_D0_DISCOVERY.md`, `scripts/sim-portxl.js`). Bu dalda yok.
+
+## D9-fix
+
+Tarih: 2026-09-29. Yalnız üç madde. `ConfirmDialogShell` iki adım (Vazgeç → Devam → Linki iptal et) aynı. Hex grep `TrackingLinkBlock.tsx`: 0.
+
+| Madde | Ne değişti |
+|---|---|
+| URL | Tema `MuiDrawer` sidenav `white-space: nowrap` miras alıyordu; `overflow-wrap` tek başına satır kırmıyordu. Çekmece kâğıdı `whiteSpace: normal`. URL `overflow-wrap: anywhere`, `word-break: break-word` |
+| Kapalı düğmeler | `paletteDark.textDisabled` `#65718c`, `opacity: 1`, gradyan yok. Koyu zemin `paletteLight.grey[100]`, açık zemin `paletteLight.white` |
+| Diyalog | Kâğıt `role="dialog"` `aria-modal="true"` `aria-labelledby="tracking-link-title"` |
+
+Ölçüm (kapalı görev `ART-0233`, `completed`):
+
+| Tema | renk | zemin | opacity | gradyan |
+|---|---|---|---|---|
+| dark | `rgb(101, 113, 140)` | `rgb(248, 249, 250)` | 1 | none |
+| light | `rgb(101, 113, 140)` | `rgb(255, 255, 255)` | 1 | none |
+
+Üç düğme `disabled`. Çekmece kaydırma çubuğu yok.
+
+| Genişlik | satır | kâğıt `scrollWidth` / `clientWidth` | yatay çubuk |
+|---|---|---|---|
+| 390 px | 2 | 390 / 390 | 0 |
+| 250 px | 3 | 250 / 250 | 0 |
+
+```
+npx tsc --noEmit     → 0
+npm run i18n:gate    → exit 0
+npm run verify:i18n  → 623 keys en/tr/nl
+npm run build        → Compiled successfully
+                       main.9f354df7.js  542.2 kB gzip
+                       main.c3bdafab.css 10.26 kB
+```
+
+axe-core 4.10.3, `wcag2a` / `wcag2aa` / `wcag21a` / `wcag21aa` + `best-practice`, `localhost:3000/dispatcher/tasks`, TR, çekmece açık:
+
+| Tema | critical | serious | moderate |
+|---|---|---|---|
+| dark | **0** | **0** | **0** |
+| light | **0** | **0** | **0** |
+
+`region` bulgusu 0. JPEG q80. Ekran görüntüsünde token `x` ile maskeli. Canlı link iptal edildi (`TLP-26-00030`).
+
+| Dosya | KB |
+|---|---|
+| `docs/screenshots/d9/closed-dark.jpg` | 36.2 |
+| `docs/screenshots/d9/closed-light.jpg` | 36.3 |
+| `docs/screenshots/d9/create-390.jpg` | 36.6 |
+
+Deployments commit **`5bdc516`**. Prod ve merge yok.

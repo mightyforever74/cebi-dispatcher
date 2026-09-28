@@ -35,7 +35,7 @@ function EmailIntegration(): JSX.Element {
   const { data: savedPrefs, isLoading: loadingPrefs } = useNotificationPreferences();
   const saveMutation = useSaveNotificationPreferences();
 
-  const [email, setEmail] = useState("dispatcher@tulipfleet.nl");
+  const [email, setEmail] = useState("");
   const [mailClient, setMailClient] = useState<MailClient>("native");
   const [alerts, setAlerts] = useState<AlertPrefs>({
     zeZone: true,
@@ -95,7 +95,7 @@ function EmailIntegration(): JSX.Element {
             </MDTypography>
             <FormField
               label={t("settings.corporateEmail")}
-              placeholder="dispatcher@tulipfleet.nl"
+              placeholder={t("settings.emailPlaceholder")}
               value={email}
               required
               helperText={t("settings.helpCorporateEmail")}

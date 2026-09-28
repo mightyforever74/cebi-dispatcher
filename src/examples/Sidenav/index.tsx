@@ -37,6 +37,7 @@ import SidenavItem from "examples/Sidenav/SidenavItem";
 // Custom styles for the Sidenav
 import SidenavRoot from "examples/Sidenav/SidenavRoot";
 import sidenavLogoLabel from "examples/Sidenav/styles/sidenav";
+import SidenavIdentity from "examples/Sidenav/SidenavIdentity";
 
 // Material Dashboard 2 PRO React context
 import {
@@ -245,25 +246,30 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
           );
         }
       } else if (type === "title") {
+        const dividerLight =
+          (!darkMode && !whiteSidenav && !transparentSidenav) ||
+          (darkMode && !transparentSidenav && whiteSidenav);
         returnValue = (
           <ListItem key={key} component="li" disablePadding sx={{ display: "block" }}>
-            <MDTypography
-              color={textColor}
-              display="block"
-              variant="caption"
-              component="p"
-              fontWeight="bold"
-              textTransform="uppercase"
-              pl={3}
-              mt={2}
-              mb={1}
-              ml={1}
-              pr={2}
-              title={title}
-              sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-            >
-              {title}
-            </MDTypography>
+            {miniSidenav ? (
+              <Divider light={dividerLight} sx={{ my: 1, mx: 1.5 }} />
+            ) : (
+              <MDTypography
+                color={textColor}
+                display="block"
+                variant="caption"
+                component="p"
+                fontWeight="bold"
+                textTransform="uppercase"
+                pl={3}
+                mt={2}
+                mb={1}
+                ml={1}
+                pr={2}
+              >
+                {title}
+              </MDTypography>
+            )}
           </ListItem>
         );
       } else if (type === "divider") {
@@ -330,6 +336,11 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
             </MDTypography>
           </MDBox>
         </MDBox>
+        <SidenavIdentity
+          miniSidenav={miniSidenav}
+          whiteSidenav={whiteSidenav}
+          transparentSidenav={transparentSidenav}
+        />
       </MDBox>
       <Divider
         light={

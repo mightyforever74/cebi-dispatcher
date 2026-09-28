@@ -58,11 +58,14 @@ import {
 
 // Real API — GET/PUT /api/alerts (api.tulipfleet.com)
 import { useAlerts, useResolveAlert, Alert, EMPTY_ALERTS } from "hooks/useAlerts";
+import { useIdentityDisplay } from "hooks/useIdentityDisplay";
 import { localizeBackendAlert, useT } from "i18n";
 import LanguageSwitcher from "components/LanguageSwitcher";
 import { useDensity } from "context/density";
 import { useAuthStore } from "store/useAuthStore";
 import NotificationHost from "components/Notifications";
+
+const NOTIFICATION_MAILBOX = "info@tulipfleet.com";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -109,6 +112,7 @@ function getAlertConfig(type: string | undefined) {
 
 function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   const { t } = useT();
+  const identity = useIdentityDisplay();
   const [controller, dispatch] = useMaterialUIController();
   const { miniSidenav, transparentNavbar, fixedNavbar, openConfigurator, darkMode } = controller;
   // First paint must already be in-flow. MUI AppBar defaults to `fixed` when
@@ -185,7 +189,7 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
   // kutusu DEGIL: sadece kritik operasyonel olaylarin (gercek backend verisi)
   // listesi. Tiklaninca (a) PUT /api/alerts/:id/resolve cagrilir (is_resolved=true)
   // ve (b) mailto: ile mail programi acilir (dispatcher kayit tutabilsin diye).
-  const notificationEmail = "dispatcher@tulipfleet.nl";
+  const notificationEmail = NOTIFICATION_MAILBOX;
 
   const { data: alertsData, isLoading: loadingAlerts } = useAlerts();
   const resolveMutation = useResolveAlert();
@@ -374,6 +378,20 @@ function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
                 transformOrigin={{ vertical: "top", horizontal: "right" }}
                 sx={{ mt: 1.5 }}
               >
+                <MDBox px={2} pt={1.5} pb={1} role="group" aria-label={identity.aria}>
+                  <MDTypography variant="button" fontWeight="medium" noWrap display="block" title={identity.primary}>
+                    {identity.primary}
+                  </MDTypography>
+                  {identity.emailLine ? (
+                    <MDTypography variant="caption" color="text" noWrap display="block" title={identity.emailLine}>
+                      {identity.emailLine}
+                    </MDTypography>
+                  ) : null}
+                  <MDTypography variant="caption" color="text" noWrap display="block" title={identity.meta}>
+                    {identity.meta}
+                  </MDTypography>
+                </MDBox>
+                <Divider sx={{ my: 0.5 }} />
                 <NotificationItem
                   icon={<Icon fontSize="small">settings</Icon>}
                   title={t("nav.tenantSettings")}

@@ -30,6 +30,13 @@ export const en = {
     home: "Home",
     sidenav: "Main navigation",
     language: "Language: {code}",
+    identityAria: "{name}, {email}, {role}, {company}",
+    identityAriaEmail: "{email}, {role}, {company}",
+    role: {
+      company_admin: "Company admin",
+      super_admin: "Super admin",
+      driver: "Driver",
+    },
     short: {
       liveFleet: "Live map",
       tasks: "Tasks",
@@ -411,7 +418,7 @@ export const en = {
     title: "New task — route optimization",
     back: "Back to tasks",
     mockBanner:
-      "Test mode: the optimization engine is currently a mock (HERE Tour Planning is planned, not yet built). The initial vehicle layout matches the backend, but you can drag any task to another vehicle before approving.",
+      "HERE Tour Planning was not implemented; the mock uses the selected vehicles (b1374ab).",
     pickup: "Pickup",
     dropoff: "Drop-off",
     pickupSearch: "Search pickup address",
@@ -562,6 +569,7 @@ export const en = {
     helpPhone: "Include country code, e.g. +31",
     helpPassword: "At least 6 characters",
     helpCorporateEmail: "Used for system notifications and dispatch summaries",
+    emailPlaceholder: "info@tulipfleet.com",
   },
   tourPlanning: {
     title: "Smart Route Optimization (VRP)",

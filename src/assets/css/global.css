@@ -205,6 +205,14 @@ html { scrollbar-gutter: stable; }
   color: var(--tf-map-panel-fg);
 }
 
+/* Dark attribution sits on map tiles; Leaflet default rgba(255,255,255,.8)
+   + #0078A8 is 1.52:1. Beat `.leaflet-container .leaflet-control-attribution`. */
+[data-theme="dark"] .leaflet-container .leaflet-control-attribution,
+[data-theme="dark"] .leaflet-container .leaflet-control-attribution a {
+  background: color-mix(in srgb, var(--tf-navy-elevated) 85%, transparent);
+  color: var(--tf-navy-fog);
+}
+
 .tf-vehicle-icon,
 .tf-dest-flag,
 .tf-map-cluster-wrap {

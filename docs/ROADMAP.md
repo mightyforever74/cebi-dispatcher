@@ -2,6 +2,40 @@
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 
+**Status as of 2026-10-04 — PROD = MAIN, TAKİP PORTALI CANLI, 5 GÜNLÜK KESİNTİ DERSİ, ÖNCELİK = SAHA**
+(1) PROD SENKRONU: core prod `/opt/fleet/backend` = main `b8abbe5`, enterprise prod = main
+`4bbae16`, dispatcher Pages = main `9d1fcef`, staging = main (temiz git checkout;
+scp/kopya yöntemi yasaklandı — qa WORKING_RULES). Eski "prod ~21 commit geride /
+code freeze backlog" kayıtları (DEMO-PORTXL-DECISIONS KARAR-1, ADR-0014 §5.1)
+TARİHSELDİR; 27 Eyl'den beri geçerli değil. ADR-0014 IRoutingProvider core'da canlı
+(`services/routing/{contract,factory,HereRoutingProvider}.js`); dispatcher scorer'lar
+hâlâ kuş uçuşu (qa TODO §9 D7-3 #13).
+(2) ENTERPRISE CUTOVER 27 Eyl: enterprise-api → `fleet_tracking` (prod), bridge → core
+prod `:3000` tam yol, token rotasyonu; Phase 4 zinciri prod'da uçtan uca (TUL-26-00041/42).
+IDENTITY & AUTHZ mini-sprint A–H 28 Eyl (profil GET, requireRole, safeErr, sidenav kimlik).
+(3) MÜŞTERİ TAKİP PORTALI MVP-1 (28 Eyl → 4 Eki): `track.tulipfleet.com` (nginx vhost,
+yalnız `/v`, `/public/track`, `/health`), core `public_tracking_tokens` 192-bit/30 gün/
+revoke, rate-limit 60/dk, timingSafeEqual; hardening (charset, no-referrer/noindex/
+no-store, id'siz DTO, canlı konum yalnız `in_progress`); dispatcher UI D9 Tasks satırı →
+çekmece (oluştur/kopyala/iptal). Prod turu 4 Eki geçti. MVP-2: HERE ETA, timeline, i18n,
+harita merkezi, yan etkisiz public okuma.
+(4) UI SERİSİ D0–D9 PROD'DA (22 Eyl–4 Eki): tema köprüsü, kabuk, Live map kümeleme,
+veri yüzeyleri, form/modal, D6 sözleşme (`docs/UI_UX_CONTRACT.md`), fontlar self-host,
+CLS 0 ×3, A11y 100 ×3, axe serious 0. D7-3 performans backlog'u BEKLER (öncelik dışı).
+(5) KESİNTİ: `api.tulipfleet.com` origin sertifikası 29 Eyl'de doldu, 4 Eki 08:45'e
+kadar 526 — 5 gün, fark eden olmadı. Çok alanlı sertifika + Pages'a taşınan alanlar →
+yenileme sessiz düştü. Tek alanlı sertifika + UptimeRobot (Free, 5 keyword monitörü)
+kuruldu (qa INFRASTRUCTURE "Sertifika Kuralı", "İzleme").
+(6) ÜRÜN GERÇEĞİ: Optimize = MOCK (`enterprise lib/routing/factory.js:9`,
+HereTourPlanningProvider yorumda; HERE Tour Planning ücretli → Phase 2 müşteri tetikli);
+sürücü tamamlama → `dispatch_tasks` geri yansımaz (Phase 2, ADR-0009 §4.4);
+FEAT-007-EXT `fuelSnapshotBatch` prod'da kalıcı yazıcı yok. Demoda söylenmez
+(DEMO-CAPABILITIES v2 Tier C).
+(7) ÖNCELİK (4 Eki durum muhakemesi, qa TODO_ACTIVE başlığı): kritik yol teknik değil —
+facilitator → vize → B.V. → NL saha (qa PRE_NL_CHECKLIST A). Ödeyen müşteri gelene
+kadar teknik kapsam demo-kritik + güvenlik hijyeni; Phase 2 tetikleri değişmedi.
+Fiyatlandırma/segment kararı açık (3 araçlık lead fiyattan kaybedildi; PRE_NL B2b).
+
 **Status as of 2026-08-20 — FORGOT-PASSWORD ONARIMI + DEMO TEMIZLIGI FAZ-2 CANLIDA**
 (1) TRIAL HUNISI ONARIMI: dispatcher'da forgot-password UI YOKTU — hosgeldin
 mailinin vaadi bosa dusuyordu (L-2 damgasindaki "trial uctan uca canli" ifadesi
@@ -801,3 +835,4 @@ Bu disiplin §Implementation Bottleneck Analysis'teki **Phase 1.1 sprint foundat
 | 2026-06-26 (Sıra 5+6 + FEAT-007-EXT yakıt) | Sıra 5 (araç/sürücü/görev listeleri) TAMAMLANDI. Sıra 6 (plan workflow + hibrit köprü) staging'de TAMAM, prod köprü deploy bekletildi. FEAT-007-EXT yakıt göstergesi: backend staging'de mühürlü; batch `fuelSnapshotBatch.js` (repo tulipfleet-backend, main, commit `5631a17` — eski "correlationBatch" yanlış isimdi); prod kalıcı yazıcı YOK (dosya prod'da yok, cron/timer/PM2 yok, değerler manuel UPDATE);gösterge 3 yer (3/3 TAMAMLANDI): driver araç ✅ (`7f7ca91`), admin araç mobil ✅ (`FuelGauge showIcon`), dispatcher araç web ✅ (`FuelGaugeMini`, commit `932266a`); FEAT-007-EXT yakıt göstergesi epic KAPANDI.
 | 2026-07-18 (Sıra 5.4 doğrulama + Sıra 6 güncelleme, dışarıdan — ARCHITECTURE_DECISION_task-management-api-driven.md) | **Sıra 5.4 (UI cilalama) kod-kanıtıyla "kısmen tamamlandı" olarak düzeltildi** — önceden "⚠️ PLANLANAN" idi, gerçekte Gradient Stat Cards (`ComplexStatisticsCard`, vehicles/drivers) ve Focus-on-Map (`focusPlate` URL param → `LiveFleetMap.tsx`'te `useSearchParams` + `selectVehicle` + `flyTo`) ikisi de kod incelemesiyle doğrulandı ve uygulanmış bulundu; sadece dokümana hiç yansıtılmamıştı. Dürüst istisna: "Gem. brandstof: 60%" stat card'ı sabit placeholder, canlı metrik değil. Ergonomi (pagination/debounced search) hâlâ yapılmadı. **Sıra 6'ya (Plan workflow) güncel not eklendi:** production köprü deploy'u artık bekletilmiyor — ayrı bir dokümanda (`tulipfleet-dispatcher/docs/ARCHITECTURE_DECISION_task-management-api-driven.md`, Faz 1-4) 2026-07-04→18 arası production'a taşındı, canlı test edildi (gerçek görev, gerçek `public.tasks` satırı), ve iki ek bug (sürücü görünürlüğü + push bildirimi) tespit edilip çözüldü. Açık kalanlar (replan, `/api/compliance/check` bağlantısı, Plan review UI) roadmap'in kendi listesiyle hâlâ tutarlı, değişmedi. |
 | 2026-07-29 (FEAT-010 v1.7/v1.8 + FN-18 canlı + ROADMAP küçültme Aşama 1) | FEAT-010 spec v1.7 (ML-analiz veri temeli: §1.8, enterprise.dispatch_decision_log §6.4 + enterprise.trip_summaries §6.5, FN-18/19/20) ve v1.8 (UNCERTAINTIES #19-21 kapandı: trip_summaries=enterprise worker, override enum opsiyonel, retention süresiz). Migration `1782300000000` staging+prod (ayna kuralı). FN-18 `POST /api/dispatcher/decision-log` deploy + 3 duman testi + staging DB satır kanıtı (detay: `SESSION_NOTES_decision-support-engine.md` B kapanışı). ROADMAP küçültme Aşama 1: Sıra 5 tamamlanmış-iş detayı + 2026-05-13→06-04 Change Log kayıtları `ROADMAP_ARCHIVE.md`'ye taşındı (silinmedi); Phase Plan ayıklaması Aşama 2'ye bırakıldı. |
+| 2026-10-04 (durum senkronu) | Status bloğu 2026-10-04 eklendi: prod=main (code-freeze/21-commit kayıtları tarihsel), enterprise cutover 27 Eyl, takip portalı MVP-1 + D9 prod'da, UI D0–D9 kapanış, 29 Eyl–4 Eki sertifika kesintisi + izleme, ürün gerçeği (Optimize mock, tek yönlü köprü, FEAT-007-EXT yazıcı yok), öncelik = saha/vize (qa PRE_NL_CHECKLIST, TODO_ACTIVE başlığı). DEMO-CAPABILITIES v2 aynı gün. |

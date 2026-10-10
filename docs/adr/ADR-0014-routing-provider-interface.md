@@ -3,8 +3,8 @@
 | Field           | Value                                                                       |
 | --------------- | --------------------------------------------------------------------------- |
 | **Status**      | Accepted                                                                    |
-| **Version**     | 1.2                                                                        |
-| **Date**        | 2026-06-19                                                                  |
+| **Version**     | 1.6                                                                        |
+| **Date**        | 2026-10-10 (amended)                                                        |
 | **Decision by** | Cem Bakir (Founder / Lead Engineer)                                         |
 | **Component**   | TulipFleet — Routing abstraction across main fleet + enterprise backends    |
 | **Related**     | ADR-0002 (HERE solver), ADR-0005 (dispatch workflow), ADR-0012 (NL compliance), FEAT-001/005/008/009/103 |
@@ -217,3 +217,31 @@ Phases 1-3 are complete in code only - NOT yet deployed to production. The Statu
 | 1.3     | 2026-06-27 | Cem Bakir | Correction. VrpJobStatus aligned to live DB authority (routing_jobs_status_check): pending -> running. Per RUNTIME_LAWS.md status law, verified staging + prod. No code change (VRP status layer follows table enum; grep empty for 'pending' in enterprise lib/routes). |
 | 1.4 | 2026-06-28 | Cem Bakir | Migration mandate (§5) completed. Phases 1-3 done: HereRoutingProvider scaffold (services/routing/), route-traffic and drive-conditions handlers migrated behind the provider. Zero hereapi.com / HERE_API_KEY remain in any handler (grep-verified). computeMatrix set false to reflect true boundary (Matrix API deferred to Phase 2). Commits: d2889da, 10a6880, 4847f34, 6ff50b1. |
 | 1.5 | 2026-06-29 | Cem Sahinkaya | Added section 5.1 Deployment status: Phases 1-3 are code-layer only, NOT in production (prod ~21 commits behind; verify hereapi.com=0 + routingProvider.computeRoute on prod). Added commit 6ff50b1 (computeMatrix=false) to the 1.4 commit list. Doc-only; no code change. |
+| 1.6 | 2026-10-10 | Cem Sahinkaya | Added section 12, Amendment: single routing source. `route_json.public_route` (HERE truck) is now the sole routing source for both the public tracking page and the driver navigation screen; Google Directions removed from `DriverRouteMapScreen.js`. Core `/api/driver/tasks/:id/start` warms the cache fire-and-forget (`warmPublicRoute`); `HereRoutingProvider.computeRoute` fetch bounded by `AbortSignal.timeout` (8000ms default). Commits: tulipfleet-backend `16e3085`, argon `7c248fd` (EAS update `b9489cd1`). |
+
+## 12. Amendment 2026-10-10: Single routing source — driver nav consumes `route_json.public_route`
+
+### 12.1 Context
+
+Section 5's "No behavior change for the mobile app" scoped the migration mandate to `/api/driver/route-traffic` and `/api/driver/drive-conditions` only. It said nothing about `DriverRouteMapScreen.js` (argon), which drew the active-task polyline by calling `https://maps.googleapis.com/maps/api/directions/json` directly from the client (`fetchRouteFromGoogle`, `GOOGLE_MAPS_API_KEY`), entirely outside `IRoutingProvider`. That path was a second, unrelated routing source this ADR never covered.
+
+This surfaced as a product problem on 2026-10-07/10: the customer tracking page (`track.tulipfleet.com`, core `routes/publicTrack.js`) caches a HERE truck route under `tasks.route_json.public_route` (`ensureRoadGeometry`, same-task contract documented in qa `TODO_ACTIVE.md` §10). The driver's own navigation screen drew a *different* route (Google, car profile, from the vehicle's live position) for the same task. A customer and a driver looking at the same delivery could see two different roads.
+
+### 12.2 Decision
+
+`route_json.public_route.geometry` (HERE, `transportMode=truck`, written by `ensureRoadGeometry`/`warmPublicRoute` in `publicTrack.js`) becomes the single routing source for both surfaces that show a route for a task: the public tracking page and the driver navigation screen. Google Directions is removed from `DriverRouteMapScreen.js` — no fallback, no re-route call. Consequences:
+
+- **Core (`tulipfleet-backend`):** `POST /api/driver/tasks/:id/start` (server.js) now calls `warmPublicRoute(fastify, taskId, logger)` (exported from `routes/publicTrack.js`) as a fire-and-forget `setImmediate` after `COMMIT` — the HTTP response never waits on HERE. `warmPublicRoute` reuses `ensureRoadGeometry`'s cache/lock/backoff and writes only the `public_route` sub-key, per the existing `route_json` shared-contract rule. `HereRoutingProvider.computeRoute` now bounds the `fetch` with `AbortSignal.timeout(HERE_TIMEOUT_MS)` (default 8000ms, env-overridable) so a hung HERE call cannot pin a pool client, in either the driver-start warm call or the public page's own on-demand call.
+- **Mobile (`argon`):** `DriverRouteMapScreen.js` reads `task.route_json.public_route.{geometry,origin,destination,distance_m,duration_s}` and draws it directly; no client-side routing call is made for the active-task polyline. If `public_route` is not yet cached when the driver presses Start, the screen draws a dashed straight connector from the vehicle's live position to the destination (or to the nearest route point once geometry arrives) and retries fetching the task (bounded: `PUBLIC_ROUTE_MAX_RETRIES`) until the backend's warm call lands. `route-traffic` and `drive-conditions` (§5) are unaffected — they still call `provider.computeRoute()` and were already behind `IRoutingProvider`.
+- **Scope boundary (§7) unchanged:** `IRoutingProvider` stays routing-only; this amendment does not add a new provider method, it removes a provider-bypassing client call and routes that traffic through the existing `publicTrack.js` cache instead.
+
+### 12.3 Non-Goals (unchanged by this amendment)
+
+- No client-side re-routing when the driver deviates from the HERE polyline (FEAT-002 dynamic re-routing is Phase 2, dispatcher-side, event-triggered — out of scope for the driver screen per FEAT-002 §1 "Kapsam — dışarıda: Driver mobile app").
+- No new HERE call added on the hot path of any mobile screen; the only new HERE call is the existing `ensureRoadGeometry` logic, now also triggered from `/start` instead of solely from the first `/v/:token` open.
+
+### 12.4 References
+
+- qa `TODO_ACTIVE.md` §10 "Rota tutarlılığı borcu" (7 Oct finding), PRE_NL_CHECKLIST.md A2 (10 Oct decision).
+- Code: `tulipfleet-backend` commit `16e3085` (`warmPublicRoute`, HERE fetch timeout, `tests/publicTrackWarm.test.js`); `argon` commit `7c248fd` (`DriverRouteMapScreen.js`, EAS update group `b9489cd1`).
+- `routes/publicTrack.js` `ensureRoadGeometry`/`cachedGeometry`/`publicRouteCache` (unchanged logic, now also called from core `/start`).

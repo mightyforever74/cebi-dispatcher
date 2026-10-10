@@ -323,6 +323,8 @@ export const nl = {
     task: "Taak",
     sos: "SOS",
     taskAccepted: "Taak geaccepteerd: {detail}",
+    taskStarted: "Taak gestart",
+    taskStartedDetail: "Taak gestart: {detail}",
   },
   notifications: {
     sos: {

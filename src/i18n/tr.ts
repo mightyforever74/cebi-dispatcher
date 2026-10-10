@@ -323,6 +323,8 @@ export const tr = {
     task: "Görev",
     sos: "SOS",
     taskAccepted: "Görev kabul edildi: {detail}",
+    taskStarted: "Görev Başladı",
+    taskStartedDetail: "Görev başladı: {detail}",
   },
   notifications: {
     sos: {

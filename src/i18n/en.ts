@@ -325,6 +325,8 @@ export const en = {
     task: "Task",
     sos: "SOS",
     taskAccepted: "Task accepted: {detail}",
+    taskStarted: "Task started",
+    taskStartedDetail: "Task started: {detail}",
   },
   notifications: {
     sos: {

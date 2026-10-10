@@ -1,3 +1,6 @@
+import { EMPTY_ALERTS, useAckAlert, useAlerts, type Alert } from "hooks/useAlerts";
+import { useExceptions, type ExceptionEvent, type ResolveAction } from "hooks/useExceptions";
+import { localizeBackendAlert, t, type TranslationKey } from "i18n";
 import {
   createContext,
   createElement,
@@ -9,15 +12,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useAlerts, EMPTY_ALERTS, type Alert } from "hooks/useAlerts";
-import {
-  useExceptions,
-  type ExceptionEvent,
-  type ResolveAction,
-} from "hooks/useExceptions";
-import { localizeBackendAlert, t, type TranslationKey } from "i18n";
 import { useAuthStore } from "store/useAuthStore";
-import { useResolveAlert } from "hooks/useAlerts";
 import { loadAckedIds, persistAckedIds } from "utils/ackedAlerts";
 
 const MERGE_WINDOW_MS = 10_000;
@@ -149,15 +144,7 @@ const NotifyContext = createContext<Api | null>(null);
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const token = useAuthStore((s) => s.token);
-  const {
-    exceptions,
-    loading,
-    error,
-    newIds,
-    refresh,
-    resolve,
-    lastOkAt,
-  } = useExceptions(token);
+  const { exceptions, loading, error, newIds, refresh, resolve, lastOkAt } = useExceptions(token);
   const { data: alertsData } = useAlerts();
   const alerts = useMemo<Alert[]>(() => alertsData ?? EMPTY_ALERTS, [alertsData]);
 
@@ -167,7 +154,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const toastedRef = useRef<Set<string>>(new Set());
   const firstAlertsRef = useRef(true);
 
-  const resolveAlert = useResolveAlert();
+  const ackAlert = useAckAlert();
 
   useEffect(() => {
     const byFamily = new Map<string, NotifyItem>();
@@ -220,6 +207,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     });
     alerts.forEach((a) => {
       if (a.is_resolved) return;
+      if (a.acknowledged_at) return;
       if (dismissedRef.current.has(a.id) || dismissedRef.current.has(`al:${a.id}`)) return;
       const type = String(a.alert_type || a.type || "default");
       const severity = String(a.severity || "").toLowerCase();
@@ -244,7 +232,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     const next = Array.from(byFamily.values()).sort((a, b) => b.createdAt - a.createdAt);
     setBanners((prev) => (sameBannerSnapshot(prev, next) ? prev : next));
   }, [exceptions, alerts]);
-
   const enqueueToasts = useCallback((incoming: NotifyItem[]) => {
     if (incoming.length === 0) return;
     setToastQueue((prev) => {
@@ -390,8 +377,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       const exIds = item.exceptionIds?.length
         ? item.exceptionIds
         : item.exceptionId
-          ? [item.exceptionId]
-          : [];
+        ? [item.exceptionId]
+        : [];
       const alertIds = item.alertIds ?? [];
       const persist = [
         item.id,
@@ -405,17 +392,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       persistAckedIds(persist);
       try {
         await Promise.all(exIds.map((id) => resolve(id, "acknowledge")));
-        await Promise.all(alertIds.map((id) => resolveAlert.mutateAsync({ id })));
+        await Promise.all(alertIds.map((id) => ackAlert.mutateAsync({ id })));
       } catch {
         // local ack already persisted — feed has no /ack; resolve may still fail
       }
       dismissBanner(item.id);
     },
-    [resolve, resolveAlert, dismissBanner]
+    [resolve, ackAlert, dismissBanner]
   );
 
   const notifyToast = useCallback(
-    (opts: { type: string; title?: string; titleKey?: TranslationKey; body?: string; severity?: string }) => {
+    (opts: {
+      type: string;
+      title?: string;
+      titleKey?: TranslationKey;
+      body?: string;
+      severity?: string;
+    }) => {
       enqueueToasts([
         {
           id: `form:${Date.now()}:${opts.type}`,
@@ -482,4 +475,4 @@ export function useNotifications(): Api {
   return ctx;
 }
 
-export { MERGE_WINDOW_MS, MAX_VISIBLE_TOASTS, MAX_VISIBLE_BANNERS };
+export { MAX_VISIBLE_BANNERS, MAX_VISIBLE_TOASTS, MERGE_WINDOW_MS };

@@ -25,6 +25,7 @@ export interface Alert {
   title?: string;
   description?: string;
   is_resolved: boolean;
+  acknowledged_at?: string | null;
   vehicle_plate?: string;
   created_at?: string;
   [key: string]: unknown;
@@ -77,6 +78,29 @@ export function useResolveAlert() {
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`Alert resolve failed: ${res.status} ${text}`);
+      }
+      return res.json().catch(() => EMPTY_OBJECT);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+    },
+  });
+}
+
+// -- POST /api/alerts/:id/ack ----------------------------------------------
+export function useAckAlert() {
+  const token = useAuthStore((s) => s.token);
+  const queryClient = useQueryClient();
+  return useMutation<unknown, Error, { id: string }>({
+    mutationFn: async ({ id }) => {
+      const res = await fetch(`${AUTH_API_URL}/api/alerts/${id}/ack`, {
+        method: "POST",
+        headers: authHeaders(token),
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Alert ack failed: ${res.status} ${text}`);
       }
       return res.json().catch(() => EMPTY_OBJECT);
     },

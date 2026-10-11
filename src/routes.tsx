@@ -18,7 +18,7 @@ import Vehicles from "layouts/dispatcher/vehicles";
 import LiveFleetMap from "layouts/live-fleet-map/LiveFleetMap";
 
 // ── Optimizasyon — gated placeholder'lar (FEAT-001 / FEAT-008) ──
-import TollAnalyticsPlaceholder from "layouts/optimization/TollAnalyticsPlaceholder";
+import TollAnalytics from "layouts/optimization/TollAnalytics";
 import TourPlanningPlaceholder from "layouts/optimization/TourPlanningPlaceholder";
 
 // ── Sistem ──
@@ -106,7 +106,7 @@ export function createRoutes(t: TFunction) {
       </Icon>
     ),
     route: "/optimization/toll-analytics",
-    component: <TollAnalyticsPlaceholder />,
+    component: <TollAnalytics />,
     noCollapse: true,
   },
 

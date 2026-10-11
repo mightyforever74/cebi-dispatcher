@@ -2,8 +2,13 @@
  * FEAT-SaaS S4 — Sayfa 4: Musteri Detay & Yonetim (/admin/supervisor/customer-detail).
  * Kaynak desen: ecommerce/orders/order-details (Card ici sol/sag Grid bloklari).
  * Sol: bekleyen talepler (Onayla→approve APPROVED+kota+mail / Reddet→reject).
- *   api_package satirinda aksiyon DISABLED + "FEAT-Connect — Yakinda" rozeti
- *   (backend 422 sozlesmesinin durust UI yuzu).
+ *   api_package satirinda aksiyon DISABLED + "self-servis aktif" rozeti.
+ *   FEAT-Connect (B2B API Key & Kota Dashboard) 2026-10-12'de CANLIYA ALINDI —
+ *   /subscription/b2b-api artik musterinin kendi basina anahtar
+ *   olusturup/iptal edebildigi gercek self-service panel; manuel
+ *   api_package talebi akisi artik kullanilmiyor (yeni talep uretilmiyor).
+ *   Bu satir sadece Slice 4 ONCESI acilmis eski/yetim talepler icin gorunur
+ *   ve bir daha onaylanmayacaktir — rozet supervizoru dashboard'a yonlendirir.
  * Sag: MANUEL kota paneli — reason ZORUNLU (>=5kr), PUT .../companies/:id/quota
  *   audit muhruyle (quota_manual_update). D-S2: gate gecilmeden fetch yok.
  */
@@ -247,7 +252,16 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
                             </MDButton>
                           </MDBox>
                         ) : (
-                          <MDBadge badgeContent={t("supervisor.featConnectSoon")} color="secondary" container />
+                          <MDBox textAlign="right">
+                            <MDBadge
+                              badgeContent={t("supervisor.featConnectSoon")}
+                              color="secondary"
+                              container
+                            />
+                            <MDTypography variant="caption" color="text" display="block" mt={0.5}>
+                              /subscription/b2b-api
+                            </MDTypography>
+                          </MDBox>
                         )}
                       </MDBox>
                     </Card>

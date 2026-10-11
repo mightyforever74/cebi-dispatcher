@@ -25,12 +25,30 @@ Durum kaynagi: bu dosya. Her faz kapanisi buraya islenmeden sonraki faza GECILME
   Ekranda "⏳ Talebiniz Incelemede" statusu belirir.
 
 ### Sayfa 2: ⚡ TulipFleet Connect (B2B API) (`/subscription/b2b-api`)
-- **Kaynak:** `src/layouts/ecommerce/products/edit-product`
-- **Islev:** UI layout'u klonlanarak kurulur. EKRANDA SAHTE SAYAC VEYA SIMULE
-  EDILMIS KEY GOSTERILMEZ. Sayfa durustce "TulipFleet Connect (FEAT-Connect) —
-  B2B API Servisi Yakinda Hizmetinizde" durumuyla kurgulanir. API Key altyapisi
-  (uretim/maskeleme/sayac/rate-limit) mustakil FEAT-Connect kalemi olarak
-  ROADMAP'e yazilir.
+- **GUNCELLEME (2026-10-12): FEAT-Connect CANLIYA ALINDI, bu bolumun asagidaki
+  orijinal "Yakinda" plani ARTIK GECERSIZ — bkz. ROADMAP.md Change Log
+  2026-10-12 satiri ve `docs/functions/FEAT-010-automated-exception-handling.md`
+  disinda, FEAT-Connect'in kendi implementasyon kaydi icin asagidaki not
+  yeterlidir (ayrica bir FEAT-Connect spec dosyasi acilmadi).** Sayfa artik
+  gercek self-servis panel: musteri API key'i kendi basina anik olusturur
+  (plaintext tek seferlik gosterim) ve iptal eder, kalan arac kotasini
+  (`GET /api/subscription/quota`, Sayfa 1'le ayni sozlesme) canli gorur.
+  Onay/approval YOK — SAHTE SAYAC/SIMULE KEY yasagi (Ilke #3) korunarak, artik
+  gercek anahtar ve gercek sayaç gosteriliyor. Mimari: dual-auth middleware
+  (JWT veya API key, `lib/auth/authenticateRequest.js`) + ozel per-customer
+  rate limiter (auth SONRASI preHandler, `lib/rateLimit/*`) + global IP
+  backstop (`@fastify/rate-limit`) + tarife TTL cache (`lib/cache/ttlCache.js`)
+  ile anti-scraping/server-cost korumasi. Penetrasyon fiyatlandirmasi
+  (€0.20-0.50/arac/ay, butce onayi gerektirmeyen frictionless model) mimari
+  baglam olarak kullanildi; ayri bir metered-billing implementasyonu bu
+  kapsamda YAPILMADI (ROADMAP R3/SIRA-4'un 5 kaleminden sadece (1) API Key
+  auth middleware ve (2) kota sayaci teslim edildi — (3) metered billing,
+  (4) public `/v1/*` facade, (5) OpenAPI spec hala tetiksiz).
+- **ORIJINAL PLAN (v1.0, artik gecersiz — tarihsel kayit icin korunuyor):**
+  ~~Kaynak: `src/layouts/ecommerce/products/edit-product`. UI layout'u
+  klonlanarak kurulur. Sayfa durustce "TulipFleet Connect (FEAT-Connect) —
+  B2B API Servisi Yakinda Hizmetinizde" durumuyla kurgulanir. API Key
+  altyapisi mustakil FEAT-Connect kalemi olarak ROADMAP'e yazilir.~~
 
 ### Sayfa 3: 🛡️ Supervizor Komuta Merkezi (`/admin/supervisor`)
 - **Kaynak:** `src/layouts/ecommerce/orders/order-list`
@@ -64,10 +82,14 @@ Durum kaynagi: bu dosya. Her faz kapanisi buraya islenmeden sonraki faza GECILME
   Re-Authentication yapilir. Re-Auth basarili olmadan musteri verisi HIC
   cekilmez (401/403).
 
-### 🟡 Kapsam Muhru (FEAT-Connect)
-- Sayfa 1, 3, 4: uctan uca canli, gercek DB/API. Sayfa 2: UI kurulur, durust
-  "Yakinda" lansmaniyla durur. API paket talebi ayni subscription_requests
-  akisini kullanir (request_type='api_package') — sayac/key motoru FEAT-Connect.
+### 🟡 Kapsam Muhru (FEAT-Connect) — GUNCEL DURUM: KAPANDI (2026-10-12)
+- Sayfa 1, 3, 4: uctan uca canli, gercek DB/API. **Sayfa 2 de artik uctan uca
+  canli** — self-servis API key uretimi/iptali + gercek kota gorunumu.
+  Eski `request_type='api_package'` manuel on-talep akisi artik KULLANILMIYOR
+  (yeni talep uretilmiyor); Supervizor Musteri Detay panelindeki olasi
+  yetim/eski talep satirlari artik "self-servis aktif, onay gerekmiyor"
+  rozetiyle gosteriliyor (eski "FEAT-Connect — Yakinda" metni kaldirildi,
+  en/nl/tr).
 
 ## 4. Faz Plani ve DURUM
 
@@ -76,7 +98,7 @@ Durum kaynagi: bu dosya. Her faz kapanisi buraya islenmeden sonraki faza GECILME
 | S1 | Sema: enterprise.subscription_requests (migration 1783100000000) | ✅ 617fccc — staging'de tablo+pgmigrations kaydi; PROD AYNASI bakim penceresine |
 | S2-E1 | Enterprise endpointleri: POST/GET /api/subscription/requests + GET /api/subscription/quota | ✅ 0e21557 + smoke 3/3 (05.08: Dobbe 4/10 professional; talep 2af1d893 PENDING) |
 | S2-E2 | Ana backend: routes/superadmin.subscriptions.js (bekleyen liste / approve+audit+mail / reject) — STAGING-ONCE | ⬜ |
-| S3 | Sayfa 1 + 2 klon/uyarlama (musteri tarafi) | Sayfa 1 ✅ c9381a9 (kota 4/10 canli, PENDING kalici, tier dinamik; UI karesi sonraki oturumda) · Sayfa 2 ✅ (Yakinda lansmani + gercek api_package on-talebi; UI karesi sonraki oturumda) |
+| S3 | Sayfa 1 + 2 klon/uyarlama (musteri tarafi) | Sayfa 1 ✅ c9381a9 (kota 4/10 canli, PENDING kalici, tier dinamik; UI karesi sonraki oturumda) · Sayfa 2 ✅✅ (2026-10-12: "Yakinda" plani SUPERSEDE edildi — FEAT-Connect self-servis dashboard CANLI, bkz. §7 asagida ve ROADMAP.md 2026-10-12 kaydi) |
 | S4 | Sayfa 3 + 4 klon/uyarlama (Supervizor) + D-S2 kapisi | ✅ 05.08 — gate gercek re-auth (negatif 401/403 canli), manuel kota endpoint'i 6cb4cfb (audit quota_manual_update), api_package durust rozet; UI kareleri sonraki oturumda |
 | S5a | Uctan uca smoke: talep -> gate 403 negatif + re-auth -> approve (10→13 UI + 10→11 curl) -> manuel muhur -> MAIL TESLIM (info@ kutusunda kanitli, 09.08) | ✅ ekran+psql+kutu kanitli. Notlar: (1) Gmail From'u SMTP hesabiyla eziyor — info@ alias dogrulamasi ROADMAP'e; (2) 2x no-op 13→13 muhru: UI alan tazeleme puruzu, no-op'a 400 iyilestirmesi S5b'ye; (3) billing_email=info@ duzeltildi; (4) JWT ders tazelendi: talep=PROD token→enterprise, onay=STAGING token→staging |
 | S5b | Prod aynasi | ✅ 10.08 penceresi (~10dk): yedek + migration prod'a ILK yaratim (defter 46) + backend 6cb4cfb (dual-bind/EMQX korundu) + smoke health 200 / superadmin liste [] / 403 negatif. FEAT-SAAS TAMAMLANDI — kalan iyilestirmeler: no-op kota 400 (staging'de), Sayfa-4 ayni-deger disable, Gmail info@ alias (Cem), FEAT-Connect ikinci dalga |
@@ -123,3 +145,50 @@ Tek transaction: company + user; unique email cakismasi -> 409.
 - UCTAN UCA ZINCIR KANITLI ✅: landing /signup formu -> public-signup -> Komuta Merkezi'nde 'cursor test firmasi · 0/5 · starter · trial' satiri. Ilk gercek musteri yolculugu provasi TAMAM.
 - .cursorrules/.cursorignore kuruldu; PROTECTED FEATURES + THREE BACKENDS gomulu.
 - TODO (landing): logo, screenshots/, early-access backend POST, 7 dil icerigi (Sira-4). Diger acik: Sepet-2 disable patch, Sepet-3 Gmail alias, prod inisi (63d45c4+fca4089).
+
+## 9. FEAT-Connect — B2B API Key & Kota Dashboard KAPANISI (2026-10-12)
+
+Bu dosyanin §2/§3'teki orijinal (v1.0) plani Sayfa 2 icin "durust Yakinda
+lansmani" ongoruyordu — ROADMAP.md'nin R3/SIRA-4 TETIK KRITERI (>=5 gercek
+B2B/ERP ilgi kaydi gelmeden kodlanmaz) ile tutarli bir temkin karariydi.
+**Bu gate Cem'in kendi onayiyla erken acildi** ve ADR-grounded RED→GREEN TDD
+ile 4 slice'ta uctan uca teslim edildi (enterprise-backend 158/158, dispatcher
+45/45):
+
+- **Slice 1 — Kripto + CRUD:** `lib/apiKeys/*` (generateApiKey/hashApiKey,
+  create/list/revoke/authenticate/touchLastUsed). SHA-256 tabanli, plaintext
+  anahtar sadece olusturma aninda bir kere gosterilir.
+- **Slice 2 — Dual-auth middleware:** `lib/auth/authenticateRequest.js` —
+  JWT (dispatcher) VEYA API key (B2B musteri) ile ayni route'a (`assessRoute`)
+  erisim; `fastify.authenticateDual`.
+- **Slice 3 — Sunucu-maliyeti korumasi:** ozel per-customer rate limiter
+  (`lib/rateLimit/*`, auth SONRASI preHandler'da calisir — `@fastify/rate-limit`'in
+  varsayilan `keyGenerator`'u auth'tan ONCE calistigi icin musteri bazli
+  degil IP bazli limitleyecekti, bu yuzden ozel katman eklendi) + aynı paket
+  global IP backstop'u olarak + `lib/cache/ttlCache.js` tarife TTL cache'i
+  (anti-scraping: kucuk, hesaplanmis JSON disinda hicbir sey donmez).
+- **Slice 4 — Self-servis UI:** `routes/apiKeys.js` (enterprise-backend) +
+  dispatcher `src/hooks/useApiKeys.ts` + **`/subscription/b2b-api` sayfasi
+  TAMAMEN DEGISTIRILDI** — eski "Yakinda" on-talep akisi (bu dosyanin §2
+  Sayfa 2 orijinal tanimi) kaldirildi, yerine anlik (onaysiz) anahtar
+  olusturma/iptal + canli kota paneli geldi.
+
+**Kapsam notu (SIRA-4'un 5 kaleminden 2'si teslim edildi):** (1) API Key auth
+middleware ✅, (2) kota sayaci ✅. (3) Mollie/iDEAL metered billing, (4) public
+`/v1/*` facade (disa plaka→uuid lookup'li ayri yuz), (5) OpenAPI spec+quickstart
+— **hala tetiksiz/kapsam disi.** Penetrasyon fiyatlandirmasi (€0.20-0.50/arac/ay,
+butce onayi gerektirmeyen frictionless model) sadece mimari baglam olarak
+kullanildi; gercek bir billing/odeme implementasyonu YAPILMADI.
+
+Supervizor Musteri Detay panelindeki (Sayfa 4) eski `api_package` talep
+satirlarindaki "FEAT-Connect — Yakinda" rozeti artik yanlis oldugu icin
+"self-servis aktif, onay gerekmiyor" olarak duzeltildi + `/subscription/b2b-api`
+yonlendirme notu eklendi (en/nl/tr, `src/layouts/supervisor/customerDetail/index.tsx`).
+Bu satirlar artik yalnizca Slice 4 ONCESI acilmis eski/yetim talepler icin
+gorunur ve bir daha islenmeyecektir (self-servis akisi onay beklemez).
+
+Detay: `docs/functions/FEAT-010-automated-exception-handling.md`'deki ayni
+oturumda kapanan FEAT-010 ile karistirilmamali — bu, farkli, bagimsiz bir
+ozellik (FEAT-Connect, ayri bir FEAT-ID'si yok, bu dosyanin kendi Sayfa 2
+kalemi olarak izleniyor). Tam Change Log detayi: `ROADMAP.md` Change Log,
+2026-10-12 kaydi.

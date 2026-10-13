@@ -5,8 +5,8 @@
 | **Feature ID** | FEAT-020 |
 | **Source** | Wishlist W24 — "base feature of cargo mgmt (kanban approach)" |
 | **Frequency rating** | Common |
-| **Tulipfleet Phase** | Phase 1.1 (statik veri toplama, **TAMAMLANDI** 2026-10-12) → Phase 1.2 (statik binary-gate matching, **spec yazıldı, implementasyon henüz Cem'in makinesinde çalıştırılmadı**) → Phase 1.3a (tarihsel ledger/BI altyapısı, **TAMAMLANDI 2026-10-13** — migration + worker staging'de E2E doğrulandı, sonra prod'a deploy edildi) → Phase 1.3b (sürücü canlı kapasite bildirimi + configurable toggle, **bu v2.0'da spec'lendi, implementasyon dışı, §6**) |
-| **Status** | **v2.0 (2026-10-13, Cem'in genişlettiği vizyon)** — "hızlı çözüm" tek katmanlı yaklaşım yetersiz bulundu; FEAT-020 üç katmanlı mimariye genişletildi: (A) statik binary-gate [v1.0'dan değişmedi, implementasyon Cem'in makinesinde henüz çalıştırılmadı], (B) tarihsel ledger/yield-management verisi [**TAMAMLANDI 2026-10-13** — `enterprise.trip_summaries` genişletmesi, §5], (C) sürücü canlı kapasite bildirimi + configurable toggle [backlog, §6]. Cem'in sıralama kararı: bu turun TDD'si **Katman B (ledger)** ile başladı ve tamamlandı; sıradaki iş Katman A'nın implementasyonunun makinede çalıştırılması |
+| **Tulipfleet Phase** | Phase 1.1 (statik veri toplama, **TAMAMLANDI** 2026-10-12) → Phase 1.2 (statik binary-gate matching, **TAMAMLANDI 2026-10-13** — `cargoScorer` ActiveScorer'a çevrildi, dispatcher UI'a bağlandı, 11/11 test geçti, commit `a8560eb`, push'landı) → Phase 1.3a (tarihsel ledger/BI altyapısı, **TAMAMLANDI 2026-10-13** — migration + worker staging'de E2E doğrulandı, sonra prod'a deploy edildi) → Phase 1.3b (sürücü canlı kapasite bildirimi + configurable toggle, **bu v2.0'da spec'lendi, implementasyon dışı, §6**) |
+| **Status** | **v2.0 (2026-10-13, Cem'in genişlettiği vizyon)** — "hızlı çözüm" tek katmanlı yaklaşım yetersiz bulundu; FEAT-020 üç katmanlı mimariye genişletildi: (A) statik binary-gate [**TAMAMLANDI 2026-10-13** — §3/§7, `cargoScorer.ts` + `types.ts` + `optimize/index.tsx` + i18n, commit `a8560eb`], (B) tarihsel ledger/yield-management verisi [**TAMAMLANDI 2026-10-13** — `enterprise.trip_summaries` genişletmesi, §5], (C) sürücü canlı kapasite bildirimi + configurable toggle [backlog, §6]. Katman A ve B artık ikisi de tamamlandı ve prod/main'de; sıradaki iş (varsa) Katman C'nin kapsamına Cem'in karar vermesi |
 | **Gatekeep bulgusu** | `docs/adr/ADR-0004-database-strategy.md` §6.4 (v3, 2026-05-14), Phase 1.1 migration'ından ÖNCE şu kolon adlarını onaylamıştı: `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`. Phase 1.1'de gerçekte uygulanan (migration `1783400000000`, tulipfleet-backend) adlar farklı: `cargo_capacity_volume_m3`, `cargo_capacity_weight_kg`, `hazmat_certified_classes` — ve `vehicle_class` hiç eklenmedi. Bu spec gerçekte CANLI olan adları esas alır (aşağıda §2). `vehicle_class`'ın eksikliği bu feature'ı bloke etmez — talep tarafı (`CapacityRequired`) hiç böyle bir alan taşımıyor; ADR'daki `vehicle_class` muhtemelen ayrı bir feature (FEAT-002 HERE Tour Planning truck-aware routing) için düşünülmüştü. **Açık madde:** ADR-0004 §6.4'ün bu gerçek adlarla amendment edilmesi — ayrı, küçük bir doküman işi, Cem'in onayı bekleniyor |
 
 ---
@@ -25,7 +25,7 @@ Phase 1.1 (2026-10-12) arz tarafını kapattı: `public.vehicles.cargo_capacity_
 
 **Not (2026-10-13):** Bu alt bölüm v1.0'dan kalma iki-katmanlı çerçeveyi anlatıyordu; Cem'in v2.0 genişletmesiyle (bkz. yukarıdaki Status satırı) mimari üç katmana çıktı. Aşağıdaki isimlendirme buna göre düzeltildi (eski metinde "Katman B" diye anılan şey aslında bugünkü **Katman C**'dir):
 
-- **Katman A — statik kapasite ile binary-gate (implementasyon spec'i yazıldı, Cem'in makinesinde henüz çalıştırılmadı — §3 FN-1/FN-2, §7):** `public.vehicles`'taki statik kolonlar kaynak. Veri yoksa feature'ı bloke etmez (graceful degradation).
+- **Katman A — statik kapasite ile binary-gate (TAMAMLANDI 2026-10-13 — §3 FN-1/FN-2, §7):** `public.vehicles`'taki statik kolonlar kaynak. Veri yoksa feature'ı bloke etmez (graceful degradation).
 - **Katman B — tarihsel ledger / yield-management verisi (TAMAMLANDI 2026-10-13 — §5):** `enterprise.trip_summaries` genişletmesi, worker tarafından otomatik doldurulur.
 - **Katman C — sürücü canlı kapasite bildirimi + configurable toggle (backlog, Phase 1.3b, implementasyon dışı — §6):** Şirketlerin IoT/dijital olgunluk seviyesi değişken olduğu için kapasite takibi şirket/araç bazında zorunlu veya opsiyonel yapılabilir olmalı; aktifse sürücünün mobil uygulamadan bildirdiği **anlık boş kapasite** statik değerin önüne geçer.
 
@@ -177,9 +177,11 @@ Bu backlog maddesi ayrı bir spec turu gerektirir (mobil ekran tasarımı, yeni 
 
 ---
 
-## 7. Test planı (Katman A, Phase 1.2 — v1.0'dan değişmedi, implementasyon Cem'in makinesinde henüz çalıştırılmadı)
+## 7. Test planı (Katman A, Phase 1.2 — TAMAMLANDI 2026-10-13, 11/11 GREEN, commit `a8560eb`)
 
-Dosya: `src/services/dispatch/scoring/scorers/cargoScorer.test.ts` (yeni, RED→GREEN)
+Dosya: `src/services/dispatch/scoring/scorers/cargoScorer.test.ts` (RED→GREEN, uygulandı)
+
+**Teslimat notu:** `types.ts`/`index.tsx`'teki anchor'lı yama script'i (`fix-feat020-phase12.js`) ilk denemede Cem'in Windows checkout'unda (`core.autocrlf` → CRLF satır sonları) "eski blok bulunamadi" hatası verdi; script'in çok satırlı anchor string'leri yalnızca LF (`\n`) içeriyordu. Düzeltme: `anchoredReplace` artık CRLF/LF bağımsız karşılaştırıp dosyanın orijinal satır sonu stilini koruyarak yazıyor. Tek satırlık i18n anchor'ları bu sorundan hiç etkilenmemişti.
 
 1. Görev kısıtsız → her araç eligible:true, value 1.0
 2. Araç verisi yok (volume+weight null, hazmat boş array) → eligible:true, value 1.0, fallback memo

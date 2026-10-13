@@ -275,7 +275,7 @@ ALTER TABLE public.companies
 
 **Rationale:** ADR-0011 FEAT-002 (Truck-Aware Routing) and FEAT-007 (Vehicle Capability Matching) require vehicle profile data passed as constraints to HERE Tour Planning.
 
-**Migration sketch:**
+**Migration sketch (orijinal, v3, 2026-05-14 — SUPERSEDED, bkz. Amendment aşağıda):**
 
 ```sql
 ALTER TABLE public.vehicles
@@ -285,9 +285,27 @@ ALTER TABLE public.vehicles
   ADD COLUMN hazmat_classes text[];
 ```
 
-**Timing:** Phase 1.1 — after MVP launch when FEAT-002/007 capacity-aware routing is enabled.
+**Amendment (2026-10-13, Cem onaylı — FEAT-020 Katman A/B teslimatı sırasında gatekeeping ile tespit edildi):** Phase 1.1'in gerçek implementasyonu (migration `1783400000000`, tulipfleet-backend, 2026-10-12) yukarıdaki sketch'ten farklı adlarla uygulandı:
 
-**Compatibility:** All new columns nullable. Existing vehicles continue to function; profile data populated as customers onboard.
+- `capacity_volume_m3` → **`cargo_capacity_volume_m3`**
+- `capacity_weight_kg` → **`cargo_capacity_weight_kg`**
+- `hazmat_classes` → **`hazmat_certified_classes`** — ayrıca `NOT NULL DEFAULT '{}'` (sketch'teki "tümü nullable" varsayımından farklı; boş dizi varsayılan, NULL değil)
+- `vehicle_class` → **hiç eklenmedi.** Sebep: talep tarafında (`enterprise.dispatch_tasks.capacity_required` / dispatcher `CapacityRequired` tipi) bu alana karşılık gelen hiçbir şey yok — FEAT-020 Katman A/B matching mantığı `vehicle_class`'a hiçbir noktada ihtiyaç duymuyor. Bu kolon muhtemelen FEAT-002 (HERE Tour Planning truck-aware routing) için planlanmıştı ve FEAT-020 ile aynı ALTER'a karıştırılmıştı; FEAT-002 kendi scope'una girdiğinde ayrıca değerlendirilecek, bu ADR'de artık FEAT-020 kapsamında değil.
+
+**Gerçek (deployed) migration — bundan sonra bu ADR'ye referans verilirken esas alınacak blok budur:**
+
+```sql
+ALTER TABLE public.vehicles
+  ADD COLUMN IF NOT EXISTS cargo_capacity_volume_m3 numeric
+    CHECK (cargo_capacity_volume_m3 IS NULL OR cargo_capacity_volume_m3 >= 0),
+  ADD COLUMN IF NOT EXISTS cargo_capacity_weight_kg numeric
+    CHECK (cargo_capacity_weight_kg IS NULL OR cargo_capacity_weight_kg >= 0),
+  ADD COLUMN IF NOT EXISTS hazmat_certified_classes text[] NOT NULL DEFAULT '{}';
+```
+
+**Timing:** Phase 1.1 — **TAMAMLANDI 2026-10-12.**
+
+**Compatibility:** `cargo_capacity_volume_m3`/`cargo_capacity_weight_kg` nullable (negatif değer CHECK ile engellenir); `hazmat_certified_classes` NOT NULL DEFAULT boş dizi. Existing vehicles continue to function; profile data populated as customers onboard.
 
 ### 6.5 Disallowed changes — `public.*` modifications that require a new ADR
 
@@ -306,7 +324,7 @@ The four changes above (6.1–6.4) are independent and can be applied in any ord
 1. `public.users.role` enum extension (Sıra 1, dispatcher role for backend skeleton)
 2. `public.companies.dispatch_mode` column (Sıra 1, read during backend bootstrap)
 3. `public.tasks.enterprise_dispatch_task_id` (Sıra 6, plan-approve endpoint)
-4. `public.vehicles` capacity columns (Phase 1.1, when FEAT-002/007 enabled)
+4. `public.vehicles` capacity columns (Phase 1.1, **TAMAMLANDI 2026-10-12** — bkz. §6.4 Amendment için gerçek kolon adları)
 
 Each migration follows standard `node-pg-migrate` process (External Migration Tool pattern per ROADMAP).
 

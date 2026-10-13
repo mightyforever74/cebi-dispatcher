@@ -254,7 +254,7 @@ W10	Multimodal Orchestration	Very common	—	—	—	🚫 OUT-001 (Phase 3 ADR p
 
 W11	Refrigerated Container Monitoring	Common	menu created, customer activates	FEAT-012	1 (skeleton) + 2 (activate)	📋 Spec pending (schema forward-compat, kod path kapalı)
 
-| **W12** | **Hazmat & Compliance Routing** | Niche | expertise feature | FEAT-013 | 1.1 | 📋 **Phase 1.1 UI & Schema Persisted (Matching Engine Pending)** (ADR-0012 ile uyumlu) · **[DSE-P1]** `hazmat_classes` form capture + `capacity_required` jsonb persist (sıfır backend riskiyle mühürlendi); matching engine Phase 1.1'de araç ADR yeteneği eklendiğinde aktifleşecek. |
+| **W12** | **Hazmat & Compliance Routing** | Niche | expertise feature | FEAT-013 | 1.1 | 🟡 **Matching engine ÇALIŞIYOR, veri-girişi UI'ı EKSİK (gatekeep bulgusu 2026-10-13).** Önceki "Matching Engine Pending" statüsü yanlıştı: FEAT-020 Katman A ile birlikte `cargoScorer.ts`'deki hazmat gate (görev `capacity_required.hazmat_classes` ↔ araç `hazmat_certified_classes`, binary gate, eksik/kısmi/tam sertifika senaryoları) zaten canlı ve 4 testle kilitli. Task formu gerekli ADR sınıfını yakalıyor (`optimize/index.tsx`, [DSE-P1]). **Gerçek boşluk:** aracın hazmat sertifikasını GİRECEK bir ekran hiçbir yerde yok (mobil `CreateVehicleScreen.js`'e Faz 1.1'de yalnız hacim/ağırlık eklendi, hazmat alanı atlandı; dispatcher `vehicles/index.tsx` kapasite alanlarına hiç dokunmuyor) — backend `POST`/`PUT /api/vehicles` alanı kabul ediyor ama tek giriş yolu ham API çağrısı. Kapatmak için tek iş: bir vehicle formuna hazmat çoklu-seçim alanı. |
 
 W13	Multi-carrier Tender Management	Common	—	FEAT-014	2	🔵 Customer-funded trigger
 

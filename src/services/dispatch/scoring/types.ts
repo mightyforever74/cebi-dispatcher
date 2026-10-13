@@ -55,6 +55,20 @@ export interface ComplianceAssessRow {
   heffing?: { rate_per_km: number; total_charge: number; matched: boolean };
 }
 
+/**
+ * FEAT-020 Phase 1.1/1.2 (2026-10-12): public.vehicles'taki statik kargo
+ * kapasite kolonlarinin (migration 1783400000000) snapshot kesiti.
+ * undefined = alan hic gelmedi (enterprise-backend /api/dispatcher/vehicles
+ * route'u bu kolonlari henuz SELECT etmiyor — FEAT-020 spec FN-3, acik madde);
+ * null alanlar = arac kaydinda veri girilmemis. Ikisi de cargoScorer'da ayni
+ * "veri yok" fallback'ine duser (eligible:true, notr) — hazmat gate HARIC.
+ */
+export interface VehicleCargoCapacity {
+  volumeM3: number | null;
+  weightKg: number | null;
+  hazmatCertifiedClasses: string[];
+}
+
 export interface ScoringVehicleSnapshot {
   id: string;
   plate: string;
@@ -68,6 +82,8 @@ export interface ScoringVehicleSnapshot {
    * veri yok — scorer 0.5 notr + durust memo doner, sahte karar uretmez.
    */
   compliance?: ComplianceAssessRow | null;
+  /** FEAT-020 Phase 1.2 — bkz. VehicleCargoCapacity yorumu. */
+  cargoCapacity?: VehicleCargoCapacity | null;
 }
 
 export interface ScoreDetail {

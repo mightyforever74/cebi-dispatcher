@@ -518,6 +518,7 @@ export const en = {
     zeCompliant: "ZE compliant",
     exemptionNeeded: "Exemption required",
     entryBlocked: "Entry blocked",
+    cargoIneligible: "Not cargo-eligible",
     directionOutbound: "Delivery (outbound)",
     directionInbound: "Return / pickup (inbound)",
     locationCustomer: "Customer",

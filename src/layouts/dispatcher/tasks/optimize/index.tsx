@@ -727,6 +727,28 @@ function OptimizeTask(): JSX.Element {
     return map;
   }, [vehicles]);
 
+  // FEAT-020 Phase 1.2: public.vehicles kargo kapasite kolonlari (Vehicle
+  // tipi [key:string]:any gevsek tipli, optional chaining ile okunur).
+  // GERCEK VERI AKMASI FN-3'e bagli (enterprise-backend /api/dispatcher/vehicles
+  // route'u bu kolonlari henuz SELECT etmiyor, spec'te acik madde) - o kapanana
+  // kadar bu map hep undefined doner, cargoScorer fallback'e duser (bloke etmez).
+  const vehicleCargoCapacityById = useMemo(() => {
+    const map: Record<string, ScoringVehicleSnapshot["cargoCapacity"]> = {};
+    vehicles.forEach((v: Vehicle) => {
+      const hasAny =
+        v.cargo_capacity_volume_m3 !== undefined ||
+        v.cargo_capacity_weight_kg !== undefined ||
+        v.hazmat_certified_classes !== undefined;
+      if (!hasAny) return;
+      map[v.id] = {
+        volumeM3: v.cargo_capacity_volume_m3 ?? null,
+        weightKg: v.cargo_capacity_weight_kg ?? null,
+        hazmatCertifiedClasses: v.hazmat_certified_classes ?? [],
+      };
+    });
+    return map;
+  }, [vehicles]);
+
   // Draft task'lar -> scorer girdisi. constraints frontend-state'ten baglanir
   // (mock poll kisit donmuyor). Form tek-task oldugu icin submittedConstraints
   // tum donen task'lara atanir.
@@ -759,10 +781,12 @@ function OptimizeTask(): JSX.Element {
           lastUpdate: frame ? frame.timestamp : null,
           // Regulasyon (04.08): assess satiri; yoksa null -> scorer 0.5 notr
           compliance: assessQuery.data?.byVehicle.get(vehicleId) ?? null,
+          // FEAT-020 Phase 1.2: undefined kalirsa cargoScorer fallback'e duser.
+          cargoCapacity: vehicleCargoCapacityById[vehicleId],
         };
       });
     },
-    [vehicleLabels, assessQuery.data]
+    [vehicleLabels, assessQuery.data, vehicleCargoCapacityById]
   );
 
   const rebuildBoard = useCallback(
@@ -821,6 +845,11 @@ function OptimizeTask(): JSX.Element {
                       tone: "neutral",
                     });
                   }
+                }
+                // FEAT-020 Phase 1.2 (FN-2): binary-gate kargo elenmesi — compliance
+                // "entryBlocked" rozetiyle AYNI desen, yeni state/mimari gerekmedi.
+                if (r.detail.eligible === false) {
+                  badges.push({ icon: "block", text: t("optimize.cargoIneligible"), tone: "warn" });
                 }
                 return [
                   r.vehicleId,

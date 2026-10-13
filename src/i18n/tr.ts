@@ -516,6 +516,7 @@ export const tr = {
     zeCompliant: "ZE uyumlu",
     exemptionNeeded: "Muafiyet gerekli",
     entryBlocked: "Giriş engelli",
+    cargoIneligible: "Kargoya uygun değil",
     directionOutbound: "Teslimat (outbound)",
     directionInbound: "İade / toplama (inbound)",
     locationCustomer: "Müşteri",

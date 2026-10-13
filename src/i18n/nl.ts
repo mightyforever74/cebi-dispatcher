@@ -516,6 +516,7 @@ export const nl = {
     zeCompliant: "ZE-conform",
     exemptionNeeded: "Ontheffing vereist",
     entryBlocked: "Toegang geblokkeerd",
+    cargoIneligible: "Niet geschikt voor lading",
     directionOutbound: "Levering (outbound)",
     directionInbound: "Retour / ophalen (inbound)",
     locationCustomer: "Klant",

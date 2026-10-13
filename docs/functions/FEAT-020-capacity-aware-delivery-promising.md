@@ -5,8 +5,8 @@
 | **Feature ID** | FEAT-020 |
 | **Source** | Wishlist W24 — "base feature of cargo mgmt (kanban approach)" |
 | **Frequency rating** | Common |
-| **Tulipfleet Phase** | Phase 1.1 (statik veri toplama, **TAMAMLANDI** 2026-10-12) → Phase 1.2 (statik binary-gate matching, **TAMAMLANDI 2026-10-13** — `cargoScorer` ActiveScorer'a çevrildi, dispatcher UI'a bağlandı, 11/11 test geçti, commit `a8560eb`, push'landı) → Phase 1.3a (tarihsel ledger/BI altyapısı, **TAMAMLANDI 2026-10-13** — migration + worker staging'de E2E doğrulandı, sonra prod'a deploy edildi) → Phase 1.3b (sürücü canlı kapasite bildirimi + configurable toggle, **bu v2.0'da spec'lendi, implementasyon dışı, §6**) |
-| **Status** | **v2.0 (2026-10-13, Cem'in genişlettiği vizyon)** — "hızlı çözüm" tek katmanlı yaklaşım yetersiz bulundu; FEAT-020 üç katmanlı mimariye genişletildi: (A) statik binary-gate [**TAMAMLANDI 2026-10-13** — §3/§7, `cargoScorer.ts` + `types.ts` + `optimize/index.tsx` + i18n, commit `a8560eb`], (B) tarihsel ledger/yield-management verisi [**TAMAMLANDI 2026-10-13** — `enterprise.trip_summaries` genişletmesi, §5], (C) sürücü canlı kapasite bildirimi + configurable toggle [backlog, §6]. Katman A ve B artık ikisi de tamamlandı ve prod/main'de; sıradaki iş (varsa) Katman C'nin kapsamına Cem'in karar vermesi |
+| **Tulipfleet Phase** | Phase 1.1 (statik veri toplama, **TAMAMLANDI** 2026-10-12) → Phase 1.2 (statik binary-gate matching, **TAMAMLANDI 2026-10-13** — `cargoScorer` ActiveScorer'a çevrildi, dispatcher UI'a bağlandı, 11/11 test geçti, commit `a8560eb`, push'landı) → Phase 1.3a (tarihsel ledger/BI altyapısı, **TAMAMLANDI 2026-10-13** — migration + worker staging'de E2E doğrulandı, sonra prod'a deploy edildi) → Phase 1.3b (sürücü canlı kapasite bildirimi + configurable toggle, **Faz 1 backend+dispatcher TAMAMLANDI 2026-10-13, §6** — Faz 2 argon mobil ekranı backlog) |
+| **Status** | **v2.1 (2026-10-13)** — FEAT-020 üç katmanlı mimari: (A) statik binary-gate [**TAMAMLANDI 2026-10-13** — §3/§7, `cargoScorer.ts` + `types.ts` + `optimize/index.tsx` + i18n, commit `a8560eb`], (B) tarihsel ledger/yield-management verisi [**TAMAMLANDI 2026-10-13** — `enterprise.trip_summaries` genişletmesi, §5], (C) sürücü canlı kapasite bildirimi + configurable toggle [**Faz 1 (backend+dispatcher) TAMAMLANDI 2026-10-13** — migration + `PATCH /api/driver/live-capacity` + FN-3 kapandı + `cargoCapacityResolver.ts`, §6.2; **Faz 2 (argon mobil ekranı) backlog**, §6.3]. Üç katmanın backend/dispatcher tarafı tamamen bitti ve main'de; kalan tek açık iş argon mobil ekranı (Faz 2) |
 | **Gatekeep bulgusu** | `docs/adr/ADR-0004-database-strategy.md` §6.4 (v3, 2026-05-14), Phase 1.1 migration'ından ÖNCE şu kolon adlarını onaylamıştı: `capacity_volume_m3`, `capacity_weight_kg`, `vehicle_class`, `hazmat_classes`. Phase 1.1'de gerçekte uygulanan (migration `1783400000000`, tulipfleet-backend) adlar farklı: `cargo_capacity_volume_m3`, `cargo_capacity_weight_kg`, `hazmat_certified_classes` — ve `vehicle_class` hiç eklenmedi. Bu spec gerçekte CANLI olan adları esas alır (aşağıda §2). `vehicle_class`'ın eksikliği bu feature'ı bloke etmez — talep tarafı (`CapacityRequired`) hiç böyle bir alan taşımıyor; ADR'daki `vehicle_class` muhtemelen ayrı bir feature (FEAT-002 HERE Tour Planning truck-aware routing) için düşünülmüştü. **Kapandı (2026-10-13):** ADR-0004 §6.4 bu gerçek adlarla ve `vehicle_class` notuyla amendment edildi, Cem onaylı |
 
 ---
@@ -165,15 +165,29 @@ dt.dropoff_location
 
 ---
 
-## 6. Katman C — Backlog taslağı (implementasyon dışı, kayıt amaçlı)
+## 6. Katman C — Sürücü canlı kapasite bildirimi + configurable toggle
 
-Cem'in 2026-10-12/13 kararları:
+**Faz 1 (backend + dispatcher) — TAMAMLANDI 2026-10-13.** **Faz 2 (argon mobil ekranı) — backlog, henüz implementasyon dışı** (bu tur Cem'in açık kapsam kararı: "Katman C için Seçenek 2... argon mobil ekranı sonraki bir tura bırakılacak").
 
-1. **Configurable scope (2026-10-13 kesinleşti): şirket seviyesi.** Presedent: `public.companies.dispatch_mode` (ADR-0004 §6.3) ile AYNI desen — yeni bir `public.companies.cargo_capacity_tracking text NOT NULL DEFAULT 'optional' CHECK (IN ('required','optional','off'))` kolonu. Araç seviyesi granülerlik reddedildi (basitlik tercih edildi).
-2. **Sürücü girdisi önceliği:** Config `'required'` veya `'optional'` iken, sürücünün mobil uygulamadan bildirdiği anlık boş kapasite, statik `cargo_capacity_*` değerinin ÖNÜNE geçer (compliance scorer'ın `useComplianceAssessment` REST-senkron besleme desenine benzer bir akış gerekir — ama kaynak statik DB değil, sürücü girdisi, `write-back`). Bu canlı bildirim aynı zamanda §5'teki ledger'ı besleyecek (worker'ın hangi veriyi önceliklendireceği — statik mi canlı mı — ayrı bir karar, henüz spec'lenmedi).
-3. **Fallback zaten §3 FN-1 adım 2'de Katman A'ya işlendi** — veri yoksa (ne statik ne canlı) `eligible:true` + nötr, hiçbir zaman bloklamaz.
+### 6.1 Tasarım kararları (Cem onaylı, 2026-10-12/13)
 
-Bu backlog maddesi ayrı bir spec turu gerektirir (mobil ekran tasarımı, yeni endpoint, `companies.cargo_capacity_tracking` migration + backend validasyonu) — bu doküman sadece ilkeyi kayda geçiriyor, tasarlamıyor.
+1. **Configurable scope: şirket seviyesi.** Presedent: `public.companies.dispatch_mode` (ADR-0004 §6.3) ile AYNI desen — `public.companies.cargo_capacity_tracking text NOT NULL DEFAULT 'optional' CHECK (IN ('required','optional','off'))` (migration `1783600000000`, tulipfleet-backend). Araç seviyesi granülerlik reddedildi (basitlik tercih edildi).
+2. **"Tek veritabanı, aynı satır" ilkesi (Cem onaylı, 2026-10-13):** Canlı kapasite, statik kapasite ile AYNI tabloda (`public.vehicles`), aynı satırda tutulur — ayrı bir tablo/row yok, çift başlı yönetim oluşmaz. Yeni kolonlar: `live_cargo_volume_m3 numeric`, `live_cargo_weight_kg numeric`, `live_cargo_reported_at timestamptz` (hepsi nullable, aynı migration). Hem mobil (core backend `PATCH /api/driver/live-capacity`) hem dispatcher (enterprise-backend `/api/dispatcher/vehicles`, aynı satırı okur) bu kolonları paylaşır.
+3. **Sürücü girdisi önceliği:** `cargo_capacity_tracking !== 'off'` VE sürücü en az bir kez rapor etmişse (`live_cargo_reported_at` set), canlı veri statik `cargo_capacity_*` değerinin TAMAMEN önüne geçer — karma kaynak yok (canlı rapor geldiyse hacim+ağırlık ikisi de canliden, kısmi rapor edilen alan `null` kalır, statikten hiç karıştırılmaz). `'off'` ise canlı veri HER ZAMAN yok sayılır (sözde-veri bile olsa). Hazmat sertifikası HER ZAMAN statikten gelir — sürücü canlı olarak sertifika bildirmiyor.
+4. **Fallback zaten §3 FN-1 adım 2'de Katman A'ya işlendi** — veri yoksa (ne statik ne canlı) `eligible:true` + nötr, hiçbir zaman bloklamaz.
+5. **Staleness (canlı verinin "bayatlaması") bilerek kapsam dışı bırakıldı** — `live_cargo_reported_at` kaydedilir ama şu an hiçbir yerde yaş kontrolü yapılmıyor (ör. 3 gün önceki rapor hâlâ "canlı" sayılır). Cem'in talebi üzerine açık bırakıldı; ileride ayrı bir karar.
+6. **Ledger (§5) ile ilişki:** `tripSummaryWorker.js` şu an hâlâ sadece `enterprise.dispatch_tasks.capacity_required` (talep) kaydediyor — bu Katman C canlı arz verisini ledger'a YAZMIYOR. Worker'ın hangi veriyi önceliklendireceği (statik mi canlı mı, görev tamamlandığı andaki mi) ayrı bir karar, henüz spec'lenmedi — bu turun kapsamı dışında.
+
+### 6.2 İmplementasyon (Faz 1 — TAMAMLANDI 2026-10-13)
+
+- **Migration** (`tulipfleet-backend`, `1783600000000_feat020-katmanc-live-capacity.sql`): `companies.cargo_capacity_tracking` + `vehicles.live_cargo_volume_m3/weight_kg/reported_at`, CHECK constraint'ler negatif değeri engeller. Sandbox'ta gerçek şemaya karşı doğrulandı (migration + SELECT + UPDATE + her iki CHECK constraint).
+- **Backend endpoint** (`tulipfleet-backend`, `routes/driver.js`): `PATCH /api/driver/live-capacity` — sürücü auth'lu, `device_assignments` üzerinden sürücünün KENDİ aktif aracı çözümlenir (body'de `vehicle_id` alınmaz, yetki sızması önlenir), `routes/liveCapacityHelpers.js`'teki pure validasyon (`parseVehicleCapacityFields`'ın `parseOptionalNonNegativeNumber` presedenti yeniden kullanıldı) ile doğrulanır. 10/10 test GREEN (`tests/liveCapacity.test.js`).
+- **FN-3 KAPANDI + enterprise-backend genişletmesi** (`tulipfleet-enterprise-backend`, `routes/vehicles.js`): `/api/dispatcher/vehicles` artık statik VE canlı kapasite kolonlarını + `companies.cargo_capacity_tracking`'i (tek `LEFT JOIN`) SELECT ediyor — bu ana kadar bu route hiç kapasite kolonu SELECT etmiyordu (Katman A'nın gerçek veri akışı FN-3'e bağlıydı, artık bağlı değil).
+- **Dispatcher kaynak seçimi** (`tulipfleet-dispatcher`): `src/services/dispatch/scoring/cargoCapacityResolver.ts` — pure fonksiyon, §6.1 madde 3'teki kuralı uygular. `cargoScorer.ts`'in kendisi DEĞİŞMEDİ (hangi kaynaktan geldiğini bilmiyor/bilmemeli). 9/9 test GREEN. `optimize/index.tsx`'teki `vehicleCargoCapacityById` useMemo'su artık bu resolver'ı çağırıyor.
+
+### 6.3 Faz 2 (backlog, implementasyon dışı) — argon mobil ekranı
+
+Sürücünün canlı kapasite bildirebileceği bir ekran (basit form: boş hacim/ağırlık), `PATCH /api/driver/live-capacity`'yi çağırır. Ayrı bir spec/tasarım turu gerektirir — bu doküman sadece backend/dispatcher tarafının buna hazır olduğunu kayda geçiriyor.
 
 ---
 

@@ -3,8 +3,8 @@
 | Field           | Value                                                                       |
 | --------------- | --------------------------------------------------------------------------- |
 | **Status**      | Accepted                                                                    |
-| **Version**     | 1.6                                                                        |
-| **Date**        | 2026-10-10 (amended)                                                        |
+| **Version**     | 1.7                                                                        |
+| **Date**        | 2026-10-15 (amended)                                                        |
 | **Decision by** | Cem Bakir (Founder / Lead Engineer)                                         |
 | **Component**   | TulipFleet — Routing abstraction across main fleet + enterprise backends    |
 | **Related**     | ADR-0002 (HERE solver), ADR-0005 (dispatch workflow), ADR-0012 (NL compliance), FEAT-001/005/008/009/103 |
@@ -218,6 +218,7 @@ Phases 1-3 are complete in code only - NOT yet deployed to production. The Statu
 | 1.4 | 2026-06-28 | Cem Bakir | Migration mandate (§5) completed. Phases 1-3 done: HereRoutingProvider scaffold (services/routing/), route-traffic and drive-conditions handlers migrated behind the provider. Zero hereapi.com / HERE_API_KEY remain in any handler (grep-verified). computeMatrix set false to reflect true boundary (Matrix API deferred to Phase 2). Commits: d2889da, 10a6880, 4847f34, 6ff50b1. |
 | 1.5 | 2026-06-29 | Cem Sahinkaya | Added section 5.1 Deployment status: Phases 1-3 are code-layer only, NOT in production (prod ~21 commits behind; verify hereapi.com=0 + routingProvider.computeRoute on prod). Added commit 6ff50b1 (computeMatrix=false) to the 1.4 commit list. Doc-only; no code change. |
 | 1.6 | 2026-10-10 | Cem Sahinkaya | Added section 12, Amendment: single routing source. `route_json.public_route` (HERE truck) is now the sole routing source for both the public tracking page and the driver navigation screen; Google Directions removed from `DriverRouteMapScreen.js`. Core `/api/driver/tasks/:id/start` warms the cache fire-and-forget (`warmPublicRoute`); `HereRoutingProvider.computeRoute` fetch bounded by `AbortSignal.timeout` (8000ms default). Commits: tulipfleet-backend `16e3085`, argon `7c248fd` (EAS update `b9489cd1`). |
+| 1.7 | 2026-10-15 | Cem Sahinkaya | Added section 13, Amendment: dispatcher decision-support scorers (`spatialScorer.ts`/`temporalScorer.ts`) stay haversine-based. Audited: `computeMatrix` is unimplemented in both backends (`HereRoutingProvider.js:28` explicit `false`, enterprise has no matrix method). Decision: same Phase 2/customer-triggered boundary as `HereTourPlanningProvider` — no `computeMatrix` work scheduled, no scorer architecture change. Closes D7-3 TODO (13). Doc-only; no code change. |
 
 ## 12. Amendment 2026-10-10: Single routing source — driver nav consumes `route_json.public_route`
 
@@ -245,3 +246,24 @@ This surfaced as a product problem on 2026-10-07/10: the customer tracking page 
 - qa `TODO_ACTIVE.md` §10 "Rota tutarlılığı borcu" (7 Oct finding), PRE_NL_CHECKLIST.md A2 (10 Oct decision).
 - Code: `tulipfleet-backend` commit `16e3085` (`warmPublicRoute`, HERE fetch timeout, `tests/publicTrackWarm.test.js`); `argon` commit `7c248fd` (`DriverRouteMapScreen.js`, EAS update group `b9489cd1`).
 - `routes/publicTrack.js` `ensureRoadGeometry`/`cachedGeometry`/`publicRouteCache` (unchanged logic, now also called from core `/start`).
+
+## 13. Amendment 2026-10-15: Dispatcher decision-support scorers stay haversine (Phase 2, customer-triggered)
+
+### 13.1 Context
+
+`tulipfleet-dispatcher`'s `spatialScorer.ts`/`temporalScorer.ts` (Decision Support Engine, Karar Notu Popover — MEKAN/ZAMAN ranking of candidate vehicles against a task) compute distance and ETA via `haversineKm` (kuş uçuşu) and a flat 60 km/h average-speed assumption, not `computeMatrix`. D7-3 TODO (13) flagged this as an open question: should the scorers call HERE Matrix instead?
+
+Audit (2026-10-15): `computeMatrix` is **not implemented in either backend** — `tulipfleet-backend/services/routing/HereRoutingProvider.js:28` sets `computeMatrix: false` with the comment "Phase 2: computeMatrix metodu yazılana kadar false"; `tulipfleet-enterprise-backend` has no matrix method either (only `solveVrp` via `HereTourPlanningProvider`, itself gated behind `ROUTING_PROVIDER=here-tour`, not default). This is not a missing wire-up — the HERE Matrix integration itself does not exist yet.
+
+### 13.2 Decision
+
+Scorers stay haversine-based. This is not a gap to schedule — it falls under the same Phase 2/customer-triggered boundary already governing `HereTourPlanningProvider` (ROADMAP.md "ÜRÜN GERÇEĞİ (6)": HERE Tour Planning is paid, activated only once a paying customer requires it). Switching the scorers to `computeMatrix` would require: (a) implementing `computeMatrix` in `HereRoutingProvider` (a new HERE API integration, not a stub), (b) a dispatcher-facing endpoint for it, (c) converting the scorers from a synchronous pure function to an async call pattern, and (d) absorbing a real, recurring per-call HERE API cost on every ranking recalculation (every task-decision, every Karar Notu Popover open). None of this is justified before a paying customer exists; the honesty discipline already in place (memo text states plainly that the figure is kuş uçuşu / 60 km/h assumption — see `src/i18n` `scorer.spatialBase`/`scorer.temporalBase`, D7-3 (11)) is the correct scope for this phase.
+
+### 13.3 Non-Goals (this amendment)
+
+- No `computeMatrix` implementation scheduled. Revisit only when a paying customer's routing accuracy needs force the same trigger that would activate `HereTourPlanningProvider`.
+- No scorer architecture change (stays synchronous, client-side, zero marginal cost per ranking).
+
+### 13.4 References
+
+- qa `TODO_ACTIVE.md` D7-3 (13). ROADMAP.md "ÜRÜN GERÇEĞİ (6)". `tulipfleet-backend/services/routing/HereRoutingProvider.js:28`. `tulipfleet-enterprise-backend/lib/routing/factory.js` (here-tour gating). `src/services/dispatch/scoring/{geo.ts,scorers/spatialScorer.ts,scorers/temporalScorer.ts}`.

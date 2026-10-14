@@ -7,7 +7,7 @@
 | **Frequency rating** | Common |
 | **Cem note** | — (wishlist'te ek not yok) |
 | **Tulipfleet Phase** | Phase 1 (rule-based detection + Mode 1 Advisory notification) + Phase 2 (FEAT-101 Mode 2 Exception-based auto-action) |
-| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-30); **v1.3'te Cem'in mühendislik incelemesiyle 3 fonksiyon eklendi/genişletildi**; **v1.4'te "sıfır iş gücü" UI davranışları netleştirildi**; **v1.5'te yanlış-pozitif önleme (debounce + GPS tamponu) eklendi (2026-07-18)**; **v1.6'da UNCERTAINTIES #16-18 kapatıldı + iki yeni girdi eklendi: temporal "KAÇIRIR" planlama-anı köprüsü (§1.6) ve tek-aktif-görev 409 hata sözleşmesi (§3.6) (2026-07-28)**; **v1.7'de ML-analiz veri temeli eklendi: karar logu + override nedeni + sefer özetleri (§1.8, §6.4-6.5) (2026-07-29)**; **v1.8'de UNCERTAINTIES #19-21 KAPATILDI (Cem onayı, 2026-07-29) — üç veri-temeli kalemi implementasyona hazır**; **v1.9'da FEAT-010 KAPANDI (2026-10-12) — FN-08 ve FN-16 (push-gönderme yarısı) implementasyonu CANLI, FN-17 FN-04 ile aynı sebepten (dock_appointments tablosu yok, FEAT-006'ya bağlı) ERTELENDİ** |
+| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-30); **v1.3'te Cem'in mühendislik incelemesiyle 3 fonksiyon eklendi/genişletildi**; **v1.4'te "sıfır iş gücü" UI davranışları netleştirildi**; **v1.5'te yanlış-pozitif önleme (debounce + GPS tamponu) eklendi (2026-07-18)**; **v1.6'da UNCERTAINTIES #16-18 kapatıldı + iki yeni girdi eklendi: temporal "KAÇIRIR" planlama-anı köprüsü (§1.6) ve tek-aktif-görev 409 hata sözleşmesi (§3.6) (2026-07-28)**; **v1.7'de ML-analiz veri temeli eklendi: karar logu + override nedeni + sefer özetleri (§1.8, §6.4-6.5) (2026-07-29)**; **v1.8'de UNCERTAINTIES #19-21 KAPATILDI (Cem onayı, 2026-07-29) — üç veri-temeli kalemi implementasyona hazır**; **v1.9'da FEAT-010 KAPANDI (2026-10-12) — FN-08 ve FN-16 (push-gönderme yarısı) implementasyonu CANLI, FN-17 FN-04 ile aynı sebepten (dock_appointments tablosu yok, FEAT-006'ya bağlı) ERTELENDİ**; **v1.10'da (2026-10-13) Severity Matrix doküman-hijyeni: `returns_pickup_failed`/`rts_warehouse_unreachable` DB'de zaten canlıydı (`tulipfleet-backend migrations/1782800000000`) ama bu tabloda hiç satırı yoktu — FEAT-018 v2 gatekeep bulgusu üzerine 3 satır eklendi, §4** |
 | **Pilot note** | Onuncu pilot. Tek iterasyonda **9/10** skor. **§number fabrikasyon = 0** ✅ (F9'daki §188 hatası tekrarlanmadı). Yeni paradigma: **"orkestratör feature"** — 4-5 FEAT'in detection'ını consume edip action'ına route ediyor. |
 
 ---
@@ -347,7 +347,10 @@ Sürücünün GPS koordinatı, geofence merkezine olan mesafe:
 | **Compliance breach imminent** | 30-15 dk önceden | medium |
 | **Compliance breach imminent** | 15-0 dk önceden | high |
 | **Compliance breach** | araç ZE-zone'a hatalı emission ile girdi | critical |
-| *(diğer satırlar — Locker/Tender/Returns/Invoice/Rest/Border/Range/CSRD — v1.4'ten değişmedi)* | | |
+| **Returns pickup failed** (`returns_pickup_failed` — FEAT-018 `monitorRmaSla` FN-13, RMA SLA eşiği aşıldı: approval→pickup 48h / pickup→warehouse 7 gün / transit→received 24h) | eşik aşıldı, henüz +24h içinde | medium |
+| **Returns pickup failed** | eşik aşımı +24h'den fazla sürdü | high |
+| **RTS warehouse unreachable** (`rts_warehouse_unreachable` — FEAT-018 `resolveRtsDestination` FN-08 hiçbir destinasyon çözemedi) | — (eşiksiz, anlık tetikleme) | high |
+| *(diğer satırlar — Locker/Tender/Invoice/Rest/Border/Range/CSRD — hâlâ v1.4'ten değişmedi, v1.10'un kapsamı sadece Returns/RTS — DB'de canlı ama bu tabloda hâlâ belgesiz, ayrı doküman-hijyen maddesi)* | | |
 
 Per-company override: `public.companies.settings.exception_thresholds` JSONB key (bkz. §6.3, v1.6'da değerler onaylandı).
 

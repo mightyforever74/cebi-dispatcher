@@ -6,11 +6,11 @@
  *
  * Run (Windows): npm test -- LocationSearchInput --watchAll=false
  */
-import { useState } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import LocationSearchInput, { LocationValue } from "./index";
 import type { GeocodeResult } from "hooks/useGeocodeSearch";
+import { useState } from "react";
+import LocationSearchInput, { LocationValue } from "./index";
 
 const rotterdam: GeocodeResult = {
   title: "Waalhaven Zuidzijde",
@@ -50,7 +50,9 @@ function Harness() {
     latitude: null,
     longitude: null,
   });
-  return <LocationSearchInput label="Pickup address search" value={value} onValueChange={setValue} />;
+  return (
+    <LocationSearchInput label="Pickup address search" value={value} onValueChange={setValue} />
+  );
 }
 
 beforeEach(() => {

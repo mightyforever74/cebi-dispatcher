@@ -1,15 +1,15 @@
 import { Chip, IconButton, TextField } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import Icon from "@mui/material/Icon";
 import { paletteLight } from "assets/theme/tokens";
-import Grid from "@mui/material/Grid";
 import ConfirmDialogShell from "components/ConfirmDialogShell";
-import { useNotifications } from "components/Notifications";
 import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import FuelGaugeMini from "components/FuelGaugeMini";
 import MDBadge from "components/MDBadge";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import { useNotifications } from "components/Notifications";
 import StatusChip, { enumLabel } from "components/StatusChip";
 import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatisticsCard";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -17,9 +17,9 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import useDrivers, { type Driver } from "hooks/useDrivers";
 import useVehicles, { useUpdateVehicleCapacity, type Vehicle } from "hooks/useVehicles";
 import { formatDate, formatNumber, useT, type TFunction } from "i18n";
-import { HAZMAT_CLASS_OPTIONS } from "types/metadata";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { HAZMAT_CLASS_OPTIONS } from "types/metadata";
 import { toNum } from "utils/toNum";
 
 const EMPTY_VEHICLES: Vehicle[] = [];
@@ -88,7 +88,11 @@ function VehiclesLayout(): JSX.Element {
   // alanlari ayri state (TextField'larin kontrollu olmasi icin string tutulur,
   // sayiya cevirme submit'te yapilir).
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
-  const [draft, setDraft] = useState<CapacityDraft>({ volumeM3: "", weightKg: "", hazmatClasses: [] });
+  const [draft, setDraft] = useState<CapacityDraft>({
+    volumeM3: "",
+    weightKg: "",
+    hazmatClasses: [],
+  });
   const updateCapacity = useUpdateVehicleCapacity();
 
   const openCapacityEdit = (v: Vehicle) => {
@@ -126,7 +130,8 @@ function VehiclesLayout(): JSX.Element {
           notifyToast({ type: "form_ok", titleKey: "notifyForm.saved" });
           setEditVehicle(null);
         },
-        onError: () => notifyToast({ type: "form_err", titleKey: "notifyForm.saveFailed", severity: "high" }),
+        onError: () =>
+          notifyToast({ type: "form_err", titleKey: "notifyForm.saveFailed", severity: "high" }),
       }
     );
   };
@@ -143,17 +148,73 @@ function VehiclesLayout(): JSX.Element {
 
   const table = useMemo(() => {
     const columns: DataColumn[] = [
-      { Header: t("vehicles.colPlateModel"), accessor: "vehicle_info", minWidth: 140, truncate: true, primary: true },
-      { Header: t("vehicles.colCategory"), accessor: "category_badge", minWidth: 88, maxWidth: 120 },
-      { Header: t("vehicles.colOwnership"), accessor: "ownership_badge", minWidth: 110, maxWidth: 160, truncate: true },
+      {
+        Header: t("vehicles.colPlateModel"),
+        accessor: "vehicle_info",
+        minWidth: 140,
+        truncate: true,
+        primary: true,
+      },
+      {
+        Header: t("vehicles.colCategory"),
+        accessor: "category_badge",
+        minWidth: 88,
+        maxWidth: 120,
+      },
+      {
+        Header: t("vehicles.colOwnership"),
+        accessor: "ownership_badge",
+        minWidth: 110,
+        maxWidth: 160,
+        truncate: true,
+      },
       { Header: t("vehicles.colFuel"), accessor: "fuel_type_badge", minWidth: 80, maxWidth: 110 },
-      { Header: t("vehicles.colFuelLevel"), accessor: "fuel_level_gauge", minWidth: 72, maxWidth: 88 },
-      { Header: t("vehicles.colTotalKm"), accessor: "total_km_display", minWidth: 80, maxWidth: 100, numeric: true, primary: true },
-      { Header: t("vehicles.colMaintenance"), accessor: "maintenance_info", minWidth: 100, maxWidth: 140 },
-      { Header: t("vehicles.colEmission"), accessor: "emission_badge", minWidth: 88, maxWidth: 120 },
-      { Header: t("vehicles.colStatus"), accessor: "status_badge", minWidth: 96, maxWidth: 120, primary: true },
-      { Header: t("vehicles.colDriver"), accessor: "assigned_driver_name", minWidth: 110, maxWidth: 160, truncate: true },
-      { Header: t("vehicles.colCapacity"), accessor: "capacity_cell", minWidth: 150, maxWidth: 220 },
+      {
+        Header: t("vehicles.colFuelLevel"),
+        accessor: "fuel_level_gauge",
+        minWidth: 72,
+        maxWidth: 88,
+      },
+      {
+        Header: t("vehicles.colTotalKm"),
+        accessor: "total_km_display",
+        minWidth: 80,
+        maxWidth: 100,
+        numeric: true,
+        primary: true,
+      },
+      {
+        Header: t("vehicles.colMaintenance"),
+        accessor: "maintenance_info",
+        minWidth: 100,
+        maxWidth: 140,
+      },
+      {
+        Header: t("vehicles.colEmission"),
+        accessor: "emission_badge",
+        minWidth: 88,
+        maxWidth: 120,
+      },
+      {
+        Header: t("vehicles.colStatus"),
+        accessor: "status_badge",
+        minWidth: 96,
+        maxWidth: 120,
+        primary: true,
+      },
+      {
+        Header: t("vehicles.colDriver"),
+        accessor: "assigned_driver_name",
+        minWidth: 110,
+        maxWidth: 160,
+        truncate: true,
+      },
+      {
+        Header: t("vehicles.colCapacity"),
+        accessor: "capacity_cell",
+        minWidth: 150,
+        maxWidth: 220,
+      },
     ];
 
     const rows: DataRow[] = vehicles.map((v: Vehicle) => {
@@ -199,7 +260,10 @@ function VehiclesLayout(): JSX.Element {
             sx={{
               bgcolor: paletteLight.badgeColors.warning.background,
               color: paletteLight.badgeColors.warning.text,
-              "& .MuiChip-label": { color: paletteLight.badgeColors.warning.text, whiteSpace: "nowrap" },
+              "& .MuiChip-label": {
+                color: paletteLight.badgeColors.warning.text,
+                whiteSpace: "nowrap",
+              },
             }}
           />
         ) : v.ownership_type === "leased" ? (
@@ -209,7 +273,10 @@ function VehiclesLayout(): JSX.Element {
             sx={{
               bgcolor: paletteLight.badgeColors.info.background,
               color: paletteLight.badgeColors.info.text,
-              "& .MuiChip-label": { color: paletteLight.badgeColors.info.text, whiteSpace: "nowrap" },
+              "& .MuiChip-label": {
+                color: paletteLight.badgeColors.info.text,
+                whiteSpace: "nowrap",
+              },
             }}
           />
         ) : (
@@ -249,7 +316,10 @@ function VehiclesLayout(): JSX.Element {
       const totalKm = toNum(v.total_km);
       const totalKmDisplay =
         totalKm != null ? (
-          <MDTypography variant="body2" sx={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+          <MDTypography
+            variant="body2"
+            sx={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}
+          >
             {formatNumber(totalKm, lang)}
           </MDTypography>
         ) : (
@@ -263,7 +333,12 @@ function VehiclesLayout(): JSX.Element {
           ? `${maintDate} · ${t("common.distanceKm", { value: formatNumber(nextKm, lang) })}`
           : maintDate;
       const maintenanceInfo = (
-        <MDTypography variant="caption" noWrap title={maintTitle} sx={{ fontVariantNumeric: "tabular-nums" }}>
+        <MDTypography
+          variant="caption"
+          noWrap
+          title={maintTitle}
+          sx={{ fontVariantNumeric: "tabular-nums" }}
+        >
           {maintDate}
         </MDTypography>
       );
@@ -281,7 +356,9 @@ function VehiclesLayout(): JSX.Element {
 
       const driverName = driverNameByVehicleId.get(v.id) ?? null;
 
-      const hazmatClasses = Array.isArray(v.hazmat_certified_classes) ? v.hazmat_certified_classes : [];
+      const hazmatClasses = Array.isArray(v.hazmat_certified_classes)
+        ? v.hazmat_certified_classes
+        : [];
       const volumeM3 = toNum(v.cargo_capacity_volume_m3);
       const weightKg = toNum(v.cargo_capacity_weight_kg);
       const hasCapacityData = volumeM3 != null || weightKg != null || hazmatClasses.length > 0;
@@ -289,14 +366,21 @@ function VehiclesLayout(): JSX.Element {
         ? [
             volumeM3 != null ? `${formatNumber(volumeM3, lang)} m³` : null,
             weightKg != null ? `${formatNumber(weightKg, lang)} kg` : null,
-            hazmatClasses.length > 0 ? t("vehicles.capacityHazmatCount", { count: hazmatClasses.length }) : null,
+            hazmatClasses.length > 0
+              ? t("vehicles.capacityHazmatCount", { count: hazmatClasses.length })
+              : null,
           ]
             .filter(Boolean)
             .join(" · ")
         : t("vehicles.capacityNone");
       const capacityCell = (
         <MDBox display="flex" alignItems="center" justifyContent="space-between" gap={0.5}>
-          <MDTypography variant="caption" noWrap title={capacitySummary} sx={{ color: hasCapacityData ? "text.main" : "text.secondary" }}>
+          <MDTypography
+            variant="caption"
+            noWrap
+            title={capacitySummary}
+            sx={{ color: hasCapacityData ? "text.main" : "text.secondary" }}
+          >
             {capacitySummary}
           </MDTypography>
           <IconButton
@@ -355,7 +439,11 @@ function VehiclesLayout(): JSX.Element {
               icon="local_shipping"
               title={t("vehicles.kpiActive")}
               count={vehicles.length}
-              percentage={{ color: "success", amount: t("vehicles.kpiLive"), label: t("vehicles.kpiRealtime") }}
+              percentage={{
+                color: "success",
+                amount: t("vehicles.kpiLive"),
+                label: t("vehicles.kpiRealtime"),
+              }}
             />
           </Grid>
           <Grid item xs={12} md={4}>

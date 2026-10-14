@@ -13,7 +13,15 @@ Coded by www.creative-tim.com
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { JSXElementConstructor, Key, ReactElement, useEffect, useMemo, useState } from "react";
+import {
+  JSXElementConstructor,
+  Key,
+  ReactElement,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useT } from "i18n";
 
 // react-router components
@@ -21,6 +29,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 // @mui material components
 import Icon from "@mui/material/Icon";
+import CircularProgress from "@mui/material/CircularProgress";
 
 // Material Dashboard 2 PRO React TS components
 import MDBox from "components/MDBox";
@@ -100,6 +109,17 @@ export default function App() {
     document.scrollingElement.scrollTop = 0;
   }, [pathname]);
 
+  // D7-3 (2) (15 Eki 2026): routes.tsx'teki route component'leri artık
+  // React.lazy() ile tanımlı (bkz. o dosyadaki not) — tek Suspense boundary
+  // burada, her Route'un kendi fallback'i (route değişince kısa bir an
+  // görünür, aynı sayfaya geri dönüşte webpack chunk cache'ten geldiği için
+  // tekrar görünmez).
+  const routeFallback = (
+    <MDBox display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+      <CircularProgress size={32} />
+    </MDBox>
+  );
+
   const getRoutes = (allRoutes: any[]): any =>
     allRoutes.map(
       (route: {
@@ -116,7 +136,11 @@ export default function App() {
           return (
             <Route
               path={route.route}
-              element={<ErrorBoundary>{route.component}</ErrorBoundary>}
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={routeFallback}>{route.component}</Suspense>
+                </ErrorBoundary>
+              }
               key={route.key}
             />
           );

@@ -9,33 +9,49 @@
 =========================================================
 */
 
-// ── Dispatcher — canlı operasyonel ekranlar ──
-import Drivers from "layouts/dispatcher/drivers";
-import Tasks from "layouts/dispatcher/tasks";
-import OptimizeTask from "layouts/dispatcher/tasks/optimize";
-import Exceptions from "layouts/dispatcher/exceptions";
-import Vehicles from "layouts/dispatcher/vehicles";
-import LiveFleetMap from "layouts/live-fleet-map/LiveFleetMap";
+// D7-3 (2) (15 Eki 2026): route-level code splitting. Önceden bu 13 layout
+// statik import'tu → tek bundle, Leaflet (yalnız LiveFleetMap kullanıyor,
+// bkz. grep "leaflet" src/) her sayfada indiriliyordu (Lighthouse "reduce
+// unused JavaScript" 119 KiB). `lazy()` ile her biri kendi webpack chunk'ına
+// ayrıldı; Suspense boundary'si App.tsx:getRoutes() içinde (tek yerden tüm
+// route'ları kapsar). ForgotPassword/SignInBasic BİLİNÇLİ OLARAK statik
+// kaldı: index.tsx bunları AYRICA (auth-gate, App mount'undan önce) statik
+// import ediyor — burada lazy yapmak hiçbir şeyi bölmez, webpack ikisini de
+// zaten ana chunk'a koyar (index.tsx'teki statik import yüzünden); üstelik
+// bu iki sayfa zaten küçük, Lighthouse bulgusunun kaynağı değil.
+import { lazy } from "react";
 
-// ── Optimizasyon — gated placeholder'lar (FEAT-001 / FEAT-008) ──
-import TollAnalytics from "layouts/optimization/TollAnalytics";
-import TourPlanningPlaceholder from "layouts/optimization/TourPlanningPlaceholder";
-
-// ── Sistem ──
-import Settings from "layouts/pages/account/settings";
-
+// Bilinçli olarak statik (yukarıdaki not) — index.tsx auth-gate ile paylaşılıyor.
 import ForgotPassword from "layouts/authentication/forgot-password";
 import SignInBasic from "layouts/authentication/sign-in/basic";
-// FEAT-SaaS S3 (05.08) — Sayfa 1
-import SubscriptionPage from "layouts/subscription";
-import B2bApiPage from "layouts/subscription/b2bApi";
-// FEAT-SaaS S4 (05.08) — Supervizor ikilisi (D-S2 gate ile korunur)
-import SupervisorPage from "layouts/supervisor";
-import CustomerDetailPage from "layouts/supervisor/customerDetail";
 
 // ── icons ──
 import Icon from "@mui/material/Icon";
 import type { TFunction } from "i18n";
+
+// ── Dispatcher — canlı operasyonel ekranlar ──
+const Drivers = lazy(() => import("layouts/dispatcher/drivers"));
+const Tasks = lazy(() => import("layouts/dispatcher/tasks"));
+const OptimizeTask = lazy(() => import("layouts/dispatcher/tasks/optimize"));
+const Exceptions = lazy(() => import("layouts/dispatcher/exceptions"));
+const Vehicles = lazy(() => import("layouts/dispatcher/vehicles"));
+const LiveFleetMap = lazy(() => import("layouts/live-fleet-map/LiveFleetMap"));
+
+// ── Optimizasyon — gated placeholder'lar (FEAT-001 / FEAT-008) ──
+const TollAnalytics = lazy(() => import("layouts/optimization/TollAnalytics"));
+const TourPlanningPlaceholder = lazy(
+  () => import("layouts/optimization/TourPlanningPlaceholder")
+);
+
+// ── Sistem ──
+const Settings = lazy(() => import("layouts/pages/account/settings"));
+
+// FEAT-SaaS S3 (05.08) — Sayfa 1
+const SubscriptionPage = lazy(() => import("layouts/subscription"));
+const B2bApiPage = lazy(() => import("layouts/subscription/b2bApi"));
+// FEAT-SaaS S4 (05.08) — Supervizor ikilisi (D-S2 gate ile korunur)
+const SupervisorPage = lazy(() => import("layouts/supervisor"));
+const CustomerDetailPage = lazy(() => import("layouts/supervisor/customerDetail"));
 
 export function createRoutes(t: TFunction) {
   return [

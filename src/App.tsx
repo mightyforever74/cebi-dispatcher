@@ -47,6 +47,8 @@ import { setMiniSidenav, setOpenConfigurator, useMaterialUIController } from "co
 
 // Images
 import tulipfleetLogo from "assets/images/tulipfleet-logo.png";
+// D7-3 (1) (15 Eki 2026): WebP öncelikli + PNG fallback, bkz. Sidenav brandWebp notu.
+import tulipfleetLogoWebp from "assets/images/tulipfleet-logo.webp";
 
 export default function App() {
   const [controller, dispatch] = useMaterialUIController();
@@ -156,6 +158,7 @@ export default function App() {
           <Sidenav
             color={sidenavColor}
             brand={tulipfleetLogo}
+            brandWebp={tulipfleetLogoWebp}
             brandName={t("login.brand")}
             routes={routes}
             onMouseEnter={handleOnMouseEnter}
@@ -179,6 +182,7 @@ export default function App() {
           <Sidenav
             color={sidenavColor}
             brand={tulipfleetLogo}
+            brandWebp={tulipfleetLogoWebp}
             brandName={t("login.brand")}
             routes={routes}
             onMouseEnter={handleOnMouseEnter}

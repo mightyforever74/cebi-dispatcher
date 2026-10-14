@@ -53,6 +53,10 @@ import { useT } from "i18n";
 interface Props {
   color?: "primary" | "secondary" | "info" | "success" | "warning" | "error" | "dark";
   brand?: string;
+  // D7-3 (1) (15 Eki 2026): opsiyonel WebP kaynağı — verilirse <picture> ile
+  // WebP öncelikli, `brand` (PNG) fallback olarak kullanılır. Bkz.
+  // BrandBlock/index.tsx'teki aynı optimizasyon notu.
+  brandWebp?: string;
   brandName: string;
   routes: {
     [key: string]:
@@ -70,7 +74,7 @@ interface Props {
   [key: string]: any;
 }
 
-function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Element {
+function Sidenav({ color, brand, brandWebp, brandName, routes, ...rest }: Props): JSX.Element {
   const { t } = useT();
   const [openCollapse, setOpenCollapse] = useState<boolean | string>(false);
   const [openNestedCollapse, setOpenNestedCollapse] = useState<boolean | string>(false);
@@ -312,14 +316,17 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
         </MDBox>
         <MDBox component={NavLink} to="/" display="flex" alignItems="center">
           {brand ? (
-            <img
-              src={brand}
-              alt=""
-              width={178}
-              height={240}
-              decoding="async"
-              style={{ width: "2rem", height: "auto", display: "block", flexShrink: 0 }}
-            />
+            <picture>
+              {brandWebp ? <source srcSet={brandWebp} type="image/webp" /> : null}
+              <img
+                src={brand}
+                alt=""
+                width={107}
+                height={144}
+                decoding="async"
+                style={{ width: "2rem", height: "auto", display: "block", flexShrink: 0 }}
+              />
+            </picture>
           ) : null}
           <MDBox
             width={!brandName && "100%"}
@@ -360,6 +367,7 @@ function Sidenav({ color, brand, brandName, routes, ...rest }: Props): JSX.Eleme
 Sidenav.defaultProps = {
   color: "info",
   brand: "",
+  brandWebp: "",
 };
 
 export default Sidenav;

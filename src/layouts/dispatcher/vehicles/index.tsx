@@ -15,6 +15,7 @@ import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatist
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import useDrivers, { type Driver } from "hooks/useDrivers";
+import useLastKnownCount from "hooks/useLastKnownCount";
 import useVehicles, { useUpdateVehicleCapacity, type Vehicle } from "hooks/useVehicles";
 import { formatDate, formatNumber, useT, type TFunction } from "i18n";
 import { useMemo, useState } from "react";
@@ -425,6 +426,10 @@ function VehiclesLayout(): JSX.Element {
     error,
   });
 
+  // D7-3 (7): skeleton satir sayisi son basarili yuklemede bilinen gercek
+  // arac sayisina gore ayarlanir (sabit 10 yerine).
+  const lastKnownVehicleCount = useLastKnownCount("vehicles", vehicles.length, status === "loading");
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -480,6 +485,7 @@ function VehiclesLayout(): JSX.Element {
             table={table}
             canSearch
             loading={status === "loading"}
+            skeletonRowCount={lastKnownVehicleCount}
             ariaLabel={t("vehicles.title")}
             entriesPerPage={VEHICLES_PAGE_SIZE}
           />

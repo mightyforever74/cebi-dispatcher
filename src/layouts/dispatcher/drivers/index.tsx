@@ -7,6 +7,7 @@ import StatusChip from "components/StatusChip";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import useDrivers, { type Driver } from "hooks/useDrivers";
+import useLastKnownCount from "hooks/useLastKnownCount";
 import useVehicles, { EMPTY_VEHICLES, type Vehicle } from "hooks/useVehicles";
 import { density } from "assets/theme/tokens";
 import { formatDate, formatNumber, useT } from "i18n";
@@ -138,6 +139,10 @@ function DriversLayout(): JSX.Element {
     error,
   });
 
+  // D7-3 (7): skeleton satir sayisi, sabit 10 yerine son basarili yuklemede
+  // bilinen gercek surucu sayisina gore ayarlanir (orn. Drivers tipik ~4).
+  const lastKnownDriverCount = useLastKnownCount("drivers", drivers.length, status === "loading");
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -166,6 +171,7 @@ function DriversLayout(): JSX.Element {
             table={table}
             canSearch
             loading={status === "loading"}
+            skeletonRowCount={lastKnownDriverCount}
             ariaLabel={t("drivers.title")}
             entriesPerPage={{ defaultValue: 10, entries: [5, 10, 25, 50] }}
           />

@@ -80,6 +80,14 @@ interface Props {
   };
   ariaLabel?: string;
   loading?: boolean;
+  /**
+   * D7-3 (7): yukleme sirasinda gosterilecek skeleton satir sayisi. Verilmezse
+   * eski davranis (pageSize || 10) korunur. Caginan taraf tipik olarak
+   * useLastKnownCount'tan gelen "son bilinen kayit sayisi"ni geçer, boylece
+   * az kayitli bir liste (orn. 4 surucu) her yuklemede 10 satirlik gereksiz
+   * buyuk bir iskelet gostermez.
+   */
+  skeletonRowCount?: number;
 }
 
 type SortDir = false | "none" | "ascending" | "descending";
@@ -134,6 +142,7 @@ function DataTable({
   noEndBorder = false,
   ariaLabel,
   loading = false,
+  skeletonRowCount,
 }: Props): JSX.Element {
   const { t } = useT();
   const { rowPx } = useDensity();
@@ -188,6 +197,14 @@ function DataTable({
     setGlobalFilter,
     state: { pageIndex, pageSize, globalFilter },
   } = tableInstance;
+
+  // D7-3 (7): skeletonRowCount verilmisse (orn. useLastKnownCount) onu, en
+  // fazla pageSize kadar (zaten o sayfada gosterilebilecek azami satir) ve en
+  // az 1 olacak sekilde kullan; verilmemisse eski sabit davranisa don.
+  const effectiveSkeletonRows =
+    skeletonRowCount != null
+      ? Math.max(1, Math.min(skeletonRowCount, pageSize || 10))
+      : pageSize || 10;
 
   useEffect(() => {
     const next = defaultValue || 10;
@@ -365,7 +382,7 @@ function DataTable({
         {toolbar}
         <MDBox display="flex" flexDirection="column" gap={1.5} px={1} pb={1}>
           {loading
-            ? Array.from({ length: 5 }).map((_, i) => (
+            ? Array.from({ length: Math.min(effectiveSkeletonRows, 5) }).map((_, i) => (
                 <Card key={`sk-m-${i}`} variant="outlined" sx={{ p: 1.5 }}>
                   {mobileColumns.map((col) => (
                     <Skeleton key={col.accessor} height={20} sx={{ my: 0.5 }} />
@@ -533,7 +550,7 @@ function DataTable({
           </TableHead>
           <TableBody {...getTableBodyProps()} sx={{ display: "table-row-group" }}>
             {loading
-              ? Array.from({ length: pageSize || 10 }).map((_, i) => (
+              ? Array.from({ length: effectiveSkeletonRows }).map((_, i) => (
                     <TableRow key={`sk-${i}`} role="row" sx={{ height: rowPx, maxHeight: rowPx }}>
                     {table.columns.map((col) => (
                       <TableCell

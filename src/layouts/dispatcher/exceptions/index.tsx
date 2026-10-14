@@ -22,6 +22,7 @@ import { useNotifications } from "components/Notifications";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { ExceptionEvent, ResolveAction } from "hooks/useExceptions";
+import useLastKnownCount from "hooks/useLastKnownCount";
 import { breakpoints, density } from "assets/theme/tokens";
 import { formatDateTime, useT, type TFunction, type TranslationKey } from "i18n";
 
@@ -226,6 +227,10 @@ export default function Exceptions(): JSX.Element {
     error,
   });
 
+  // D7-3 (7): skeleton satir sayisi son basarili yuklemede bilinen gercek
+  // istisna sayisina gore ayarlanir (sabit 10 yerine).
+  const lastKnownExceptionCount = useLastKnownCount("exceptions", exceptions.length, loading);
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -274,6 +279,7 @@ export default function Exceptions(): JSX.Element {
             <DataTable
               table={table}
               loading={state === "loading"}
+              skeletonRowCount={lastKnownExceptionCount}
               ariaLabel={t("exceptions.title")}
               entriesPerPage={false}
               showTotalEntries={false}

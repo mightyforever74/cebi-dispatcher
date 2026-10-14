@@ -9,6 +9,7 @@ import StatusChip, { PriorityChip } from "components/StatusChip";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import useDrivers, { type Driver } from "hooks/useDrivers";
+import useLastKnownCount from "hooks/useLastKnownCount";
 import useTasks, { type Task, type TaskFilter } from "hooks/useTasks";
 import useVehicles, { type Vehicle } from "hooks/useVehicles";
 import { density } from "assets/theme/tokens";
@@ -181,6 +182,10 @@ function TasksLayout(): JSX.Element {
     error,
   });
 
+  // D7-3 (7): skeleton satir sayisi son basarili yuklemede bilinen gercek
+  // gorev sayisina gore ayarlanir (sabit 10 yerine).
+  const lastKnownTaskCount = useLastKnownCount("tasks", tasks.length, status === "loading");
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -236,6 +241,7 @@ function TasksLayout(): JSX.Element {
             table={table}
             canSearch
             loading={status === "loading"}
+            skeletonRowCount={lastKnownTaskCount}
             ariaLabel={t("tasks.title")}
             entriesPerPage={TASKS_PAGE_SIZE}
           />

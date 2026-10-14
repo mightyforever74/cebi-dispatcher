@@ -86,6 +86,7 @@ function NotificationHost(): JSX.Element | null {
   const { pathname } = useLocation();
   const { banners, toasts, dismissToast } = useNotifications();
   const [controller] = useMaterialUIController();
+  const { miniSidenav } = controller;
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down("lg"));
   const moreLinkColor = controller.darkMode ? a11y.linkDark : a11y.linkLight;
@@ -108,11 +109,27 @@ function NotificationHost(): JSX.Element | null {
             ? {
                 position: "fixed",
                 top: density.navbar,
-                left: 0,
+                // D7-3 (5) (15 Eki 2026): bu banner position:fixed olduğu için
+                // DashboardLayout'un sidenav'a ayırdığı marginLeft'i (ki marginLeft
+                // ancestor üzerinde — fixed elemanları etkilemez) HİÇBİR genişlikte
+                // hesaba katmıyordu; sidenav görünür (hover ile açılmış ya da xl+'da
+                // kalıcı açık) olduğunda banner left:0'dan başlayıp zIndex 1300 ile
+                // sidenav'ın (zIndex 1200) üzerine biniyordu — 992px'den itibaren her
+                // genişlikte, sadece 1045px'e özgü değil. Sidenav genişliğini
+                // (DashboardLayout'un kullandığı aynı 120/274 rem değerleriyle tutarlı)
+                // burada da hesaba katarak çakışmayı önlüyoruz.
+                left: miniSidenav ? 0 : 274,
                 right: 0,
                 zIndex: 1300,
                 pointerEvents: "none",
                 "& > *": { pointerEvents: "auto" },
+                transition: theme.transitions.create("left", {
+                  easing: theme.transitions.easing.sharp,
+                  duration: theme.transitions.duration.shorter,
+                }),
+                [theme.breakpoints.up("xl")]: {
+                  left: miniSidenav ? 120 : 274,
+                },
               }
             : undefined),
         }}

@@ -128,7 +128,9 @@ function SupervisorContent({ saToken }: { saToken: string }): JSX.Element {
     <MDBox my={3}>
       <MDBox display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
         <MDBox>
-          <MDTypography variant="h4" fontWeight="bold">
+          {/* D7-3 (4) (15 Eki 2026): axe heading-order — sayfa h1'i
+              (Breadcrumbs) üstte zaten var, bu h2 olmalı. */}
+          <MDTypography variant="h4" component="h2" fontWeight="bold">
             {t("supervisor.title")}
           </MDTypography>
           <MDTypography variant="button" color="text">

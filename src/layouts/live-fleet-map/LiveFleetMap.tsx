@@ -559,6 +559,11 @@ function LiveFleetMap(): JSX.Element {
               />
             </MDBox>
 
+            {/* D7-3 (4) (15 Eki 2026): axe target-size (WCAG 2.5.8) — bu 4 chip
+                tek tıklanabilir ("onClick") olan, MUI'nin size="small" Chip
+                varsayılanı (height:24) sınırda; minHeight/minWidth 24px ile
+                açıkça garanti altına alındı (diğer sayfadaki chip'ler salt
+                bilgilendirme amaçlı, onClick yok — tap-target kapsamı dışı). */}
             <MDBox display="flex" gap={0.5} flexWrap="wrap" mb={2}>
               <Chip
                 label={t("map.filterAll")}
@@ -568,6 +573,8 @@ function LiveFleetMap(): JSX.Element {
                   bgcolor: statusFilter === "all" ? mapTokens.selected : chrome.border,
                   color: chrome.text,
                   cursor: "pointer",
+                  minHeight: "24px",
+                  minWidth: "24px",
                 }}
               />
               <Chip
@@ -578,6 +585,8 @@ function LiveFleetMap(): JSX.Element {
                   bgcolor: statusFilter === "moving" ? status.vehicle.online.border : chrome.border,
                   color: chrome.text,
                   cursor: "pointer",
+                  minHeight: "24px",
+                  minWidth: "24px",
                 }}
               />
               <Chip
@@ -588,6 +597,8 @@ function LiveFleetMap(): JSX.Element {
                   bgcolor: statusFilter === "stopped" ? status.vehicle.offline.border : chrome.border,
                   color: chrome.text,
                   cursor: "pointer",
+                  minHeight: "24px",
+                  minWidth: "24px",
                 }}
               />
               <Chip
@@ -598,6 +609,8 @@ function LiveFleetMap(): JSX.Element {
                   bgcolor: statusFilter === "ze" ? mapTokens.ze : chrome.border,
                   color: chrome.text,
                   cursor: "pointer",
+                  minHeight: "24px",
+                  minWidth: "24px",
                 }}
               />
             </MDBox>

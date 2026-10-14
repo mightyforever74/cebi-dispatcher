@@ -122,10 +122,19 @@ function SubscriptionPage(): JSX.Element {
         <Grid container justifyContent="center">
           <Grid item xs={12} lg={8}>
             <MDBox mb={4} textAlign="center">
-              <MDTypography variant="h3" fontWeight="bold">
+              {/* D7-3 (4) (15 Eki 2026): axe heading-order — sayfa h1'i
+                  (Breadcrumbs, component="h1") üstte zaten var; bu h2 olmalı.
+                  Alttaki subtitle semantik başlık değil, component="p". */}
+              <MDTypography variant="h3" component="h2" fontWeight="bold">
                 {t("plan.title")}
               </MDTypography>
-              <MDTypography variant="h6" fontWeight="regular" mt={1} sx={{ color: muted }}>
+              <MDTypography
+                variant="h6"
+                component="p"
+                fontWeight="regular"
+                mt={1}
+                sx={{ color: muted }}
+              >
                 {t("plan.subtitle")}
               </MDTypography>
             </MDBox>
@@ -151,7 +160,8 @@ function SubscriptionPage(): JSX.Element {
                       <MDTypography variant="button" fontWeight="regular" color="text">
                         {t("plan.activeQuota")}
                       </MDTypography>
-                      <MDTypography variant="h4" fontWeight="bold">
+                      {/* Bir KPI değeri, semantik başlık değil */}
+                      <MDTypography variant="h4" component="p" fontWeight="bold">
                         {quota
                           ? t("plan.vehiclesCount", {
                               active: quota.active_vehicles,
@@ -176,7 +186,7 @@ function SubscriptionPage(): JSX.Element {
 
             <Card>
               <MDBox p={3}>
-                <MDTypography variant="h5" fontWeight="bold" mb={2}>
+                <MDTypography variant="h5" component="h3" fontWeight="bold" mb={2}>
                   {t("plan.requestTitle")}
                 </MDTypography>
 

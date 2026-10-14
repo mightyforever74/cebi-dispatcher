@@ -47,7 +47,9 @@ function TollAnalytics(): JSX.Element {
       <MDBox py={3}>
         <Card sx={{ mb: 3 }}>
           <MDBox p={3}>
-            <MDTypography variant="h5" fontWeight="medium">
+            {/* D7-3 (4) (15 Eki 2026): axe heading-order — sayfa h1'i
+                (Breadcrumbs) üstte zaten var, bu kart başlığı h2 olmalı. */}
+            <MDTypography variant="h5" component="h2" fontWeight="medium">
               {t("tollAnalytics.title")}
             </MDTypography>
             <MDBox mt={1} mb={2}>

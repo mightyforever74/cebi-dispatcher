@@ -119,7 +119,12 @@ function ChangePassword(): JSX.Element {
           </MDBox>
         )}
         <MDBox mt={6} mb={1}>
-          <MDTypography variant="h5">{t("settings.passwordRequirements")}</MDTypography>
+          {/* D7-3 (4) (15 Eki 2026): axe heading-order — kart başlığı (h2,
+              satır 69) ile aynı kart içindeki bu alt-başlık arasında h3/h4
+              atlanıyordu (h2 → h5). component="h3" ile düzeltildi. */}
+          <MDTypography variant="h5" component="h3">
+            {t("settings.passwordRequirements")}
+          </MDTypography>
         </MDBox>
         <MDBox mb={1}>
           <MDTypography variant="body2" color="text">

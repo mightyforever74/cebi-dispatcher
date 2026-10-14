@@ -94,7 +94,10 @@ function SupervisorGate({ children }: Props): JSX.Element {
               <Icon fontSize="medium">shield</Icon>
             </MDBox>
             <MDBox>
-              <MDTypography variant="h5" fontWeight="bold">
+              {/* D7-3 (4) (15 Eki 2026): axe heading-order — bu ekran geçit
+                  aşılana kadar SupervisorContent'in h2'sinin yerini alıyor,
+                  aynı seviyede olmalı. */}
+              <MDTypography variant="h5" component="h2" fontWeight="bold">
                 {t("supervisor.gateTitle")}
               </MDTypography>
               <MDTypography variant="caption" color="text">

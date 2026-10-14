@@ -106,17 +106,24 @@ function B2bApiPage(): JSX.Element {
         <Grid container justifyContent="center">
           <Grid item xs={12} lg={9}>
             <MDBox mb={4} textAlign="center">
-              <MDTypography variant="h3" fontWeight="bold">
+              {/* D7-3 (4) (15 Eki 2026): axe heading-order — bkz. subscription/index.tsx aynı not. */}
+              <MDTypography variant="h3" component="h2" fontWeight="bold">
                 {t("connect.title")}
               </MDTypography>
-              <MDTypography variant="h6" fontWeight="regular" mt={1} sx={{ color: muted }}>
+              <MDTypography
+                variant="h6"
+                component="p"
+                fontWeight="regular"
+                mt={1}
+                sx={{ color: muted }}
+              >
                 {t("connect.subtitle")}
               </MDTypography>
             </MDBox>
 
             {quota && (
               <Card sx={{ p: 3, mb: 4 }}>
-                <MDTypography variant="h5" fontWeight="bold" mb={1}>
+                <MDTypography variant="h5" component="h3" fontWeight="bold" mb={1}>
                   {t("connect.quotaTitle")}
                 </MDTypography>
                 <MDTypography variant="button" color="text" fontWeight="regular" display="block" mb={2}>
@@ -147,7 +154,7 @@ function B2bApiPage(): JSX.Element {
             )}
 
             <Card sx={{ p: 3, mb: 4 }}>
-              <MDTypography variant="h5" fontWeight="bold" mb={1}>
+              <MDTypography variant="h5" component="h3" fontWeight="bold" mb={1}>
                 {t("connect.createTitle")}
               </MDTypography>
               <MDTypography variant="button" color="text" fontWeight="regular" display="block" mb={2}>
@@ -179,7 +186,7 @@ function B2bApiPage(): JSX.Element {
 
             <Card>
               <MDBox p={3}>
-                <MDTypography variant="h5" fontWeight="bold" mb={2}>
+                <MDTypography variant="h5" component="h3" fontWeight="bold" mb={2}>
                   {t("connect.keysTitle")}
                 </MDTypography>
 

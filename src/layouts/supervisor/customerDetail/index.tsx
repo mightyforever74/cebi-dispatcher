@@ -180,7 +180,9 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
             {/* Header */}
             <MDBox pt={2} px={2} display="flex" justifyContent="space-between" alignItems="center">
               <MDBox>
-                <MDTypography variant="h5" fontWeight="bold">
+                {/* D7-3 (4) (15 Eki 2026): axe heading-order — sayfa h1'i
+                    (Breadcrumbs) üstte zaten var, bu h2 olmalı. */}
+                <MDTypography variant="h5" component="h2" fontWeight="bold">
                   {companyName || t("supervisor.customerTitle")}
                 </MDTypography>
                 <MDTypography variant="caption" color="text">
@@ -207,7 +209,7 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
               <Grid container spacing={3}>
                 {/* SOL BLOK — bekleyen talepler */}
                 <Grid item xs={12} md={7}>
-                  <MDTypography variant="h6" fontWeight="bold" mb={1}>
+                  <MDTypography variant="h6" component="h3" fontWeight="bold" mb={1}>
                     {t("supervisor.pendingTitle")}
                   </MDTypography>
                   {requests.length === 0 && (
@@ -281,7 +283,7 @@ function CustomerDetailContent({ saToken }: { saToken: string }): JSX.Element {
                   <Card sx={{ p: 2, bgcolor: "rgba(0,0,0,0.02)" }}>
                     <MDBox display="flex" alignItems="center" mb={1}>
                       <Icon sx={{ mr: 1 }}>tune</Icon>
-                      <MDTypography variant="h6" fontWeight="bold">
+                      <MDTypography variant="h6" component="h3" fontWeight="bold">
                         {t("supervisor.manualTitle")}
                       </MDTypography>
                     </MDBox>

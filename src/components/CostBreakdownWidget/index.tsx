@@ -78,7 +78,9 @@ function CostBreakdownWidget({ from, to, groupBy = "vehicle" }: CostBreakdownWid
             <MDTypography variant="caption" color="text">
               {t("tollAnalytics.widget.totalToll")}
             </MDTypography>
-            <MDTypography variant="h5" fontWeight="bold">
+            {/* D7-3 (4) (15 Eki 2026): axe heading-order — bu üçü KPI değeri,
+                semantik başlık değil (caption etiketlerin altındaki rakamlar). */}
+            <MDTypography variant="h5" component="p" fontWeight="bold">
               {formatEur(data.total_toll_eur)}
             </MDTypography>
           </MDBox>
@@ -86,7 +88,7 @@ function CostBreakdownWidget({ from, to, groupBy = "vehicle" }: CostBreakdownWid
             <MDTypography variant="caption" color="text">
               {t("tollAnalytics.widget.totalKm")}
             </MDTypography>
-            <MDTypography variant="h5" fontWeight="bold">
+            <MDTypography variant="h5" component="p" fontWeight="bold">
               {data.total_km.toFixed(1)} km
             </MDTypography>
           </MDBox>
@@ -94,7 +96,7 @@ function CostBreakdownWidget({ from, to, groupBy = "vehicle" }: CostBreakdownWid
             <MDTypography variant="caption" color="text">
               {t("tollAnalytics.widget.avgPerKm")}
             </MDTypography>
-            <MDTypography variant="h5" fontWeight="bold">
+            <MDTypography variant="h5" component="p" fontWeight="bold">
               {data.avg_eur_per_km === null ? "—" : `€${data.avg_eur_per_km.toFixed(4)}`}
             </MDTypography>
           </MDBox>

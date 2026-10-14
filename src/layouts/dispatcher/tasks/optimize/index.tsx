@@ -132,6 +132,8 @@ import {
   ScoringTask,
   ScoringVehicleSnapshot,
 } from "services/dispatch/scoring/types";
+// FEAT-020 Phase 1.3b (Katman C) - statik/canli kapasite kaynak secimi
+import { resolveCargoCapacity, VehicleCargoRow } from "services/dispatch/scoring/cargoCapacityResolver";
 
 // Kisit sozlesmesi (form <-> scorer TEK gercek)
 import {
@@ -727,24 +729,19 @@ function OptimizeTask(): JSX.Element {
     return map;
   }, [vehicles]);
 
-  // FEAT-020 Phase 1.2: public.vehicles kargo kapasite kolonlari (Vehicle
-  // tipi [key:string]:any gevsek tipli, optional chaining ile okunur).
-  // GERCEK VERI AKMASI FN-3'e bagli (enterprise-backend /api/dispatcher/vehicles
-  // route'u bu kolonlari henuz SELECT etmiyor, spec'te acik madde) - o kapanana
-  // kadar bu map hep undefined doner, cargoScorer fallback'e duser (bloke etmez).
+  // FEAT-020 Phase 1.2 + 1.3b (Katman A statik + Katman C canli, 2026-10-13):
+  // public.vehicles kargo kapasite kolonlari (Vehicle tipi [key:string]:any
+  // gevsek tipli, optional chaining ile okunur). FN-3 KAPANDI (2026-10-13) —
+  // enterprise-backend /api/dispatcher/vehicles artik statik VE canli
+  // kolonlari + companies.cargo_capacity_tracking'i SELECT ediyor. Kaynak
+  // secimi (statik mi canli mi) resolveCargoCapacity'de (cargoCapacityResolver.ts,
+  // bkz. kendi testleri) — bu useMemo sadece cagiriyor, karar mantigi
+  // scorer'dan tamamen ayri kaldi.
   const vehicleCargoCapacityById = useMemo(() => {
     const map: Record<string, ScoringVehicleSnapshot["cargoCapacity"]> = {};
     vehicles.forEach((v: Vehicle) => {
-      const hasAny =
-        v.cargo_capacity_volume_m3 !== undefined ||
-        v.cargo_capacity_weight_kg !== undefined ||
-        v.hazmat_certified_classes !== undefined;
-      if (!hasAny) return;
-      map[v.id] = {
-        volumeM3: v.cargo_capacity_volume_m3 ?? null,
-        weightKg: v.cargo_capacity_weight_kg ?? null,
-        hazmatCertifiedClasses: v.hazmat_certified_classes ?? [],
-      };
+      const resolved = resolveCargoCapacity(v as VehicleCargoRow);
+      if (resolved) map[v.id] = resolved;
     });
     return map;
   }, [vehicles]);

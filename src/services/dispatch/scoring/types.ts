@@ -56,12 +56,16 @@ export interface ComplianceAssessRow {
 }
 
 /**
- * FEAT-020 Phase 1.1/1.2 (2026-10-12): public.vehicles'taki statik kargo
- * kapasite kolonlarinin (migration 1783400000000) snapshot kesiti.
- * undefined = alan hic gelmedi (enterprise-backend /api/dispatcher/vehicles
- * route'u bu kolonlari henuz SELECT etmiyor — FEAT-020 spec FN-3, acik madde);
- * null alanlar = arac kaydinda veri girilmemis. Ikisi de cargoScorer'da ayni
- * "veri yok" fallback'ine duser (eligible:true, notr) — hazmat gate HARIC.
+ * FEAT-020 Phase 1.1/1.2/1.3b (2026-10-12/13): public.vehicles'taki kargo
+ * kapasite verisinin (statik — migration 1783400000000 — veya canli —
+ * migration 1783600000000, Katman C) cozumlenmis snapshot kesiti.
+ * Kaynak secimi (statik mi canli mi) dispatcher'da cargoCapacityResolver.ts
+ * tarafindan yapilir; bu alana geldiginde zaten tek bir kaynaga indirgenmis
+ * olur. undefined = hic veri yok (FN-3 KAPANDI 2026-10-13 — enterprise-backend
+ * /api/dispatcher/vehicles artik bu kolonlari SELECT ediyor; undefined artik
+ * sadece arac kaydinda gercekten hic veri olmadigi anlamina gelir); null
+ * alanlar = veri var ama o alan bos. Ikisi de cargoScorer'da ayni "veri yok"
+ * fallback'ine duser (eligible:true, notr) — hazmat gate HARIC.
  */
 export interface VehicleCargoCapacity {
   volumeM3: number | null;

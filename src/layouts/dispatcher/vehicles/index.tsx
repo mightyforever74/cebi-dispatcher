@@ -1,6 +1,9 @@
-import { Chip } from "@mui/material";
+import { Chip, IconButton, TextField } from "@mui/material";
+import Icon from "@mui/material/Icon";
 import { paletteLight } from "assets/theme/tokens";
 import Grid from "@mui/material/Grid";
+import ConfirmDialogShell from "components/ConfirmDialogShell";
+import { useNotifications } from "components/Notifications";
 import DataState, { isDataStale, listFetchState } from "components/DataState";
 import DataTable, { type DataColumn, type DataRow } from "components/DataTable";
 import FuelGaugeMini from "components/FuelGaugeMini";
@@ -12,15 +15,45 @@ import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatist
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import useDrivers, { type Driver } from "hooks/useDrivers";
-import useVehicles, { type Vehicle } from "hooks/useVehicles";
-import { formatDate, formatNumber, useT } from "i18n";
-import { useMemo } from "react";
+import useVehicles, { useUpdateVehicleCapacity, type Vehicle } from "hooks/useVehicles";
+import { formatDate, formatNumber, useT, type TFunction } from "i18n";
+import { HAZMAT_CLASS_OPTIONS } from "types/metadata";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toNum } from "utils/toNum";
 
 const EMPTY_VEHICLES: Vehicle[] = [];
 const EMPTY_DRIVERS: Driver[] = [];
 const VEHICLES_PAGE_SIZE = { defaultValue: 10, entries: [5, 10, 25, 50] };
+
+// FEAT-013 W12 (2026-10-14): ayni etiketleme deseni optimize/index.tsx
+// hazmatLabel'dan kanitli -- ayni i18n key'i (optimize.hazmatClass) paylasir,
+// bilerek: tek bir "Sinif N" gosterim sozlesmesi butun dispatcher'da.
+function hazmatLabel(cls: string, translate: TFunction): string {
+  const n = cls.replace(/\D/g, "");
+  return n ? translate("optimize.hazmatClass", { n }) : cls;
+}
+
+interface CapacityDraft {
+  volumeM3: string;
+  weightKg: string;
+  hazmatClasses: string[];
+}
+
+function toCapacityDraft(v: Vehicle): CapacityDraft {
+  return {
+    volumeM3: v.cargo_capacity_volume_m3 != null ? String(v.cargo_capacity_volume_m3) : "",
+    weightKg: v.cargo_capacity_weight_kg != null ? String(v.cargo_capacity_weight_kg) : "",
+    hazmatClasses: Array.isArray(v.hazmat_certified_classes) ? v.hazmat_certified_classes : [],
+  };
+}
+
+function parseDraftNumber(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed.replace(",", "."));
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
 
 function emissionClassColor(emissionClass?: string): "success" | "info" | "warning" | "error" {
   if (!emissionClass) return "info";
@@ -48,6 +81,55 @@ function VehiclesLayout(): JSX.Element {
   const vehicles = data ?? EMPTY_VEHICLES;
   const drivers = driversData ?? EMPTY_DRIVERS;
   const navigate = useNavigate();
+  const { notifyToast } = useNotifications();
+
+  // FEAT-013 W12 (2026-10-14): hazmat veri-girisi UI -- editDraft null degilse
+  // dialog acik. editDraft.vehicle ayri tutulur (plaka basligi icin), draft
+  // alanlari ayri state (TextField'larin kontrollu olmasi icin string tutulur,
+  // sayiya cevirme submit'te yapilir).
+  const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
+  const [draft, setDraft] = useState<CapacityDraft>({ volumeM3: "", weightKg: "", hazmatClasses: [] });
+  const updateCapacity = useUpdateVehicleCapacity();
+
+  const openCapacityEdit = (v: Vehicle) => {
+    setDraft(toCapacityDraft(v));
+    setEditVehicle(v);
+  };
+
+  const closeCapacityEdit = () => {
+    if (updateCapacity.isPending) return;
+    setEditVehicle(null);
+  };
+
+  const toggleDraftHazmat = (cls: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      hazmatClasses: prev.hazmatClasses.includes(cls)
+        ? prev.hazmatClasses.filter((c) => c !== cls)
+        : [...prev.hazmatClasses, cls],
+    }));
+  };
+
+  const saveCapacity = () => {
+    if (!editVehicle) return;
+    updateCapacity.mutate(
+      {
+        id: editVehicle.id,
+        capacity: {
+          cargo_capacity_volume_m3: parseDraftNumber(draft.volumeM3),
+          cargo_capacity_weight_kg: parseDraftNumber(draft.weightKg),
+          hazmat_certified_classes: draft.hazmatClasses,
+        },
+      },
+      {
+        onSuccess: () => {
+          notifyToast({ type: "form_ok", titleKey: "notifyForm.saved" });
+          setEditVehicle(null);
+        },
+        onError: () => notifyToast({ type: "form_err", titleKey: "notifyForm.saveFailed", severity: "high" }),
+      }
+    );
+  };
 
   const driverNameByVehicleId = useMemo(() => {
     const m = new Map<string, string>();
@@ -71,6 +153,7 @@ function VehiclesLayout(): JSX.Element {
       { Header: t("vehicles.colEmission"), accessor: "emission_badge", minWidth: 88, maxWidth: 120 },
       { Header: t("vehicles.colStatus"), accessor: "status_badge", minWidth: 96, maxWidth: 120, primary: true },
       { Header: t("vehicles.colDriver"), accessor: "assigned_driver_name", minWidth: 110, maxWidth: 160, truncate: true },
+      { Header: t("vehicles.colCapacity"), accessor: "capacity_cell", minWidth: 150, maxWidth: 220 },
     ];
 
     const rows: DataRow[] = vehicles.map((v: Vehicle) => {
@@ -198,6 +281,35 @@ function VehiclesLayout(): JSX.Element {
 
       const driverName = driverNameByVehicleId.get(v.id) ?? null;
 
+      const hazmatClasses = Array.isArray(v.hazmat_certified_classes) ? v.hazmat_certified_classes : [];
+      const volumeM3 = toNum(v.cargo_capacity_volume_m3);
+      const weightKg = toNum(v.cargo_capacity_weight_kg);
+      const hasCapacityData = volumeM3 != null || weightKg != null || hazmatClasses.length > 0;
+      const capacitySummary = hasCapacityData
+        ? [
+            volumeM3 != null ? `${formatNumber(volumeM3, lang)} m³` : null,
+            weightKg != null ? `${formatNumber(weightKg, lang)} kg` : null,
+            hazmatClasses.length > 0 ? t("vehicles.capacityHazmatCount", { count: hazmatClasses.length }) : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : t("vehicles.capacityNone");
+      const capacityCell = (
+        <MDBox display="flex" alignItems="center" justifyContent="space-between" gap={0.5}>
+          <MDTypography variant="caption" noWrap title={capacitySummary} sx={{ color: hasCapacityData ? "text.main" : "text.secondary" }}>
+            {capacitySummary}
+          </MDTypography>
+          <IconButton
+            size="small"
+            aria-label={t("vehicles.editCapacityAction")}
+            title={t("vehicles.editCapacityAction")}
+            onClick={() => openCapacityEdit(v)}
+          >
+            <Icon fontSize="small">edit</Icon>
+          </IconButton>
+        </MDBox>
+      );
+
       return {
         vehicle_info: vehicleInfo,
         category_badge: categoryBadge,
@@ -209,13 +321,14 @@ function VehiclesLayout(): JSX.Element {
         emission_badge: emissionBadge,
         status_badge: <StatusChip kind="vehicle" value={v.status} />,
         assigned_driver_name: driverName ?? "—",
+        capacity_cell: capacityCell,
         id: v.id,
         _ariaLabel: plate,
       };
     });
 
     return { columns, rows };
-  }, [vehicles, driverNameByVehicleId, navigate, t, lang]);
+  }, [vehicles, driverNameByVehicleId, navigate, t, lang, openCapacityEdit]);
 
   const status = listFetchState({
     isLoading,
@@ -284,6 +397,59 @@ function VehiclesLayout(): JSX.Element {
           />
         </DataState>
       </MDBox>
+
+      <ConfirmDialogShell
+        open={editVehicle !== null}
+        severity="accent"
+        icon="edit"
+        title={t("vehicles.editCapacityTitle")}
+        subtitle={editVehicle?.plate_no || undefined}
+        submitting={updateCapacity.isPending}
+        confirmLabel={t("vehicles.editCapacitySave")}
+        submittingLabel={t("vehicles.editCapacitySaving")}
+        onCancel={closeCapacityEdit}
+        onConfirm={saveCapacity}
+      >
+        <MDBox display="flex" gap={1.5} mb={2}>
+          <TextField
+            fullWidth
+            size="small"
+            label={t("vehicles.volumeM3Label")}
+            value={draft.volumeM3}
+            onChange={(e) => setDraft((prev) => ({ ...prev, volumeM3: e.target.value }))}
+            inputProps={{ inputMode: "decimal" }}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            fullWidth
+            size="small"
+            label={t("vehicles.weightKgLabel")}
+            value={draft.weightKg}
+            onChange={(e) => setDraft((prev) => ({ ...prev, weightKg: e.target.value }))}
+            inputProps={{ inputMode: "decimal" }}
+            InputLabelProps={{ shrink: true }}
+          />
+        </MDBox>
+        <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
+          {t("vehicles.hazmatTitle")}
+        </MDTypography>
+        <MDBox display="flex" flexWrap="wrap" gap={0.75}>
+          {HAZMAT_CLASS_OPTIONS.map((cls) => {
+            const selected = draft.hazmatClasses.includes(cls);
+            return (
+              <Chip
+                key={cls}
+                label={hazmatLabel(cls, t)}
+                size="small"
+                clickable
+                color={selected ? "warning" : "default"}
+                variant={selected ? "filled" : "outlined"}
+                onClick={() => toggleDraftHazmat(cls)}
+              />
+            );
+          })}
+        </MDBox>
+      </ConfirmDialogShell>
     </DashboardLayout>
   );
 }

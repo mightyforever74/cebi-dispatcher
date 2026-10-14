@@ -5,316 +5,103 @@
 | **Feature ID** | FEAT-018 |
 | **Source** | Wishlist W18 — "Reverse Logistics Handling" |
 | **Frequency rating** | Common |
-| **Tulipfleet Phase** | Phase 1.1 (A customer pickup + B failed delivery RTS) + Phase 2 (C RMA lifecycle, customer-funded trigger) |
-| **Spec readiness** | Yorum B kararı, 2026-05-30 — Phase 2 etiketi korunur, spec şimdi yazılır |
-| **Status** | Function spec drafted via NotebookLM (1 prompt, 2026-05-30) |
-| **Pilot note** | On üçüncü pilot. **8.5/10** skor, tek iterasyon. **§number fabrikasyon = 0** ✅ (F8-F10-F17-F14-F18 zinciri stable), **section misattribution = 1** ⚠️ (F14'teki AYNI hata tekrarlandı — yeni hata sınıfı KALICI). Yeni paradigma: **multi-flow reverse logistics** — 3 alt-paradigma (A/B/C) tek spec'te. |
+| **Tulipfleet Phase** | Phase 1.1 (A customer pickup + B failed delivery RTS) + Phase 2 (C RMA lifecycle) + Phase 2.5 (D warehouse hierarchy + E CRM/CSAT, customer-funded) |
+| **Spec readiness** | v2 (2026-10-13) — akademik yaşam döngüsü (Shipment & Return Lifecycle) terminolojisiyle genişletildi, kural tabanlı durum geçiş matrisi netleştirildi, WMS/CRM/audit-trail prensipleri ayrıştırıldı |
+| **Status** | Spec-only — hiçbir satır kod/migration henüz yazılmadı (bkz. §0 gatekeep) |
+
+> **Not (ID tutarsızlığı):** `docs/ROADMAP.md`'nin Wishlist Coverage Matrix tablosu W18'i `FEAT-109` olarak gösteriyor, ama bu spec dosyasının adı ve ROADMAP'in kendi Phase-2-zinciri tablosu (`FEAT-018 Reverse ...`) `FEAT-018` kullanıyor. Bu dosya, dosya adı + ROADMAP'in çoğunluk kullanımıyla tutarlı kalıp `FEAT-018` kullanmayı sürdürüyor. ROADMAP'teki W18 satırının `FEAT-109`'u düzeltilmesi ayrı, küçük bir doküman-hijyen maddesi — bu rewrite'ın kapsamı dışında bırakıldı.
 
 ---
 
-## 1. Feature description
+## 0. Gatekeep bulguları (bu rewrite'tan önce doğrulanan gerçekler)
+
+Kod/DB'ye bakılmadan devam edilmedi:
+
+1. **Phase 1.1 şeması (`direction`/`parent_task_id`) hiçbir zaman uygulanmadı.** `tulipfleet-backend` ve `tulipfleet-enterprise-backend` migration klasörlerinde bu kolonlara dair hiçbir iz yok. v1'den (2026-05-30) beri bu spec üzerinde hiç kod yazılmamış — bu rewrite da yalnızca spec, implementasyon değil.
+2. **v1'in "cross-spec sync TODO" iddiası kısmen YANLIŞ çıktı — düzeltildi:** `returns_pickup_failed` ve `rts_warehouse_unreachable` exception type'ları **zaten canlı** — `tulipfleet-backend migrations/1782800000000_bug1-overlap-foundation.sql`, `enterprise.exception_events.exception_type` CHECK constraint'inde mevcut (muhtemelen başka bir pilot/oturumda toplu eklenmiş, bu spec'in kendi commit'i değil). **Gerçekten açık kalan tek parça:** `FEAT-010-automated-exception-handling.md`'nin kendi Severity Matrix dokümantasyonunda bu 2 değer hâlâ yok — DB'de var, dokümantasyonda yok. §6'da bu netleştirildi.
+3. **`public.warehouses` ve `enterprise.customer_feedback` hiçbir repoda yok** — ikisi de bu rewrite'ta sıfırdan tasarlanan, henüz migration'ı yazılmamış yeni tablolar (§3).
+4. **`enterprise.exception_events` fiziksel olarak `tulipfleet-backend` repo'sunun migration'larıyla yönetiliyor**, `tulipfleet-enterprise-backend` (Fastify API servisi) değil — Postgres şema adı `enterprise` olsa da, migration sahipliği core backend'de. Referanslarda bu doğru repo adıyla anılıyor.
+
+---
+
+## 1. Genişletilmiş Feature Tanımı ve Akademik Yaşam Döngüsü (Shipment & Return Lifecycle)
 
 ### 1.1 Wishlist tanımı
 
 > *"This use case involves managing the complex process of picking up, transporting, and storing customer returns and replacements."*
 
-### 1.2 3 alt-paradigma — kapsam ayrımı
+### 1.2 Akademik aşama ↔ TulipFleet karşılığı — kapsam haritası
+
+Her akademik lojistik aşaması TulipFleet'in gerçek mimarisine (ADR-0002 VRP solver, ADR-0005 Advisory mode, ADR-0011 K/M-segman kapsamı) karşı denetlendi. Bir aşama ürünün gerçek kapsamına uymuyorsa, zorla içeri sokulmadı — gerekçeli olarak kapsam dışı bırakıldı.
+
+| Akademik aşama (APICS/CSCMP) | TulipFleet karşılığı | Kapsam kararı |
+|---|---|---|
+| **Order Initiation & Reservation** | RMA talep girişi (FN-10 `POST /rma/requests`); depo slotu rezervasyonu | RMA: içeride (Faz 2). Slot rezervasyonu: **Faz 2.5**, FEAT-006 dock appointment'ın (zaten var olan) bir uzantısı — yeni kavram değil |
+| **Inbound / Warehousing & ASN** | `syncWarehouseReturn` (FN-14) — araç depo geofence'ine girince tetiklenir | **Kısmi.** Gerçek ASN (Advanced Shipping Notice) üretimi/protokolü müşterinin WMS'inin işi (SAP EWM, Manhattan vb.) — TulipFleet bunu **üretmez**, sadece "received" event'ini WMS connector üzerinden **tüketir** (ADR-0007 §3.2 adapter pattern). Kendi ASN şemamızı icat etmek over-engineering olur |
+| **Cross-Docking & Sorting** | Yeni: çok-depolu hiyerarşi, `warehouse_type='cross_dock_hub'` ara durak | **Faz 2.5**, opsiyonel — şirket gerçekten birden fazla depo/hub kullanıyorsa devreye girer, kullanmıyorsa `warehouses` tablosu tek satırla (tek merkezi depo) sorunsuz çalışır (additive, geriye dönük nötr) |
+| **Line-Haul / Trunking** | — | **KAPSAM DIŞI, gerekçeli.** TulipFleet Advisory-mode VRP ile bölgesel/last-mile dispatch yapan bir ürün (ADR-0002 HERE Tour Planning, ADR-0011 K/M-segman 50–300 araçlık filolar). Uzun-hat ana taşıma (line-haul network optimization, multi-echelon hub-and-spoke) tamamen farklı bir problem sınıfı ve farklı bir ürün kategorisi — mevcut VRP mimarisine zorla eklenmesi yanlış olur. Bir şirketin gerçekten line-haul ihtiyacı çıkarsa bu ayrı bir ADR/feature konusu |
+| **Last-Mile Delivery & PoD** | Mevcut — FEAT-011 PoD Capture'a delege | İçeride (delegasyon, v1'den değişmedi) |
+| **Reverse Logistics, RMA & RTS** | Spec'in çekirdeği — alt-paradigma A/B/C | İçeride (v1'den korunur, §2'de netleştirildi) |
+
+### 1.3 3 alt-paradigma — kapsam ayrımı (v1'den değişmeden korunur)
 
 | Alt-paradigma | Detay | Phase | Fonksiyon |
 |---|---|---|---|
-| **A) Customer pickup (return)** | Driver müşteri adresine gidip return alır. HERE Tour Planning mixed pickup/delivery (ADR-0002 §3.2 native). | 1.1 | FN-01, FN-02, FN-04, FN-05, FN-07 (5 fn) |
-| **B) Failed delivery → return-to-sender (RTS)** | Teslim edilemeyen paket otomatik warehouse'a döner. FEAT-017 locker reverse paralel pattern. | 1.1 | FN-03, FN-06, FN-08, FN-09 (4 fn, **konsolidasyonda +2**) |
-| **C) RMA lifecycle** | Customer return talebi → schedule → pickup → warehouse → processed → replacement (opsiyonel). State machine. | 2 (customer-funded) | FN-10, FN-11, FN-12, FN-13, FN-14, FN-15 (6 fn) |
+| **A) Customer pickup (return)** | Driver müşteri adresine gidip return alır. HERE Tour Planning mixed pickup/delivery (ADR-0002 §3.2 native). | 1.1 | FN-01, FN-02, FN-04, FN-05, FN-07, FN-09 |
+| **B) Failed delivery → return-to-sender (RTS)** | Teslim edilemeyen paket otomatik warehouse'a döner. FEAT-017 locker reverse paralel pattern. | 1.1 | FN-03, FN-06, FN-08 |
+| **C) RMA lifecycle** | Customer return talebi → schedule → pickup → warehouse → processed → replacement (opsiyonel). State machine. | 2 | FN-10, FN-11, FN-12, FN-13, FN-14, FN-15, FN-16 |
+| **D) Depo hiyerarşisi (yeni, v2)** | Çok-depolu/multi-hub yapı, cross-dock ara durak | 2.5 | FN-17 |
+| **E) CRM/CSAT/SLA geri bildirimi (yeni, v2)** | İade sonrası müşteri memnuniyeti + şikayet + SLA ihlali kaydı | 2.5 | FN-18, FN-19 |
 
-### 1.3 Önceki FEAT'lerle delegasyon
+### 1.4 Önceki FEAT'lerle delegasyon (v1'den korunur)
 
 | Önceki | Delegasyon noktası |
 |---|---|
 | **FEAT-017:FN-11** `onCustomerLockerDropoff` | `locker_return` türü FEAT-017'ye delege edilir, FEAT-018 yeniden yazmaz |
-| **FEAT-001:FN-016** `buildHereProblem` | Mixed pickup/delivery extension burada (FN-07 buildHereProblemWithMixedLoads) |
+| **FEAT-001:FN-016** `buildHereProblem` | Mixed pickup/delivery extension burada (FN-07) |
 | **FEAT-002:FN-02** `POST /replan` | RTS sırasında failed delivery re-plan tetikler |
-| **FEAT-009 carbon** | Return loads emission tracking — mevcut `carbon_footprint_kg` infrastructure |
-| **FEAT-010:FN-06** `logExceptionEvent` | `returns_pickup_failed`, `rts_warehouse_unreachable` exception types |
-| **FEAT-006:FN-08** dock appointment | Warehouse return arrival appointment (Phase 2) |
+| **FEAT-009 carbon** | Return loads emission tracking |
+| **FEAT-010:FN-06** `logExceptionEvent` | `returns_pickup_failed`, `rts_warehouse_unreachable` — **zaten canlı**, bkz. §0.2 |
+| **FEAT-006:FN-08** dock appointment | Warehouse return arrival appointment + depo slot rezervasyonu (Faz 2.5 §1.2) |
+| **FEAT-011 PoD Capture** | RMA dokümantasyonu (CMR/irsaliye) — FEAT-018 kendi dokümantasyon disiplinini icat etmez |
 
-### 1.4 ML disipline kritik nüans
+### 1.5 Kapsam — içeride / dışarıda (güncellendi)
 
-| Konu | Karar |
-|---|---|
-| Return reason prediction | ❌ Phase 3+ candidate (ADR-0010 §3.5) |
-| Pickup time optimization | ✅ Weighted sum (ADR-0010 §3.4 — FN-04 calculateReturnPriority) |
-| Replacement product matching | ❌ E-commerce SKU işi, KAPSAM DIŞI |
-| Return condition AI inspection | ❌ Phase 3+ |
-| Auto-acceptance of returns | ⚠️ Policy-based stub (Mode 1 advisory, Mode 2 customer-funded) |
+**İçeride:** 3 alt-paradigma (A/B/C) + depo hiyerarşisi (D, Faz 2.5) + CSAT/şikayet/SLA geri bildirimi (E, Faz 2.5) · HERE mixed pickup/delivery · `direction`+`parent_task_id` · `enterprise.rma_requests` · `public.warehouses` (yeni) · `enterprise.customer_feedback` (yeni) · WMS connector'a TEK giriş noktası (FN-14) · cross-spec: FEAT-001/002/006/009/010/011/017
 
-### 1.5 Kapsam — içeride
-
-- 3 alt-paradigma (A, B, C) tek spec
-- HERE Tour Planning mixed pickup/delivery native kullanımı
-- `enterprise.dispatch_tasks.direction` enum + `parent_task_id` schema
-- `enterprise.rma_requests` yeni tablo (Phase 2)
-- State machine RMA lifecycle (Phase 2)
-- Cross-spec entegrasyon: FEAT-001, 002, 009, 010, 017
-- WMS connector Phase 2 (FEAT-108)
-
-### 1.6 Kapsam — dışarıda
-
-- **Replacement product catalog** — e-commerce SKU yönetimi
-- **Customer-facing return portal UI** — Phase 3 ADR pending
-- **Refund processing** — finance system işi
-- **International returns customs declaration** — Phase 3+
-- **Return condition AI inspection** — Phase 3+
-- **Return reason prediction ML** — Phase 3+ (ADR-0010 §3.5)
+**Dışarıda:** Replacement product catalog (e-ticaret SKU) · Customer-facing return portal UI (Phase 3 ADR) · Refund processing (finance sistemi) · International customs declaration (Phase 3+) · Return condition AI inspection (Phase 3+) · Return reason prediction ML (Phase 3+, ADR-0010 §3.5) · **Line-haul/trunking ağ optimizasyonu** (yeni, §1.2 gerekçeli) · **Genel amaçlı WMS/CRM inşası** — TulipFleet kendi WMS'ini veya CRM'ini yazmaz, sadece adapter/connector noktası sağlar (§5)
 
 ---
 
-## 2. Function catalog
+## 2. Kural Tabanlı Durum Geçiş Engine'i (Automated vs. Dispatcher Approval State Machine)
 
-| # | Function ID | Layer | Signature / Endpoint | Inputs | Outputs | Reads from | Writes to | External deps | ADR ref (alıntılı) | Phase | Shared with FEAT-001..10,14,17 |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | FEAT-018-FN-01 | backend | `createReturnTask` | taskData, direction='inbound' | { taskId } | — | enterprise.dispatch_tasks | — | ADR-0009 §4.4 — "Dispatcher-created and dispatcher-approved plans flow into the driver-facing task model." | 1.1 | **FEAT-003** order ingestion pattern |
-| 2 | FEAT-018-FN-02 | backend | `linkParentTask` | returnTaskId, originalTaskId | Success | enterprise.dispatch_tasks | enterprise.dispatch_tasks (parent_task_id) | — | ADR-0004 v3 §6 — "Additive ve geriye dönük uyumlu... değişikliklere izin verilir." | 1.1 | — |
-| 3 | FEAT-018-FN-03 | backend | `validateReversePolicy` | taskId, companyId | { allowed, reason? } | public.companies (settings) | — | — | ADR-0005 §7 — "Add policy module structure in the enterprise backend (`src/dispatch/policy.ts`) that reads the mode and currently always returns 'advisory'." | 1.1 | **FEAT-003:FN-08** policy engine pattern |
-| 4 | FEAT-018-FN-04 | shared_library | `calculateReturnPriority` | taskId, delayTime, customerSla | score: numeric (0-100) | enterprise.dispatch_tasks | — | — | ADR-0010 §3.4 — "'Reward function' in conversation → in implementation, it is a weighted sum of constraint penalties in HERE's `objective`. **No learning.**" | 1.1 | **FEAT-003:FN-06** + **FEAT-014:FN-05** weighted sum pattern |
-| 5 | FEAT-018-FN-05 | backend | `GET /api/dispatcher/returns` | company_id, status, direction | Task[] | enterprise.dispatch_tasks | — | — | ADR-0011 §9.5 — "Phase 1 endpoint patterns" | 1.1 | **FEAT-001:FN-006** list endpoint pattern |
-| 6 | FEAT-018-FN-06 | worker | `triggerReturnToSender` | originalTaskId, reason | { returnTaskId } | enterprise.dispatch_tasks | enterprise.dispatch_tasks (new inbound task) | — | ADR-0005 §5.3 — "If rules trigger an exception, system marks the task `needs_dispatcher` and notifies the dispatcher." | 1.1 | **FEAT-017:FN-11** reverse flow pattern |
-| 7 | FEAT-018-FN-07 | shared_library | `buildHereProblemWithMixedLoads` | tasks (outbound + inbound), vehicles | HERE_JSON | enterprise.dispatch_tasks | — | HERE Tour Planning | ADR-0002 §3.2 — "HERE Tour Planning natively models constraints (vehicle height, cold chain, driver shift rules, mixed pickup/delivery, refueling stops)" | 1.1 | **FEAT-001:FN-016** buildHereProblem (mixed extension) |
-| 8 | FEAT-018-FN-08 | backend | `resolveRtsDestination` (**KONSOLIDASYONDA EKLENDİ**) | originalTaskId, currentLocation | { destinationType, destinationId, reason } | public.companies (settings), public.geofences (locker/pudo), enterprise.dispatch_tasks | — | — | ADR-belirsiz (RTS destination resolution — UNCERTAINTIES #4 cevap) | 1.1 | **FEAT-017:FN-01** findNearbyLockers (locker alt-yol seçimi) |
-| 9 | FEAT-018-FN-09 | backend | `processCustomerPickupWindow` (**KONSOLIDASYONDA EKLENDİ**) | taskId, customerWindows | Success | enterprise.dispatch_tasks | enterprise.dispatch_tasks (time_window metadata) | — | ADR-0002 §3.4 — soft constraint time-window (ADR-0002 addendum §3.4 customer time window) | 1.1 | **FEAT-006:FN-03** time window pattern |
-| 10 | FEAT-018-FN-10 | backend | `POST /api/dispatcher/rma/requests` | rmaData | { rmaId } | — | enterprise.rma_requests | — | ADR-belirsiz (RMA ingestion pattern) | 2 | — |
-| 11 | FEAT-018-FN-11 | backend | `evaluateRmaDecision` | rmaId, action, (JWT.user_id) | Success | enterprise.rma_requests | enterprise.rma_requests (state transition) | — | ADR-0005 §2 — "Mode 1 — Advisory: The system suggests dispatch decisions. The dispatcher approves every action before it takes effect." | 2 | — |
-| 12 | FEAT-018-FN-12 | shared_library | `getRmaLifecycleTimeline` | rmaId | Timeline[] | enterprise.rma_requests | — | — | ADR-0005 §4.1 — "Audit. Every action (plan submitted, proposal received, dispatcher modification, approve, reject) is logged for later review and Mode 2/3 training data." | 2 | — |
-| 13 | FEAT-018-FN-13 | worker | `monitorRmaSla` | (cron trigger, hourly) | void | enterprise.rma_requests | enterprise.exception_events | — | ADR-0011 §6 — "FEAT-101 Automated Exception-Based Dispatch (Mode 2)" | 2 | **FEAT-010:FN-06** logExceptionEvent + **FEAT-014:FN-04** + **FEAT-017:FN-12** deadline monitoring pattern |
-| 14 | FEAT-018-FN-14 | backend | `syncWarehouseReturn` | taskId, wmsRef | Success | — | enterprise.rma_requests, enterprise.dispatch_tasks (status=warehouse_received) | WMS API | ADR-0007 §3.2 — "Every third-party telematics provider's API changes over time." | 2 | **FEAT-006:FN-08** dock appointment pattern |
-| 15 | FEAT-018-FN-15 | backend | `broadcastReturnStatus` | taskId, status | void | — | — | EMQX MQTT | ADR-0009 §8 — "MQTT publish from enterprise backend — for direct vehicle commands in Mode 2/3 dispatch (per ADR-0005)." | 2 | **FEAT-005:FN-08** MQTT publish pattern |
+v1'in state machine'i (rma_requested → approved/rejected → pickup_scheduled → in_transit → warehouse_received → processed → closed) değişmedi — ama hangi geçişin **otomatik** (event/IoT/geofence-tetikli) hangisinin **dispatcher onayı** (Mode 1 Advisory, ADR-0005 §2: *"The system suggests dispatch decisions. The dispatcher approves every action before it takes effect."*) gerektirdiği v1'de örtüktü. v2 bunu açık bir matrise döküyor.
 
-**Konsolidasyon notları (NotebookLM çıktısına göre düzeltmeler):**
+| Geçiş | Tetikleyici | Mod | Mekanizma |
+|---|---|---|---|
+| `rma_requested` → `approved` / `rejected` | Dispatcher kararı | **Dispatcher onaylı** (Mode 1) | `evaluateRmaDecision` (FN-11) — ADR-0005 §2 |
+| `approved` → `pickup_scheduled` | Onay sonrası otomatik | **Otomatik** | `createReturnTask` (FN-01) tetiklenir |
+| `pickup_scheduled` → `in_transit` | Driver mobile "pickup completed" | **Otomatik** | Mevcut task completion event akışı |
+| `in_transit` → `warehouse_received` | Araç depo geofence'ine girer | **Otomatik, geofence-tetikli** | `syncWarehouseReturn` (FN-14) — 11 Ekim'de kapanan v2-contract `geofenceService.js` paterniyle aynı disiplin (tek yetkili merci, legacy path yok) |
+| `warehouse_received` → `{refund_issued \| replacement_dispatched \| disposed}` | Operasyonel karar | **Koşullu** — bkz. aşağıdaki kural | `resolveApprovalRequirement` (FN-16, yeni) |
+| Herhangi bir durum → `closed` | Terminal çözüm | **Otomatik** | Audit log'a append + `closed_at` set |
 
-| # | NotebookLM dedi | Düzeltme |
-|---|---|---|
-| **Numaralandırma** | FN-08 → FN-10 (FN-09 atlandı) | ✅ Düzeltildi: FN-01..FN-15 ardışık (NotebookLM 13 fn ama FN-09 boştu) |
-| **FN-11 (eski FN-09) ADR-0005 §4.1** | "The dispatcher approves every action before it takes effect" | 🚨 **F14'TEKİ AYNI HATA** — section misattribution. Alıntı gerçek ama §2'de (Mode 1 Advisory tanımı), §4.1'de değil. ✅ Düzeltildi: ADR-0005 §2 |
-| **FN-12 (eski FN-10) ADR-0005 §4.1** | "Audit. Every action... logged for later review" | ✅ Doğru — §4.1.6 Audit step birebir cümle |
-| **B alt-paradigma az fonksiyon (NotebookLM 2 fn)** | RTS destination + customer pickup window eksik | ✅ **EKLENDİ FN-08** `resolveRtsDestination` (UNCERTAINTIES #4 cevap — depo mu locker mu?) + **EKLENDİ FN-09** `processCustomerPickupWindow` (customer availability) |
-| **FEAT-017 delegasyon açık değildi** | `locker_return` type'ı sadece taxonomy'de | ✅ §1.3 ve §3'te **açık delegasyon belgelendi** — FEAT-018 locker_return için onCustomerLockerDropoff (FEAT-017:FN-11) tetikler, yeniden yazmaz |
-| Diğer 11 alıntı | ✅ Doğru | — |
+**`resolveApprovalRequirement` (FN-16) kuralı — ne zaman dispatcher onayı şart:**
 
-**Fonksiyon sayısı:** NotebookLM 13 (FN-09 atlanmış) → konsolidasyon **15** (FN-08 + FN-09 eklendi, ardışık numaralandırma).
+```
+requiresApproval =
+    return_type === 'damaged_goods'
+    OR estimated_value_eur > company.settings.reverse_logistics_policy.approval_required_above_eur
+    OR resolution_type === 'refund'   // finance etkisi her zaman insan onayı ister
+```
+
+Aksi halde (düşük değerli `customer_initiated` return, `resolution_type IN ('returned_to_inventory', 'replacement')`) ve şirket `auto_resolve_below_eur` politikasını açmışsa, geçiş otomatik yapılabilir. **Varsayılan: kapalı** — mevcut Mode 1 Advisory disiplinine uygun, hiçbir şirket açıkça izin vermeden otomatik finansal sonuç üretilmez.
 
 ---
 
-## 3. Alt-paradigma A — Customer pickup (return)
+## 3. Veritabanı Şeması Değişiklikleri
 
-### 3.1 Akış
-
-```
-1. Customer return talebi (manuel dispatcher entry veya RMA Phase 2)
-        │
-        ▼
-2. createReturnTask (FN-01) — direction='inbound'
-   - enterprise.dispatch_tasks INSERT
-   - pickup_location = customer adresi
-   - delivery_location = warehouse (default) veya alternatif
-        │
-        ▼
-3. linkParentTask (FN-02) — orijinal outbound task'a referans
-   - parent_task_id = original_task_id (RMA durumda)
-   - NULL olabilir (independent return)
-        │
-        ▼
-4. validateReversePolicy (FN-03) — public.companies.settings check
-   - allow_returns flag
-   - max_return_value_eur threshold
-   - approval_required flag
-        │
-        ▼
-5. processCustomerPickupWindow (FN-09) — customer müsait pencere
-   - customerWindows = [{start, end}] (telefon/email confirmation)
-   - enterprise.dispatch_tasks.metadata.time_window UPDATE
-   - Soft constraint HERE'ye geçer
-        │
-        ▼
-6. buildHereProblemWithMixedLoads (FN-07) — VRP submission
-   - outbound + inbound tasks tek planda
-   - HERE Tour Planning native mixed pickup/delivery
-   - Mevcut routing pipeline (FEAT-001) reuse
-        │
-        ▼
-7. Standard plan approval (FEAT-001:FN-013)
-   - Dispatcher Mode 1 onay
-   - Driver mobile receives pickup task
-        │
-        ▼
-8. Driver pickup completion → task status: completed
-   - public.task_events log
-   - FEAT-005 ETA tracking dahil
-```
-
-### 3.2 Mixed pickup/delivery — HERE detayı
-
-ADR-0002 §3.2 *"HERE Tour Planning natively models constraints (vehicle height, cold chain, driver shift rules, mixed pickup/delivery, refueling stops)"* — yani HERE problem JSON'da:
-
-```jsonc
-{
-  "plan": {
-    "tasks": [
-      { "id": "T-001", "type": "delivery", "places": [{"location": {...}, "duration": 300}] },
-      { "id": "R-001", "type": "pickup",   "places": [{"location": {...}, "duration": 300}],
-        "metadata": { "direction": "inbound", "parent_task_id": "T-005" } }
-    ]
-  }
-}
-```
-
-HERE solver mixed problem'i otomatik optimize eder — kapasite hesabı, sıralama (LIFO/FIFO), shift constraint dahil (UNCERTAINTIES #2 cevap).
-
----
-
-## 4. Alt-paradigma B — Failed delivery → Return-to-sender (RTS)
-
-### 4.1 Akış
-
-```
-1. Driver mobile: delivery failed (mevcut akış)
-   - task status: failed
-   - failed_reason: 'customer_not_home' | 'address_invalid' | 'refused' | 'damaged_on_arrival'
-        │
-        ▼
-2. allow_auto_return flag check (public.companies.settings.reverse_logistics_policy)
-   - Hayır → standart manuel exception
-   - Evet → 3. adıma
-        │
-        ▼
-3. resolveRtsDestination (FN-08) — destination kararı (UNCERTAINTIES #4)
-   Karar matrisi:
-   - failed_reason='damaged_on_arrival' → warehouse (return for inspection)
-   - failed_reason='refused' + customer locker tercihi → FEAT-017 onCustomerLockerDropoff
-   - failed_reason='customer_not_home' + nearby locker → FEAT-017 delegate
-   - failed_reason='customer_not_home' + locker yok → warehouse RTS
-        │
-        ▼
-4. triggerReturnToSender (FN-06):
-   - Eğer locker route: FEAT-017:FN-11 delegate (yeniden yazma)
-   - Eğer warehouse RTS: createReturnTask (FN-01) çağır, direction='inbound'
-        │
-        ▼
-5. FEAT-002:FN-02 POST /replan:
-   - Mevcut rota güncellenir, warehouse RTS waypoint eklenir
-   - Driver mobile yeni rota görür
-```
-
-### 4.2 RTS destination karar matrisi (FN-08)
-
-```typescript
-function resolveRtsDestination(originalTaskId, currentLocation) {
-  const task = await getTask(originalTaskId);
-  const company = await getCompanySettings(task.company_id);
-  const policy = company.settings.reverse_logistics_policy;
-  
-  // 1. Damaged goods: always warehouse (inspection)
-  if (task.failed_reason === 'damaged_on_arrival') {
-    return { destinationType: 'warehouse', destinationId: task.origin_warehouse_id,
-             reason: 'damaged_inspection_required' };
-  }
-  
-  // 2. Customer locker preference (refused or not home)
-  if (policy.prefer_locker_for_failed && 
-      ['refused', 'customer_not_home'].includes(task.failed_reason)) {
-    const nearbyLocker = await findNearbyLockers(  // FEAT-017:FN-01 reuse
-      currentLocation, policy.max_locker_distance_meters || 2000, task.company_id);
-    if (nearbyLocker.length > 0) {
-      return { destinationType: 'locker', destinationId: nearbyLocker[0].id,
-               reason: 'customer_locker_fallback', delegate_to: 'FEAT-017' };
-    }
-  }
-  
-  // 3. Default: warehouse RTS
-  return { destinationType: 'warehouse', destinationId: task.origin_warehouse_id,
-           reason: 'default_rts' };
-}
-```
-
-### 4.3 Locker delegasyon — FEAT-017 reuse
-
-`destinationType === 'locker'` durumunda:
-- FEAT-018 yeni task **oluşturmaz**
-- FEAT-017:FN-11 `onCustomerLockerDropoff` tetiklenir (driver-initiated variant)
-- FEAT-017'nin expiry monitoring (FN-12) ve customer notification pipeline'ı geçerli
-- Mimari net: **bir feature bir paterni sahiplenir**, diğerleri delege eder
-
----
-
-## 5. Alt-paradigma C — RMA lifecycle (Phase 2 customer-funded)
-
-### 5.1 State machine
-
-```
-                    rma_requested (FN-10)
-                          │
-                          ▼
-              evaluateRmaDecision (FN-11)
-                          │
-              ┌───────────┴───────────┐
-              │                       │
-            approve                  reject
-              │                       │
-              ▼                       ▼
-        ┌─────────────────┐     ┌──────────┐
-        │pickup_scheduled │     │  closed  │
-        │  (createReturnTask FN-01)│   │ (rejected)│
-        └────────┬────────┘     └──────────┘
-                 │
-                 ▼ Driver pickup completed
-        ┌────────────┐
-        │ in_transit │
-        └─────┬──────┘
-              │
-              ▼ Vehicle warehouse arrival (geofence entry)
-              │ syncWarehouseReturn (FN-14)
-              ▼
-        ┌────────────────────┐
-        │ warehouse_received │
-        └─────┬──────────────┘
-              │
-              ▼ Operational processing
-              │
-              ┌───────────────┬───────────────┐
-              │               │               │
-        refund_issued   replacement_dispatched  disposed
-              │               │               │
-              └───────────────┴───────────────┘
-                              │
-                              ▼
-                       ┌────────────┐
-                       │ processed  │
-                       └────────────┘
-```
-
-**State enum** (`enterprise.rma_requests.status`):
-- `rma_requested`, `approved`, `rejected`, `pickup_scheduled`, `in_transit`, `warehouse_received`, `processed`, `closed`
-
-### 5.2 SLA monitoring (FN-13)
-
-`monitorRmaSla` (hourly cron):
-- RMA `approved` → `pickup_scheduled` deadline 48h
-- RMA `pickup_scheduled` → `in_transit` deadline 7 gün
-- RMA `in_transit` → `warehouse_received` deadline 24h
-- SLA breach → FEAT-010:FN-06 `logExceptionEvent` (exception_type=`returns_pickup_failed`)
-
-### 5.3 Warehouse integration
-
-`syncWarehouseReturn` (FN-14) — WMS connector (Phase 2 FEAT-108):
-- Vehicle warehouse geofence entry → otomatik trigger
-- WMS API call: SAP EWM, Manhattan, vb. (customer-funded)
-- `enterprise.rma_requests.status` UPDATE → `warehouse_received`
-- `enterprise.dispatch_tasks.status` UPDATE → `warehouse_received`
-- ADR-0007 §3.2 customer-funded connector pattern
-
----
-
-## 6. Database schema (Phase 1.1 + Phase 2 additive)
-
-### 6.1 `enterprise.dispatch_tasks.direction` + `parent_task_id` — Phase 1.1 additive
+### 3.1 `enterprise.dispatch_tasks.direction` + `parent_task_id` (v1'den değişmedi, Faz 1.1, hâlâ uygulanmadı)
 
 ```sql
 ALTER TABLE enterprise.dispatch_tasks
@@ -324,133 +111,143 @@ ALTER TABLE enterprise.dispatch_tasks
 ALTER TABLE enterprise.dispatch_tasks
   ADD COLUMN parent_task_id UUID
   REFERENCES enterprise.dispatch_tasks(id) ON DELETE SET NULL;
-
-CREATE INDEX idx_dispatch_tasks_direction ON enterprise.dispatch_tasks (company_id, direction)
-  WHERE direction = 'inbound';
-
-CREATE INDEX idx_dispatch_tasks_parent ON enterprise.dispatch_tasks (parent_task_id)
-  WHERE parent_task_id IS NOT NULL;
 ```
 
-ADR-0004 v3 §6 additive pattern. Mevcut task'lar otomatik `direction='outbound'`, eski davranış bozulmaz.
+### 3.2 `enterprise.rma_requests` (v1'den değişmedi, Faz 2, hâlâ uygulanmadı)
 
-### 6.2 `enterprise.rma_requests` — Phase 2 yeni tablo
+v1 §6.2 ile birebir aynı — bkz. Change Log v1 kaydı. Yeni eklenen tek şey: `warehouse_id` nullable FK (§3.3'teki yeni tabloya işaret eder, additive).
 
 ```sql
-CREATE TABLE enterprise.rma_requests (
-    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    company_id           UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    
-    -- Customer reference
-    customer_ref         TEXT NOT NULL,  -- customer external ID
-    original_task_id     UUID REFERENCES enterprise.dispatch_tasks(id),  -- nullable: customer manuel RMA
-    
-    -- State machine
-    status               TEXT NOT NULL DEFAULT 'rma_requested'
-                         CHECK (status IN (
-                           'rma_requested', 'approved', 'rejected',
-                           'pickup_scheduled', 'in_transit', 'warehouse_received',
-                           'processed', 'closed'
-                         )),
-    
-    -- Return classification
-    return_type          TEXT NOT NULL
-                         CHECK (return_type IN (
-                           'customer_initiated', 'failed_delivery',
-                           'damaged_goods', 'wrong_item', 'locker_return'
-                         )),
-    reason_code          TEXT,
-    
-    -- Linked dispatch task (after approval)
-    pickup_task_id       UUID REFERENCES enterprise.dispatch_tasks(id),
-    
-    -- SLA tracking
-    sla_deadline_at      TIMESTAMPTZ,
-    
-    -- Resolution
-    resolution_type      TEXT CHECK (resolution_type IN 
-                           ('refund', 'replacement', 'disposal', 'returned_to_inventory')),
-    
-    metadata             JSONB,
-    audit_log            JSONB NOT NULL DEFAULT '[]'::jsonb,  -- state transitions
-    
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    approved_at          TIMESTAMPTZ,
-    processed_at         TIMESTAMPTZ,
-    closed_at            TIMESTAMPTZ
-);
-
-CREATE INDEX idx_rma_company_status ON enterprise.rma_requests (company_id, status, sla_deadline_at);
-CREATE INDEX idx_rma_customer ON enterprise.rma_requests (company_id, customer_ref);
-CREATE INDEX idx_rma_original_task ON enterprise.rma_requests (original_task_id) WHERE original_task_id IS NOT NULL;
+ALTER TABLE enterprise.rma_requests
+  ADD COLUMN warehouse_id UUID REFERENCES public.warehouses(id);
 ```
 
-### 6.3 `public.companies.settings.reverse_logistics_policy` — JSONB additive
+(Bu satır, §3.3'teki `warehouses` tablosu yaratıldıktan SONRA, ayrı bir additive migration olarak uygulanır — `rma_requests`'in kendisi `warehouses`'tan önce var olabilir, aksi yöne bağımlılık yok.)
 
-```jsonc
-{
-  ...
-  "reverse_logistics_policy": {
-    "allow_returns": true,
-    "auto_rts_on_failed_delivery": true,        // FN-06 trigger flag
-    "prefer_locker_for_failed": false,          // FEAT-017 delegate tercihi
-    "max_locker_distance_meters": 2000,
-    "max_return_value_eur": 5000,
-    "approval_required_above_eur": 500,
-    "rma_sla_hours": {
-      "approval_to_pickup": 48,
-      "pickup_to_warehouse": 168,                // 7 gün
-      "transit_to_received": 24
-    }
-  }
+### 3.3 `public.warehouses` — YENİ, Faz 2.5
+
+```sql
+CREATE TABLE public.warehouses (
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id           UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+
+    name                 TEXT NOT NULL,
+    warehouse_type       TEXT NOT NULL DEFAULT 'central'
+                         CHECK (warehouse_type IN ('central', 'cross_dock_hub', 'partner')),
+    parent_warehouse_id  UUID REFERENCES public.warehouses(id) ON DELETE SET NULL,
+
+    address              TEXT,
+    latitude             DOUBLE PRECISION,
+    longitude            DOUBLE PRECISION,
+    geofence_id          UUID REFERENCES public.geofences(id),  -- otomatik "received" tetikleyici için
+
+    is_active            BOOLEAN NOT NULL DEFAULT true,
+
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_warehouses_company ON public.warehouses (company_id) WHERE is_active = true;
+CREATE INDEX idx_warehouses_parent ON public.warehouses (parent_warehouse_id) WHERE parent_warehouse_id IS NOT NULL;
+```
+
+**Tasarım notu — `public` şeması, `enterprise` değil:** `warehouses` fiziksel bir tesis kaydı — `public.companies`/`public.vehicles` gibi telematics-agnostic çekirdek veri, sadece dispatcher'a özel değil (gelecekte mobil app da bir depo listesine ihtiyaç duyabilir — örn. sürücünün "en yakın depo" görmesi). ADR-0004 v3 §6 additive pattern'e uygun. **Açık karar (Cem onayı):** bu şema-yeri tercihinin (public vs enterprise) kabul edilip edilmeyeceği.
+
+Her şirket **tek bir merkezi depo** kullanıyorsa, tablo tek satırla (warehouse_type='central', parent_warehouse_id=NULL) sorunsuz çalışır — hiyerarşi zorunlu değil, opsiyonel genişleme.
+
+### 3.4 `enterprise.customer_feedback` — YENİ, Faz 2.5, customer-funded
+
+```sql
+CREATE TABLE enterprise.customer_feedback (
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id           UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+
+    task_id              UUID REFERENCES enterprise.dispatch_tasks(id),
+    rma_request_id       UUID REFERENCES enterprise.rma_requests(id),
+
+    feedback_type        TEXT NOT NULL CHECK (feedback_type IN ('csat', 'complaint', 'sla_breach_ack')),
+    csat_score           SMALLINT CHECK (csat_score BETWEEN 1 AND 5),
+
+    complaint_events      JSONB NOT NULL DEFAULT '[]'::jsonb,  -- append-only, bkz. §5.3
+    sla_breach            BOOLEAN NOT NULL DEFAULT false,
+
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_customer_feedback_task ON enterprise.customer_feedback (task_id) WHERE task_id IS NOT NULL;
+CREATE INDEX idx_customer_feedback_rma ON enterprise.customer_feedback (rma_request_id) WHERE rma_request_id IS NOT NULL;
+CREATE INDEX idx_customer_feedback_breach ON enterprise.customer_feedback (company_id, sla_breach) WHERE sla_breach = true;
+```
+
+Bu tablo bir **CRM değildir** — TulipFleet'in kendi CSAT/şikayet özeti, müşteri ilişkisinin tam kaydı değil (§5.2).
+
+---
+
+## 4. Güncellenmiş Fonksiyon Katalogu
+
+FN-01..FN-15 **v1'den değişmedi** (bkz. v1 Change Log, aşağıda korunur) — hepsi hâlâ geçerli, hâlâ implementasyon beklemede. v2 yalnızca 4 yeni fonksiyon ekliyor:
+
+| # | Function ID | Layer | Signature / Endpoint | Inputs | Outputs | Reads from | Writes to | Phase | Not |
+|---|---|---|---|---|---|---|---|---|---|
+| 16 | FEAT-018-FN-16 | shared_library | `resolveApprovalRequirement` | rmaRequest, companyPolicy | `{ requiresApproval, reason }` | enterprise.rma_requests, public.companies (settings) | — | 2 | §2 kural motoru — saf fonksiyon, side-effect yok |
+| 17 | FEAT-018-FN-17 | backend | `POST/PUT /api/dispatcher/warehouses` | warehouseData | `{ warehouseId }` | — | public.warehouses | 2.5 | Basit admin CRUD, karmaşık değil |
+| 18 | FEAT-018-FN-18 | backend | `POST /api/public/feedback` (veya dispatcher-authenticated varyant) | taskId/rmaId, csatScore?, complaintText? | `{ feedbackId }` | enterprise.dispatch_tasks, enterprise.rma_requests | enterprise.customer_feedback | 2.5 | Müşteri-tarafı giriş noktası — auth modeli ayrı karar (bkz. §7 açık madde) |
+| 19 | FEAT-018-FN-19 | worker | `evaluateSlaBreach` (monitorRmaSla FN-13'ün çıktısını tüketir) | rmaId, breachDetected | Success | enterprise.rma_requests | enterprise.customer_feedback (sla_breach=true) | 2.5 | FN-13'ü yeniden yazmaz, sonucunu `customer_feedback`'e yansıtır |
+
+---
+
+## 5. WMS, CRM & Audit Trail Entegrasyon Prensipleri
+
+### 5.1 WMS — tek giriş noktası, adapter pattern
+
+TulipFleet **genel amaçlı bir WMS yazmaz.** Tek entegrasyon noktası `syncWarehouseReturn` (FN-14): araç depo geofence'ine girdiğinde tetiklenir, gerçek WMS'in (SAP EWM, Manhattan, vb.) API'sine `enterprise.rma_requests.status` güncellemesini bildirir. ADR-0007 §3.2 adapter pattern'i birebir geçerli: *"Every third-party telematics provider's API changes over time"* — aynı disiplin WMS sağlayıcıları için de geçerli, vendor-specific mantık FEAT-108'in (ayrı, customer-funded) adapter katmanında kalır, FEAT-018'in kendisi vendor-agnostic durur.
+
+### 5.2 CRM — sınır net çizilir
+
+`enterprise.customer_feedback` bir CRM değil — CSAT puanı, şikayet metni ve SLA ihlali bayrağının **minimal, dispatcher'ın kendi karar desteği için tuttuğu özeti**. Gerçek müşteri ilişkisi yönetimi (iletişim geçmişi, segment, lead/opportunity) kapsam dışı — bir şirketin gerçek CRM'i varsa (HubSpot, Salesforce vb.) bu tablo o sistemle senkronize edilmez, sadece dispatcher'ın kendi operasyonel görünürlüğü için var olur.
+
+### 5.3 Audit trail — append-only kontrat
+
+`enterprise.rma_requests.audit_log` (v1'den beri var, `JSONB NOT NULL DEFAULT '[]'::jsonb`) ve yeni `enterprise.customer_feedback.complaint_events` için **tek kural:** uygulama katmanı bu JSONB array'lere **sadece ekler, hiçbir zaman var olan elemanı UPDATE/DELETE etmez.** Bu DB seviyesinde bir trigger ile zorlanmıyor (Faz 3+ adayı, şimdi over-engineering) — disiplin, tek bir paylaşılan saf fonksiyonla sağlanıyor:
+
+```typescript
+function appendAuditEntry(existingLog: AuditEntry[], entry: AuditEntry): AuditEntry[] {
+  return [...existingLog, entry];  // asla mutate etme, asla filter/splice ile eski entry silme
 }
 ```
 
----
-
-## 7. UNCERTAINTIES (Cem onayı bekleyen)
-
-### NotebookLM'in tespit ettikleri
-
-1. **İade ücretlendirme (Vrachtwagenheffing FEAT-008):** Inbound loads outbound ile aynı tariff sınıfında mı?
-   - **Karar:** EVET — Vrachtwagenheffing toll **vehicle-bound**, load direction-agnostic. Inbound tasks aynı `vehicle.emission_class` + `weight_class` ile hesaplanır. FEAT-008 cross-spec sync gerekmez.
-
-2. **Araç kapasite dinamiği (LIFO/FIFO):** HERE solver mı yoksa app layer mı?
-   - **Karar:** HERE solver native handles (ADR-0002 §3.2 mixed pickup/delivery). App layer ek logic gerek YOK. Tüm capacity-time çakışmaları HERE'nin objective fonksiyonunda.
-
-3. **RMA dokümanları (CMR/İrsaliye):** Driver dijital doküman yükleme zorunlu mu?
-   - **Karar:** **FEAT-011 PoD Capture spec'ine bırakıldı.** FEAT-018 sadece RMA state machine'i yönetir. Dokümantasyon discipline FEAT-011'de tanımlanır.
-
-4. **Geri dönüş noktası — depo mu locker mu?**
-   - **Karar (konsolidasyonda):** FN-08 `resolveRtsDestination` karar matrisi:
-     - Damaged goods → warehouse
-     - Customer locker preference + nearby locker → FEAT-017 delegate
-     - Default → warehouse RTS
-   - Per-company `prefer_locker_for_failed` policy flag
-
-### Konsolidasyonda eklenenler
-
-5. **Replacement coordination — RMA approved sonrası:** Replacement delivery otomatik mi yoksa manuel dispatcher mı?
-   - **Karar:** Phase 2 başlangıç **manuel** (Mode 1 Advisory). Dispatcher RMA processed sonrası ayrı outbound task açar. Phase 2.5+ otomatik linking (Mode 2 trigger) — `enterprise.rma_requests.replacement_task_id` UPDATE.
-
-6. **Customer notification — RMA status updates:** SMS/email otomatik mi?
-   - **Karar:** Phase 2 yes, FEAT-015 (Tender) FN-08 paterniyle. Notification preference customer-side, RMA platform integration.
-
-7. **Multi-leg international returns:** Hollanda'dan Belçika customer → return Hollanda'ya?
-   - **Karar:** Phase 1.1/2 EU intra-community OK (Vrachtwagenheffing dahil), customs declaration Phase 3+ (UNCERTAINTIES kapsam).
-
-8. **Refund processing — finance system entegrasyon:**
-   - **Karar:** **KAPSAM DIŞI** — `resolution_type='refund'` sadece flag, gerçek refund finance system (SAP, Stripe vb.) işi. Customer-funded entegrasyon Phase 3+.
-
-9. **Damaged goods inspection workflow:** Warehouse arrival sonrası inspection süresi?
-   - **Karar:** `enterprise.rma_requests.metadata.inspection_required BOOLEAN` flag. Default `false` (warehouse otomatik processed). `damaged_goods` type için `true` (manuel inspection step). Detaylı inspection workflow FEAT-108 WMS connector kapsamında.
-
-10. **Wrong_item replacement priority:** Yanlış ürün gönderimi acil mi?
-    - **Karar:** FN-04 `calculateReturnPriority` weights `customerSla` parametresi yüksek wrong_item için (örn. weight=0.6). Default policy per-company.
+`evaluateRmaDecision` (FN-11), `syncWarehouseReturn` (FN-14) ve yeni `evaluateSlaBreach` (FN-19) dahil, duruma dokunan HER fonksiyon bu helper'ı kullanır — ayrı ayrı append mantığı yazılmaz.
 
 ---
 
-## 8. Shared infrastructure with previous FEAT'leri
+## 6. Cross-Spec Sync ve FEAT-010 / FEAT-017 Bağlantıları
+
+### 6.1 FEAT-010 ile — DÜZELTİLMİŞ durum (bkz. §0.2)
+
+v1'in iddia ettiği gibi `returns_pickup_failed` ve `rts_warehouse_unreachable` **enum değerleri eklenmesi gerekmiyor — zaten canlı.** Gerçekten açık kalan tek parça: `FEAT-010-automated-exception-handling.md`'nin kendi Severity Matrix'inde (§5) bu 2 değerin dokümantasyon satırı yok. **Öneri:** FEAT-018 implementasyonuna geçilmeden önce, FEAT-010 spec'ine 2 satırlık bir doküman-hijyen PR'ı (kod değişikliği yok, sadece tablo satırı).
+
+### 6.2 FEAT-017 ile (v1'den değişmedi)
+
+`destinationType === 'locker'` durumunda FEAT-018 yeni task oluşturmaz — FEAT-017:FN-11 `onCustomerLockerDropoff` tetiklenir, FEAT-017'nin expiry monitoring (FN-12) ve customer notification pipeline'ı geçerli olur. "Bir feature bir paterni sahiplenir, diğerleri delege eder" prensibi korunur.
+
+### 6.3 Yeni (v2) — henüz cross-spec bağlantısı gerektirmeyen parçalar
+
+FN-16/17/18/19 hiçbir mevcut spec'i değiştirmiyor — hepsi FEAT-018'in kendi yeni tablolarına yazıyor. Tek dolaylı bağlantı: FN-14 `syncWarehouseReturn`'ün artık opsiyonel olarak `warehouse_id`'yi set edebilmesi (§3.2) — bu, FN-14'ün v1'deki imzasını bozmaz, sadece bir alan daha doldurur.
+
+---
+
+## 7. Açık kararlar (Cem onayı bekleyen — v2'de yeni eklenenler)
+
+1. **`public.warehouses`'ın şema-yeri:** `public` mi `enterprise` mi? (§3.3 gerekçe verildi, ama nihai karar Cem'in)
+2. **`FN-18 submitCustomerFeedback`'in auth modeli:** müşteri kendi (login'siz, token'lı — tracking portal'daki `public_tracking_tokens` paternine benzer) mi girecek, yoksa dispatcher/driver adına mı girilecek? Bu, FEAT-018'in müşteri-tarafı bir yüzeyi olup olmayacağını belirliyor (v1 §1.6'da "customer-facing return portal UI" Phase 3 ADR bekliyor olarak kapsam dışı bırakılmıştı — CSAT formu bu sınırı ihlal ediyor mu, yoksa ayrı/minimal bir şey mi, netleştirilmeli)
+3. **`auto_resolve_below_eur` politikasının varsayılan değeri ve üst sınırı** — §2'de "varsayılan kapalı" dendi, ama açıldığında üst limit ne olacak (örn. şirket kendi `approval_required_above_eur`'undan büyük bir otomatik-çözüm limiti koyabilir mi, yoksa ikisi aynı mı olmalı)
+4. **Cross-dock hub routing'in VRP'ye etkisi** — bir return, hub'dan geçerken `parent_task_id` zinciri 2 seviyeye çıkıyor (orijinal → hub-leg → final-leg); HERE Tour Planning'in bunu tek problem'de mi yoksa 2 ayrı plan'da mı çözeceği netleştirilmeli (Faz 2.5, implementasyon öncesi karar)
+
+v1'in UNCERTAINTIES listesi (§7, eski numaralandırma) **tamamen çözülmüş kalıyor** — bu yeni liste sadece v2'nin eklediği parçalara dair.
+
+---
+
+## 8. Shared infrastructure with previous FEAT'leri (v1'den korunur, değişmedi)
 
 | FEAT-018 fonksiyon | Shared with | Paylaşım türü |
 |---|---|---|
@@ -466,158 +263,74 @@ CREATE INDEX idx_rma_original_task ON enterprise.rma_requests (original_task_id)
 | FN-14 syncWarehouseReturn | **FEAT-006:FN-08** | Dock appointment pattern |
 | FN-15 broadcastReturnStatus | **FEAT-005:FN-08** | MQTT publish pattern |
 
-**Cross-spec sync TODO (TOPLU COMMIT için biriken — FEAT-018 sonrası):**
-
-FEAT-010 `exception_type` CHECK constraint genişletme — **5 yeni enum value** birden:
-- `'locker_pickup_expired'` (FEAT-017:FN-12)
-- `'tender_withdrawn'` (FEAT-014:FN-13)
-- `'tender_no_quotes'` (FEAT-014:FN-04)
-- `'returns_pickup_failed'` (FEAT-018:FN-13 — RMA SLA breach)
-- `'rts_warehouse_unreachable'` (FEAT-018:FN-08 — RTS destination resolution failed)
-
-FEAT-010 §5 Severity matrix entries (5 yeni)
-FEAT-010 §2 Function catalog FN-06 shared kolonu — FEAT-014, 017, 018 eklenmeli
-
-**Karar:** FEAT-018 sonrası **TOPLU CROSS-SPEC SYNC** (4 spec değiştirilecek: FEAT-010 + ilgili spec'lerin shared kolonları). Token tasarrufu için ayrı commit.
-
 ---
 
-## 9. Pilot süreç notları
+## 9. Pilot süreç notları (v1, 2026-05-30 — tarihsel kayıt, değiştirilmedi)
 
-### 9.1 Pilot akışı (2026-05-30)
+### 9.1 Pilot akışı
 
-Tek prompt + 0 follow-up. Konsolidasyonda 2 yeni fonksiyon eklendi (FN-08 RTS destination resolution, FN-09 customer pickup window), 1 numaralandırma düzeltmesi (FN-09 atlanmıştı), 1 section misattribution düzeltmesi (FN-11 §4.1 → §2).
+Tek prompt + 0 follow-up. Konsolidasyonda 2 yeni fonksiyon eklendi (FN-08, FN-09), 1 numaralandırma düzeltmesi, 1 section misattribution düzeltmesi (FN-11 §4.1 → §2).
 
-### 9.2 Alıntı doğrulama — section misattribution KALICI
+### 9.2 Alıntı doğrulama özeti
 
-| # | NotebookLM | Gerçek | Durum |
-|---|---|---|---|
-| FN-01..07 (Phase 1.1 base) | ✅ Hepsi doğru | — | ✅ |
-| **FN-11 (RMA decision) ADR-0005 §4.1** | "The dispatcher approves every action..." | 🚨 **§2 Mode 1 Advisory** — **F14'TEKİ AYNI HATA** | ⚠️ Düzeltildi |
-| FN-12 (timeline) ADR-0005 §4.1 | "Audit. Every action... logged for later review..." | ✅ **§4.1.6 Audit step** birebir cümle | ✅ |
-| FN-13 (SLA) ADR-0011 §6 FEAT-101 | ✅ Doğru | — | ✅ |
-| FN-14 (warehouse) ADR-0007 §3.2 | ✅ Birebir | — | ✅ |
-| FN-15 (MQTT) ADR-0009 §8 | ✅ Birebir | — | ✅ |
+**§number fabrikasyon: 0** ✅ · **Section misattribution: 1** ⚠️ (F14'teki aynı hata tekrarlandı, kalıcı hata sınıfı) · **Numaralandırma anomalisi: 1** ⚠️ (FN-09 atlandı, düzeltildi)
 
-**§number fabrikasyon: 0** ✅ (F8-F10-F17-F14-F18 zinciri stable)
-**Section misattribution: 1** ⚠️ (F14'teki AYNI hata, KALICI hata sınıfı)
-**Numaralandırma anomalisi: 1** ⚠️ (FN-09 atlandı)
-**Toplam alıntı düzeltmesi: 1** (FN-11 §4.1 → §2)
-
-### 9.3 Section misattribution analizi — kalıcı pattern
-
-| Pilot | Hata | Source |
-|---|---|---|
-| F14 | ADR-0005 §4.1 → §2 (Mode 1 Advisory) | NotebookLM kavramsal yakınlık karıştırıyor |
-| F18 | **AYNI HATA TEKRARLANDI** — guard rail prompt'a rağmen | Pattern KALICI |
-
-**Sonuç:** Section misattribution F14'ten beri **kalıcı bir hata sınıfı**. Prompt'taki guard rail uyarısı **yeterli değil** — NotebookLM ADR-0005 §2 Mode 1 Advisory cümlesini sürekli §4.1'e atfediyor.
-
-**Önlem (sonraki pilotlar):**
-1. Konsolidasyonda **manuel section doğrulama** zorunlu (sadece §4.1 değil, her ADR-0005 §X.Y dikkatli kontrol)
-2. Bu hata önemli değildir başlı başına (alıntı gerçek, sadece konum yanlış) — ama disipline kayıt için belgelenmeli
-
-### 9.4 13 pilot karşılaştırma
-
-| Boyut | F8 | F9 | F10 | F17 | F14 | **F18** |
-|---|---|---|---|---|---|---|
-| Skor | 9.5 | 8.5 | 9 | 8.5 | 8.5 | **8.5** |
-| İterasyon | 1 | 1 | 1 | 1+1 | 1 | **1** |
-| Fonksiyon (final) | 9 | 7 | 15 | 13 | 16 | **15** |
-| §number fabrikasyon | 0 | 1 | 0 | 0 | 0 | **0** ✅ |
-| Section misattribution | 0 | 0 | 0 | 0 | 1 | **1** ⚠️ TEKRARLI |
-| Numaralandırma anomalisi | 0 | 0 | 0 | 0 | 0 | **1** ⚠️ yeni |
-| Yeni paradigma | Toll | Carbon | Orch | Geo ext | Ext eco | **Multi-flow reverse** |
-
-**F18 gözlemleri:**
-- §number fabrikasyon zinciri devam (F8-F10-F17-F14-F18: 0)
-- Section misattribution **kalıcı** (F14 → F18)
-- Yeni hata sınıfı: **numaralandırma anomalisi** (FN-09 atlandı, NotebookLM tablo continuity'sini kaybetti)
-- 3 alt-paradigma boundary korundu — F18'in karmaşık scope'una rağmen disipline OK
-- FEAT-017 delegasyon paterni konsolidasyonda eklendi (açık belgeleme)
-
-### 9.5 Trend yorumu — guard rail etkinliği
-
-F8'den beri prompt guard rail evolution:
-- **F8-F9:** §number fabrikasyon uyarısı eklendi → F10+ stop
-- **F14:** Section misattribution yeni hata sınıfı
-- **F17 prompt'ta**: section uyarısı yok → section misattribution F17'de görülmedi
-- **F14 prompt'ta**: section uyarısı eklendi → ama F14'te yine ortaya çıktı
-- **F18 prompt'ta**: section uyarısı korundu → AMA YİNE TEKRARLANDI
-
-**Hipotez:** Section misattribution NotebookLM'in **semantik benzerlik confusion**'ından geliyor (ADR-0005'te dispatcher approval kavramı hem §2 hem §4.1'de geçiyor). Prompt guard rail bu **kavramsal yakınlığı** çözemiyor. Konsolidasyonda **manuel düzeltme zorunlu**.
+Detaylı tablo ve 13-pilot karşılaştırması için bkz. bu dosyanın v1 commit'i (`git log -p` ile erişilebilir) — v2 rewrite'ı bu tarihsel analizi tekrar etmiyor, sadece referans olarak bırakıyor.
 
 ---
 
 ## 10. Next steps
 
-### 10.1 Cross-spec sync TODO — TOPLU COMMIT (FEAT-018 sonrası)
+### 10.1 Doküman hijyeni (v2'den doğan, küçük)
 
-**Mecburi yapılacak iş**, 5 birikmiş cross-spec sync:
+- [ ] `FEAT-010-automated-exception-handling.md` §5 Severity Matrix'e `returns_pickup_failed` + `rts_warehouse_unreachable` satırları eklenmeli (DB'de zaten var, dokümantasyon eksik — §6.1)
+- [ ] `docs/ROADMAP.md` Wishlist Coverage Matrix'teki W18/FEAT-109 ↔ FEAT-018 ID tutarsızlığı düzeltilmeli (ayrı küçük PR)
 
-| Spec | Değişiklik |
-|---|---|
-| **FEAT-010** | `exception_type` CHECK + 5 yeni enum (`locker_pickup_expired`, `tender_withdrawn`, `tender_no_quotes`, `returns_pickup_failed`, `rts_warehouse_unreachable`) |
-| **FEAT-010 §5** | Severity matrix 5 yeni entry |
-| **FEAT-010 §2** | FN-06 logExceptionEvent shared kolonu FEAT-014, 017, 018 eklenmeli |
-| **FEAT-017 §10.1** | Cross-spec sync TODO işaretlendi olarak kapanmalı |
-| **FEAT-014 §10.1** | Cross-spec sync TODO işaretlendi olarak kapanmalı |
+### 10.2 Phase 1.1 implementation backlog (A + B) — v1'den değişmedi, hâlâ başlanmadı
 
-**Karar:** Bu sync FEAT-018 commit'inden **HEMEN SONRA** yapılır — Cem'den onay alınca tek konsolide commit.
+- [ ] Schema migration: `direction` + `parent_task_id` + INDEX
+- [ ] FN-01..FN-09 (A ve B alt-paradigmaları)
 
-### 10.2 Phase 1.1 implementation backlog (A + B)
-
-- [ ] Schema migration: `enterprise.dispatch_tasks.direction` + `parent_task_id` + INDEX
-- [ ] FN-01 createReturnTask
-- [ ] FN-02 linkParentTask
-- [ ] FN-03 validateReversePolicy
-- [ ] FN-04 calculateReturnPriority
-- [ ] FN-05 GET /api/dispatcher/returns
-- [ ] FN-06 triggerReturnToSender (FEAT-017 delegasyon)
-- [ ] FN-07 buildHereProblemWithMixedLoads (FEAT-001 cross-spec sync)
-- [ ] FN-08 resolveRtsDestination
-- [ ] FN-09 processCustomerPickupWindow
-
-### 10.3 Phase 2 implementation backlog (C RMA + customer-funded trigger)
+### 10.3 Phase 2 implementation backlog (C RMA)
 
 - [ ] Schema migration: `enterprise.rma_requests`
-- [ ] FN-10 POST /api/dispatcher/rma/requests
-- [ ] FN-11 evaluateRmaDecision
-- [ ] FN-12 getRmaLifecycleTimeline
-- [ ] FN-13 monitorRmaSla (hourly cron)
-- [ ] FN-14 syncWarehouseReturn (WMS connector FEAT-108)
-- [ ] FN-15 broadcastReturnStatus (MQTT)
-- [ ] FEAT-108 WMS connector spec (ayrı pilot, customer-funded)
+- [ ] FN-10..FN-15 + yeni FN-16 (resolveApprovalRequirement)
 
-### 10.4 Sıradaki pilot
+### 10.4 Phase 2.5 implementation backlog (D warehouse + E CRM/CSAT) — yeni, v2
 
-Cem'in 7 pilot listesinde 4. sırada: **FEAT-015 W14 Automated Freight Audit and Payment**
+- [ ] Schema migration: `public.warehouses`, `enterprise.customer_feedback`
+- [ ] FN-17 (warehouse CRUD), FN-18 (feedback intake — §7 madde 2 kararı önce gerekli), FN-19 (SLA breach evaluation)
+- [ ] FEAT-108 WMS connector spec (ayrı pilot, customer-funded) — hâlâ yazılmadı
 
-Yeni paradigma: invoice/contract verification, audit trail, financial accuracy. FEAT-014 tender'ın doğal devamı.
+### 10.5 Sıradaki pilot
+
+v1'de "FEAT-015 W14 Automated Freight Audit and Payment" olarak not edilmişti — hâlâ geçerli bir aday, ama bu artık Cem'in güncel pilot sıralamasına (ROADMAP.md "Pilot pipeline öncelik sırası") bağlı, burada sabitlenmiyor.
 
 ---
 
 ## 11. References
 
 - ADR-0001 §3.6 (UI primitives)
-- **ADR-0002 §3.2** (HERE native mixed pickup/delivery), §3.4 (soft constraint time-window — addendum)
+- **ADR-0002 §3.2** (HERE native mixed pickup/delivery), §3.4 (soft constraint time-window)
 - ADR-0004 v3 §6 (additive schema changes)
-- **ADR-0005 §2** (Mode 1 Advisory — "The dispatcher approves every action before it takes effect"), §4.1 (User flow — Audit step), §5.3 (Auto-dispatch loop), §7 (Policy module stub)
-- ADR-0007 §3.2 (Third-party API consumer pattern)
-- ADR-0009 §4.4 (dispatcher → driver task flow), §8 (MQTT publish from enterprise)
-- **ADR-0010 §3.4** (weighted sum, no learning), §3.5 (ML Phase 3 candidate)
-- ADR-0011 §6 (FEAT-101 Mode 2 reference), §9.5 (endpoint patterns)
-- FEAT-001 spec v3 (FN-016 buildHereProblem mixed extension, FN-006 list pattern, FN-013 approve)
-- FEAT-002 spec (FN-02 POST /replan failed delivery)
+- **ADR-0005 §2** (Mode 1 Advisory), §4.1 (Audit step), §5.3 (Auto-dispatch loop), §7 (Policy module stub)
+- ADR-0007 §3.2 (Third-party API adapter pattern — WMS entegrasyonu da bu paterni kullanır, §5.1)
+- ADR-0009 §4.4 (dispatcher → driver task flow), §8 (MQTT publish)
+- ADR-0010 §3.4 (weighted sum, no learning), §3.5 (ML Phase 3 candidate)
+- ADR-0011 §6 (Mode 2 reference, scope gating), §9.5 (endpoint patterns)
+- FEAT-001 spec (FN-016 mixed extension, FN-006 list pattern, FN-013 approve)
+- FEAT-002 spec (FN-02 POST /replan)
 - FEAT-003 spec (FN-06 weighted sum, FN-08 policy engine)
-- FEAT-005 spec v2 (FN-08 MQTT publish)
+- FEAT-005 spec (FN-08 MQTT publish)
 - FEAT-006 spec (FN-03 time window, FN-08 dock appointment)
-- FEAT-009 spec (carbon footprint emission tracking)
-- FEAT-010 spec (FN-06 logExceptionEvent — cross-spec sync 5 yeni exception type)
+- FEAT-009 spec (carbon footprint)
+- FEAT-010 spec (FN-06 logExceptionEvent; §6.1'de doküman-hijyen bulgusu)
+- FEAT-011 spec (PoD Capture — RMA dokümantasyonu delegasyonu)
 - FEAT-014 spec (FN-04 deadline monitoring, FN-05 weighted sum)
-- FEAT-017 spec (FN-01 findNearbyLockers, FN-11 onCustomerLockerDropoff, FN-12 deadline monitoring — **delegasyon noktası**)
+- FEAT-017 spec (FN-01 findNearbyLockers, FN-11 onCustomerLockerDropoff, FN-12 deadline monitoring)
 - FEAT-108 (Phase 2 customer-funded WMS connector — henüz spec yok)
-- NotebookLM session 2026-05-30 (1 prompt, 8.5/10 skor)
+- `tulipfleet-backend migrations/1782800000000_bug1-overlap-foundation.sql` (exception_type canlı değerleri — §0.2 kanıtı)
+- NotebookLM session 2026-05-30 (v1, 1 prompt, 8.5/10 skor)
 
 ---
 
@@ -625,4 +338,5 @@ Yeni paradigma: invoice/contract verification, audit trail, financial accuracy. 
 
 | Version | Date | Author | Change |
 |---|---|---|---|
-| 1 | 2026-05-30 | Cem Bakir (with Claude + NotebookLM cowork) | İlk konsolide function spec. On üçüncü pilot — reverse logistics handling, wishlist W18. Phase 1.1 (A customer pickup + B failed delivery RTS) + Phase 2 (C RMA lifecycle, customer-funded). 15 fonksiyon (FN-01..FN-15), NotebookLM 13 önerdi (FN-09 atlanmış) + konsolidasyonda 2 ek (FN-08 resolveRtsDestination + FN-09 processCustomerPickupWindow) + numaralandırma düzeltmesi. **Yeni paradigma: Multi-flow Reverse Logistics** — 3 alt-paradigma tek spec'te (A/B/C boundary korundu). HERE Tour Planning mixed pickup/delivery native kullanımı (ADR-0002 §3.2). FEAT-017 delegasyon paterni açık belgelendi (locker_return type FEAT-017:FN-11'e delege). Schema değişiklikleri: `enterprise.dispatch_tasks.direction` + `parent_task_id` (Phase 1.1 additive), `enterprise.rma_requests` yeni tablo (Phase 2), `public.companies.settings.reverse_logistics_policy` JSONB. State machine RMA: rma_requested → approved/rejected → pickup_scheduled → in_transit → warehouse_received → processed → closed. ML disipline kusursuz — return reason prediction Phase 3+, weighted sum FN-04, replacement matching KAPSAM DIŞI. Konsolidasyon düzeltmeleri: FN-11 ADR-0005 §4.1 → §2 (section misattribution — F14'TEKİ AYNI HATA TEKRARLANDI, KALICI hata sınıfı). FN-09 numaralandırma anomalisi düzeltildi (NotebookLM atlamış). FN-08 RTS destination karar matrisi (UNCERTAINTIES #4 cevap — depo mu locker mu?), FN-09 customer pickup window (A alt-paradigma eksiği). Cross-spec sync TODO (TOPLU COMMIT FEAT-018 sonrası): FEAT-010 exception_type CHECK 5 yeni enum value (`locker_pickup_expired`, `tender_withdrawn`, `tender_no_quotes`, `returns_pickup_failed`, `rts_warehouse_unreachable`) + Severity matrix 5 yeni entry + shared kolonu güncellemeleri. §number fabrikasyon = 0 ✅ (F8-F10-F17-F14-F18 zinciri stable). Section misattribution KALICI (F14 + F18), prompt guard rail bu kavramsal confusion'ı çözemiyor — konsolidasyonda manuel düzeltme zorunlu. |
+| 1 | 2026-05-30 | Cem Bakir (with Claude + NotebookLM cowork) | İlk konsolide function spec. 15 fonksiyon (FN-01..FN-15), 3 alt-paradigma (A/B/C). Detay: bkz. git history. |
+| 2 | 2026-10-13 | Cem Sahinkaya (with Claude, ADR-Grounded Gatekeep SOP) | **Akademik yaşam döngüsü terminolojisi** (APICS/CSCMP: Order Initiation, ASN, Cross-Docking, Last-Mile, RMA/RTS) her aşama TulipFleet'in gerçek mimarisine karşı denetlenip haritalandı; **Line-Haul/Trunking gerekçeli kapsam dışı bırakıldı** (ürün Advisory-mode VRP last-mile/bölgesel dispatch, uzun-hat ağ optimizasyonu değil). **Kural tabanlı durum geçiş matrisi** eklendi (§2) — hangi geçiş otomatik/geofence-tetikli, hangisi dispatcher onaylı, açık tablo + `resolveApprovalRequirement` (FN-16) saf fonksiyonu. **2 yeni tablo tasarlandı** (Faz 2.5, henüz migration yazılmadı): `public.warehouses` (depo hiyerarşisi, self-referencing, additive — tek-depo şirketler için nötr) ve `enterprise.customer_feedback` (CSAT/şikayet/SLA-ihlali — bilinçli olarak CRM DEĞİL, minimal operasyonel özet). **Append-only audit trail kontratı** formalize edildi (§5.3) — DB trigger yerine paylaşılan saf fonksiyon disiplini, over-engineering'den kaçınıldı. **Gatekeep bulgusu (düzeltme):** v1'in "FEAT-010'a 2 yeni exception_type eklenmeli" iddiası yanlış çıktı — `returns_pickup_failed`/`rts_warehouse_unreachable` `tulipfleet-backend migrations/1782800000000` ile zaten canlı; gerçek açık kalan, FEAT-010'un kendi Severity Matrix dokümantasyonundaki eksik 2 satır (§6.1, §10.1). WMS/CRM sınırları netleştirildi (§5) — ikisi de TulipFleet'in inşa ettiği sistemler değil, tek adaptör noktası (FN-14) ve minimal özet tablosu. 4 yeni fonksiyon (FN-16..FN-19), FN-01..FN-15 değişmeden korundu. 4 yeni açık karar (§7) Cem'in onayını bekliyor — implementasyon hiçbiri için başlamadı. |

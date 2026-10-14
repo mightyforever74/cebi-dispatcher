@@ -6,6 +6,7 @@
  *
  * Run (Windows): npm test -- LocationSearchInput --watchAll=false
  */
+import { useState } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import LocationSearchInput, { LocationValue } from "./index";
@@ -44,12 +45,12 @@ function setResults(results: GeocodeResult[], loading = false) {
 }
 
 function Harness() {
-  const [value, setValue] = require("react").useState<LocationValue>({
+  const [value, setValue] = useState<LocationValue>({
     address: "",
     latitude: null,
     longitude: null,
   });
-  return <LocationSearchInput label="Alış adresi ara" value={value} onValueChange={setValue} />;
+  return <LocationSearchInput label="Pickup address search" value={value} onValueChange={setValue} />;
 }
 
 beforeEach(() => {

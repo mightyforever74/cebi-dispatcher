@@ -1,0 +1,28 @@
+# TulipFleet Dispatcher
+
+> TulipFleet is a B2B fleet management SaaS for logistics companies operating
+> in the Netherlands and Belgium. This subdomain hosts the Dispatcher web
+> app: live fleet tracking, task/dispatch management, driver and vehicle
+> records, route and toll-cost optimization, and exception handling for
+> fleet operators.
+
+This is the authenticated operator application, not a content or marketing
+site — most pages require a company login and show live, per-tenant
+operational data (vehicle positions, tasks, drivers), so there is little
+static content here for a crawler to index beyond this file and the public
+sign-in page.
+
+## Company
+
+- Main site: https://tulipfleet.com/
+- Privacy policy: https://tulipfleet.com/en/privacy/
+- Terms of service: https://tulipfleet.com/en/terms/
+- Contact: info@tulipfleet.com
+
+## What TulipFleet does
+
+- Real-time fleet location tracking (MQTT-based vehicle telemetry on a live map)
+- Task and dispatch management for drivers
+- Driver and vehicle master data, safety scoring, HGV/toll compliance
+- Route optimization and cost/toll analytics for Dutch and Belgian road networks
+- Exception monitoring and resolution workflow for fleet operators

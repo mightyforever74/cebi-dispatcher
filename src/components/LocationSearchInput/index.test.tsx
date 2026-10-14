@@ -8,8 +8,9 @@
  */
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import LocationSearchInput, { LocationValue } from "./index";
 import type { GeocodeResult } from "hooks/useGeocodeSearch";
+import { useState } from "react";
+import LocationSearchInput, { LocationValue } from "./index";
 
 const rotterdam: GeocodeResult = {
   title: "Waalhaven Zuidzijde",
@@ -44,12 +45,14 @@ function setResults(results: GeocodeResult[], loading = false) {
 }
 
 function Harness() {
-  const [value, setValue] = require("react").useState<LocationValue>({
+  const [value, setValue] = useState<LocationValue>({
     address: "",
     latitude: null,
     longitude: null,
   });
-  return <LocationSearchInput label="Alış adresi ara" value={value} onValueChange={setValue} />;
+  return (
+    <LocationSearchInput label="Pickup address search" value={value} onValueChange={setValue} />
+  );
 }
 
 beforeEach(() => {

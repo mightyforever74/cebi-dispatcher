@@ -17,6 +17,8 @@
  * dokumantasyonda yasar. Arayuz sozlesmesi (ScoreDetail) degismedi.
  */
 
+import { t } from "i18n";
+
 import { ActiveScorer, ScoreDetail, ScoringTask, ScoringVehicleSnapshot } from "../types";
 import { frameAgeLabel, haversineKm } from "../geo";
 
@@ -38,7 +40,7 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
   if (vehicle.latitude === null || vehicle.longitude === null) {
     return {
       value: 0,
-      memo: `${vehicle.plate}: 📡 Canli konum verisi yok — ETA hesaplanamadi.`,
+      memo: t("scorer.temporalNoLocation", { plate: vehicle.plate }),
     };
   }
 
@@ -47,13 +49,16 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
   const baseValue = 1 / (1 + etaMin / HALF_SCORE_ETA_MIN);
   const statusNote =
     vehicle.movementStatus === "moving"
-      ? `su an hareket halinde (${Math.round(vehicle.speedKmh ?? 0)} km/h)`
-      : `su an ${vehicle.movementStatus ?? "durum bilinmiyor"}`;
+      ? t("scorer.temporalMoving", { speed: Math.round(vehicle.speedKmh ?? 0) })
+      : t("scorer.temporalStatus", { status: vehicle.movementStatus ?? t("scorer.statusUnknown") });
 
-  const baseMemo =
-    `${vehicle.plate}: ⏱ Pickup'a tahmini ${Math.round(etaMin)} dk ` +
-    `(60 km/h ortalama varsayimi, kus ucusu ${km.toFixed(1)} km) · ` +
-    `${statusNote} · 📡 son sinyal ${frameAgeLabel(vehicle.lastUpdate)}`;
+  const baseMemo = t("scorer.temporalBase", {
+    plate: vehicle.plate,
+    eta: Math.round(etaMin),
+    km: km.toFixed(1),
+    statusNote,
+    lastSignal: frameAgeLabel(vehicle.lastUpdate),
+  });
 
   const windowEnd = task.constraints?.extended.time_window_end ?? null;
   const minsToEnd = minutesUntil(windowEnd);
@@ -62,7 +67,7 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
   if (minsToEnd === null) {
     return {
       value: baseValue,
-      memo: `${baseMemo}. Teslim penceresi belirtilmemis — salt ETA'ya gore siralandi.`,
+      memo: t("scorer.temporalNoWindow", { base: baseMemo }),
     };
   }
 
@@ -71,14 +76,14 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
     const slack = Math.round(minsToEnd - etaMin);
     return {
       value: baseValue,
-      memo: `${baseMemo}. Teslim penceresine YETISIR (~${slack} dk pay).`,
+      memo: t("scorer.temporalWindowMet", { base: baseMemo, slack }),
     };
   }
 
   const late = Math.round(etaMin - minsToEnd);
   return {
     value: baseValue * WINDOW_MISS_PENALTY,
-    memo: `${baseMemo}. UYARI: teslim penceresini ~${late} dk KACIRIR — feasibility cezasi uygulandi.`,
+    memo: t("scorer.temporalWindowMissed", { base: baseMemo, late }),
   };
 }
 

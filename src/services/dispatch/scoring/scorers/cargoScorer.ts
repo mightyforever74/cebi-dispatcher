@@ -15,6 +15,8 @@
  *    backlog, bkz. spec §5. Bu dosya sadece Katman A'yi implemente eder.
  */
 
+import { t } from "i18n";
+
 import { ActiveScorer, ScoreDetail, ScoringTask, ScoringVehicleSnapshot } from "../types";
 
 function hasStaticCapacityData(vehicle: ScoringVehicleSnapshot): boolean {
@@ -41,7 +43,7 @@ export const cargoScorer: ActiveScorer = {
         (required.weight_kg === null || required.weight_kg === undefined) &&
         (!required.hazmat_classes || required.hazmat_classes.length === 0));
     if (noConstraint) {
-      return { value: 1.0, memo: "Kargo kisiti yok.", eligible: true };
+      return { value: 1.0, memo: t("scorer.cargoNoConstraint"), eligible: true };
     }
 
     const certifiedClasses = vehicle.cargoCapacity?.hazmatCertifiedClasses ?? [];
@@ -53,7 +55,7 @@ export const cargoScorer: ActiveScorer = {
       if (missing.length > 0) {
         return {
           value: 0,
-          memo: `Tehlikeli madde sertifikasi eksik: ${missing.join(", ")}.`,
+          memo: t("scorer.cargoHazmatMissing", { classes: missing.join(", ") }),
           eligible: false,
         };
       }
@@ -63,7 +65,7 @@ export const cargoScorer: ActiveScorer = {
     if (!hasStaticCapacityData(vehicle)) {
       return {
         value: 1.0,
-        memo: "Kapasite verisi yok - bu arac elenmedi, skorlamaya dahil edilmedi.",
+        memo: t("scorer.cargoNoCapacityData"),
         eligible: true,
       };
     }
@@ -75,14 +77,14 @@ export const cargoScorer: ActiveScorer = {
     if (volumeNeeded !== null && cap.volumeM3 !== null && cap.volumeM3 < volumeNeeded) {
       return {
         value: 0,
-        memo: `Hacim yetersiz: arac ${cap.volumeM3} m3, gereken ${volumeNeeded} m3.`,
+        memo: t("scorer.cargoVolumeInsufficient", { available: cap.volumeM3, required: volumeNeeded }),
         eligible: false,
       };
     }
     if (weightNeeded !== null && cap.weightKg !== null && cap.weightKg < weightNeeded) {
       return {
         value: 0,
-        memo: `Agirlik yetersiz: arac ${cap.weightKg} kg, gereken ${weightNeeded} kg.`,
+        memo: t("scorer.cargoWeightInsufficient", { available: cap.weightKg, required: weightNeeded }),
         eligible: false,
       };
     }
@@ -101,7 +103,7 @@ export const cargoScorer: ActiveScorer = {
 
     return {
       value,
-      memo: `Kapasiteye sigiyor (doluluk ~%${Math.round(usedRatio * 100)}).`,
+      memo: t("scorer.cargoFits", { percent: Math.round(usedRatio * 100) }),
       eligible: true,
     };
   },

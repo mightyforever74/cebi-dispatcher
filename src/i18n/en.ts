@@ -779,4 +779,34 @@ export const en = {
     quotaSealed: "Quota sealed: {old} → {new}",
     errorNetwork: "Could not reach the server.",
   },
+  // D7-3 (11) (15 Oct 2026): dispatch scoring memo copy — previously hardcoded
+  // Turkish literals directly in src/services/dispatch/scoring/{geo,scorers/*}.ts.
+  scorer: {
+    signalNone: "no signal",
+    signalJustNow: "just now",
+    signalMinutesAgo: "{count} min ago",
+    signalHoursAgo: "{count}h ago",
+    cargoNoConstraint: "No cargo constraint.",
+    cargoHazmatMissing: "Missing hazmat certification: {classes}.",
+    cargoNoCapacityData: "No capacity data — vehicle not eliminated, excluded from scoring.",
+    cargoVolumeInsufficient: "Insufficient volume: vehicle {available} m³, needed {required} m³.",
+    cargoWeightInsufficient: "Insufficient weight: vehicle {available} kg, needed {required} kg.",
+    cargoFits: "Fits capacity (~{percent}% full).",
+    complianceNoData:
+      "No compliance data / failed to load — neutral ranking (0.5). No fake ZE-zone verdict is produced.",
+    complianceDagontheffing: "Dagontheffing remaining {remaining}/{limit} ({year})",
+    complianceHeffing: "Heffing ~€{total} ({rate} €/km)",
+    spatialNoLocation: "{plate}: 📡 No live location data — distance could not be calculated.",
+    spatialBase: "{plate}: 📍 {km} km as the crow flies · 📡 Last signal {lastSignal}",
+    temporalNoLocation: "{plate}: 📡 No live location data — ETA could not be calculated.",
+    statusUnknown: "status unknown",
+    temporalMoving: "currently moving ({speed} km/h)",
+    temporalStatus: "currently {status}",
+    temporalBase:
+      "{plate}: ⏱ ETA to pickup ~{eta} min (60 km/h average assumption, {km} km as the crow flies) · {statusNote} · 📡 last signal {lastSignal}",
+    temporalNoWindow: "{base}. Delivery window not specified — ranked by ETA only.",
+    temporalWindowMet: "{base}. MEETS delivery window (~{slack} min to spare).",
+    temporalWindowMissed:
+      "{base}. WARNING: MISSES delivery window by ~{late} min — feasibility penalty applied.",
+  },
 } as const;

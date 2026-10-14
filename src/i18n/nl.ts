@@ -777,4 +777,34 @@ export const nl = {
     quotaSealed: "Quota vastgelegd: {old} → {new}",
     errorNetwork: "Server onbereikbaar.",
   },
+  // D7-3 (11) (15 okt 2026): dispatch-scoring memo-tekst — stond eerder
+  // hardcoded in het Turks in src/services/dispatch/scoring/{geo,scorers/*}.ts.
+  scorer: {
+    signalNone: "geen signaal",
+    signalJustNow: "zojuist",
+    signalMinutesAgo: "{count} min geleden",
+    signalHoursAgo: "{count}u geleden",
+    cargoNoConstraint: "Geen ladingbeperking.",
+    cargoHazmatMissing: "Certificering gevaarlijke stoffen ontbreekt: {classes}.",
+    cargoNoCapacityData: "Geen capaciteitsgegevens — voertuig niet uitgesloten, buiten scoring gehouden.",
+    cargoVolumeInsufficient: "Onvoldoende volume: voertuig {available} m³, nodig {required} m³.",
+    cargoWeightInsufficient: "Onvoldoende gewicht: voertuig {available} kg, nodig {required} kg.",
+    cargoFits: "Past binnen capaciteit (~{percent}% vol).",
+    complianceNoData:
+      "Geen compliancegegevens / laden mislukt — neutrale rangschikking (0,5). Er wordt geen vervalste ZE-zone-uitspraak gegenereerd.",
+    complianceDagontheffing: "Dagontheffing resterend {remaining}/{limit} ({year})",
+    complianceHeffing: "Heffing ~€{total} ({rate} €/km)",
+    spatialNoLocation: "{plate}: 📡 Geen live locatiegegevens — afstand kon niet worden berekend.",
+    spatialBase: "{plate}: 📍 {km} km hemelsbreed · 📡 Laatste signaal {lastSignal}",
+    temporalNoLocation: "{plate}: 📡 Geen live locatiegegevens — ETA kon niet worden berekend.",
+    statusUnknown: "status onbekend",
+    temporalMoving: "op dit moment rijdend ({speed} km/u)",
+    temporalStatus: "op dit moment {status}",
+    temporalBase:
+      "{plate}: ⏱ ETA naar ophaalpunt ~{eta} min (gemiddelde aanname 60 km/u, {km} km hemelsbreed) · {statusNote} · 📡 laatste signaal {lastSignal}",
+    temporalNoWindow: "{base}. Leverperiode niet opgegeven — alleen op ETA gerangschikt.",
+    temporalWindowMet: "{base}. HAALT leverperiode (~{slack} min marge).",
+    temporalWindowMissed:
+      "{base}. WAARSCHUWING: MIST leverperiode met ~{late} min — haalbaarheidsstraf toegepast.",
+  },
 } satisfies TranslationSchema;

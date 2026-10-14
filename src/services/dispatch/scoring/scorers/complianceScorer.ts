@@ -10,6 +10,8 @@
  * (Graceful Degradation ilkesi aynen korunur).
  */
 
+import { t } from "i18n";
+
 import { ActiveScorer, ScoreDetail } from "../types";
 
 /** Cem onayli skor matrisi (04.08). */
@@ -32,21 +34,29 @@ export const complianceScorer: ActiveScorer = {
     if (!c) {
       return {
         value: 0.5,
-        memo:
-          "Regulasyon verisi yok/yuklenemedi — siralama notr (0.5). " +
-          "Sahte ZE-zone karari uretilmez.",
+        memo: t("scorer.complianceNoData"),
       };
     }
     const value = STATUS_SCORE[c.status] ?? 0.3;
+    // c.reason enterprise-backend'den gelen dinamik veri (zaten o anki
+    // sonucu anlatan serbest metin) - scorer'in kendi hardcoded literali
+    // degil, bu nedenle D7-3 (11) kapsami disinda birebir birakildi.
     const parts: string[] = [c.reason];
     if (c.needs_dagontheffing && c.dagontheffing) {
       parts.push(
-        `Dagontheffing kalan ${c.dagontheffing.remaining}/${c.dagontheffing.limit} (${c.dagontheffing.year})`
+        t("scorer.complianceDagontheffing", {
+          remaining: c.dagontheffing.remaining,
+          limit: c.dagontheffing.limit,
+          year: c.dagontheffing.year,
+        })
       );
     }
     if (c.heffing && c.heffing.matched) {
       parts.push(
-        `Heffing ~€${c.heffing.total_charge.toFixed(2)} (${c.heffing.rate_per_km.toFixed(3)} €/km)`
+        t("scorer.complianceHeffing", {
+          total: c.heffing.total_charge.toFixed(2),
+          rate: c.heffing.rate_per_km.toFixed(3),
+        })
       );
     }
     return { value, memo: parts.join(" · ") };

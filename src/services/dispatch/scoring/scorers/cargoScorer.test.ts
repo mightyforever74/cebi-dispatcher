@@ -4,6 +4,7 @@
  * Kilitli RED test — implementasyon cargoScorer.ts'de, bu dosyada degil.
  */
 import { cargoScorer } from "./cargoScorer";
+import { t } from "i18n";
 import { ScoringTask, ScoringVehicleSnapshot } from "../types";
 
 function vehicle(overrides: Partial<ScoringVehicleSnapshot> = {}): ScoringVehicleSnapshot {
@@ -65,7 +66,10 @@ describe("cargoScorer (FEAT-020 Phase 1.2, Katman A)", () => {
     const detail = cargoScorer.score(v, task({ volume_m3: 10, weight_kg: 500 }));
     expect(detail.eligible).toBe(true);
     expect(detail.value).toBe(1.0);
-    expect(detail.memo).toMatch(/kapasite verisi yok/i);
+    // D7-3 (11) (15 Eki 2026): memo artik i18n key'inden (scorer.cargoNoCapacityData)
+    // geliyor - sabit Turkce metin yerine aktif dilde cozulen degerle karsilastir,
+    // boylece aktif test ortaminin dili (en/tr/nl) ne olursa olsun dogru kalir.
+    expect(detail.memo).toBe(t("scorer.cargoNoCapacityData"));
   });
 
   it("3) hacim yetersiz -> eligible:false, value 0", () => {

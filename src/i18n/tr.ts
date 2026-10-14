@@ -777,4 +777,35 @@ export const tr = {
     quotaSealed: "Kota mühürlendi: {old} → {new}",
     errorNetwork: "Sunucuya ulasilamadi.",
   },
+  // D7-3 (11) (15 Eki 2026): dispatch scoring memo metinleri — daha once
+  // src/services/dispatch/scoring/{geo,scorers/*}.ts icinde dogrudan
+  // hardcoded Turkce literal olarak duruyordu.
+  scorer: {
+    signalNone: "sinyal yok",
+    signalJustNow: "az önce",
+    signalMinutesAgo: "{count} dk önce",
+    signalHoursAgo: "{count} sa önce",
+    cargoNoConstraint: "Kargo kısıtı yok.",
+    cargoHazmatMissing: "Tehlikeli madde sertifikası eksik: {classes}.",
+    cargoNoCapacityData: "Kapasite verisi yok - bu araç elenmedi, skorlamaya dahil edilmedi.",
+    cargoVolumeInsufficient: "Hacim yetersiz: araç {available} m³, gereken {required} m³.",
+    cargoWeightInsufficient: "Ağırlık yetersiz: araç {available} kg, gereken {required} kg.",
+    cargoFits: "Kapasiteye sığıyor (doluluk ~%{percent}).",
+    complianceNoData:
+      "Regülasyon verisi yok/yüklenemedi — sıralama nötr (0.5). Sahte ZE-zone kararı üretilmez.",
+    complianceDagontheffing: "Dagontheffing kalan {remaining}/{limit} ({year})",
+    complianceHeffing: "Heffing ~€{total} ({rate} €/km)",
+    spatialNoLocation: "{plate}: 📡 Canlı konum verisi yok — mesafe hesaplanamadı.",
+    spatialBase: "{plate}: 📍 Kuş uçuşu {km} km · 📡 Son sinyal {lastSignal}",
+    temporalNoLocation: "{plate}: 📡 Canlı konum verisi yok — ETA hesaplanamadı.",
+    statusUnknown: "durum bilinmiyor",
+    temporalMoving: "şu an hareket halinde ({speed} km/h)",
+    temporalStatus: "şu an {status}",
+    temporalBase:
+      "{plate}: ⏱ Pickup'a tahmini {eta} dk (60 km/h ortalama varsayımı, kuş uçuşu {km} km) · {statusNote} · 📡 son sinyal {lastSignal}",
+    temporalNoWindow: "{base}. Teslim penceresi belirtilmemiş — salt ETA'ya göre sıralandı.",
+    temporalWindowMet: "{base}. Teslim penceresine YETİŞİR (~{slack} dk pay).",
+    temporalWindowMissed:
+      "{base}. UYARI: teslim penceresini ~{late} dk KAÇIRIR — feasibility cezası uygulandı.",
+  },
 } satisfies TranslationSchema;

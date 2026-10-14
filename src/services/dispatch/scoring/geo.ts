@@ -5,6 +5,8 @@
  * olarak kalir (telemetri var ama Matrix cevap vermiyorsa).
  */
 
+import { t } from "i18n";
+
 const EARTH_RADIUS_KM = 6371;
 
 export function haversineKm(
@@ -22,14 +24,17 @@ export function haversineKm(
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(a));
 }
 
-/** "3 dk once" tarzi insan-okur yas etiketi (Karar Notu icin). */
+/**
+ * "3 dk once" tarzi insan-okur yas etiketi (Karar Notu icin). D7-3 (11)
+ * (15 Eki 2026): artik aktif dile gore i18n key'inden okunuyor (scorer.signal*).
+ */
 export function frameAgeLabel(isoTimestamp: string | null): string {
-  if (!isoTimestamp) return "sinyal yok";
+  if (!isoTimestamp) return t("scorer.signalNone");
   const ageMs = Date.now() - new Date(isoTimestamp).getTime();
-  if (Number.isNaN(ageMs)) return "sinyal yok";
+  if (Number.isNaN(ageMs)) return t("scorer.signalNone");
   const min = Math.round(ageMs / 60000);
-  if (min < 1) return "az once";
-  if (min < 60) return `${min} dk once`;
+  if (min < 1) return t("scorer.signalJustNow");
+  if (min < 60) return t("scorer.signalMinutesAgo", { count: min });
   const h = Math.round(min / 60);
-  return `${h} sa once`;
+  return t("scorer.signalHoursAgo", { count: h });
 }

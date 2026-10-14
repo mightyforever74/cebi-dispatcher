@@ -12,6 +12,8 @@
  * arac 0 skor alir ve memo'da nedeni yazar — sahte konum uretilmez.
  */
 
+import { t } from "i18n";
+
 import { ActiveScorer, ScoreDetail, ScoringTask, ScoringVehicleSnapshot } from "../types";
 import { frameAgeLabel, haversineKm } from "../geo";
 
@@ -22,7 +24,7 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
   if (vehicle.latitude === null || vehicle.longitude === null) {
     return {
       value: 0,
-      memo: `${vehicle.plate}: 📡 Canli konum verisi yok — mesafe hesaplanamadi.`,
+      memo: t("scorer.spatialNoLocation", { plate: vehicle.plate }),
     };
   }
 
@@ -35,7 +37,11 @@ function score(vehicle: ScoringVehicleSnapshot, task: ScoringTask): ScoreDetail 
 
   return {
     value: 1 / (1 + km / HALF_SCORE_KM),
-    memo: `${vehicle.plate}: 📍 Kus ucusu ${km.toFixed(1)} km · 📡 Son sinyal ${frameAgeLabel(vehicle.lastUpdate)}`,
+    memo: t("scorer.spatialBase", {
+      plate: vehicle.plate,
+      km: km.toFixed(1),
+      lastSignal: frameAgeLabel(vehicle.lastUpdate),
+    }),
   };
 }
 

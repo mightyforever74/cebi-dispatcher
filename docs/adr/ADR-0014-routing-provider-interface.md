@@ -3,8 +3,8 @@
 | Field           | Value                                                                       |
 | --------------- | --------------------------------------------------------------------------- |
 | **Status**      | Accepted                                                                    |
-| **Version**     | 1.7                                                                        |
-| **Date**        | 2026-10-15 (amended)                                                        |
+| **Version**     | 1.8                                                                        |
+| **Date**        | 2026-10-15 (amended twice same day — §13 then §13.5)                        |
 | **Decision by** | Cem Bakir (Founder / Lead Engineer)                                         |
 | **Component**   | TulipFleet — Routing abstraction across main fleet + enterprise backends    |
 | **Related**     | ADR-0002 (HERE solver), ADR-0005 (dispatch workflow), ADR-0012 (NL compliance), FEAT-001/005/008/009/103 |
@@ -219,6 +219,7 @@ Phases 1-3 are complete in code only - NOT yet deployed to production. The Statu
 | 1.5 | 2026-06-29 | Cem Sahinkaya | Added section 5.1 Deployment status: Phases 1-3 are code-layer only, NOT in production (prod ~21 commits behind; verify hereapi.com=0 + routingProvider.computeRoute on prod). Added commit 6ff50b1 (computeMatrix=false) to the 1.4 commit list. Doc-only; no code change. |
 | 1.6 | 2026-10-10 | Cem Sahinkaya | Added section 12, Amendment: single routing source. `route_json.public_route` (HERE truck) is now the sole routing source for both the public tracking page and the driver navigation screen; Google Directions removed from `DriverRouteMapScreen.js`. Core `/api/driver/tasks/:id/start` warms the cache fire-and-forget (`warmPublicRoute`); `HereRoutingProvider.computeRoute` fetch bounded by `AbortSignal.timeout` (8000ms default). Commits: tulipfleet-backend `16e3085`, argon `7c248fd` (EAS update `b9489cd1`). |
 | 1.7 | 2026-10-15 | Cem Sahinkaya | Added section 13, Amendment: dispatcher decision-support scorers (`spatialScorer.ts`/`temporalScorer.ts`) stay haversine-based. Audited: `computeMatrix` is unimplemented in both backends (`HereRoutingProvider.js:28` explicit `false`, enterprise has no matrix method). Decision: same Phase 2/customer-triggered boundary as `HereTourPlanningProvider` — no `computeMatrix` work scheduled, no scorer architecture change. Closes D7-3 TODO (13). Doc-only; no code change. |
+| 1.8 | 2026-10-15 | Cem Bakir | Added section 13.5, Revision: explicit, conscious override of §13.2's closing clause — un-bundles the Tour Planning UI's activation schedule from the scorer/`computeMatrix` finding (§13.1–13.3 unchanged, still accurate). `/optimization/tour-planning` moves from locked placeholder to **Phase 1.1 / Pre-Customer Activation** (live now, not customer-gated); built against the pre-existing `submitVrp`/`pollVrp` contract (`hooks/useTaskOptimization.ts`, reused unmodified) — zero changes to `/dispatcher/tasks/optimize`, the DSE `SCORERS` chain, or `lib/routing/factory.js`'s `ROUTING_PROVIDER` default (still `"mock"`; flipping it to `here-tour` in production remains a separate ops action). New files: `src/layouts/optimization/TourPlanning.tsx`, `src/components/TourPlanningMap.tsx` (replaces `TourPlanningPlaceholder.tsx`, deleted). |
 
 ## 12. Amendment 2026-10-10: Single routing source — driver nav consumes `route_json.public_route`
 
@@ -267,3 +268,24 @@ Scorers stay haversine-based. This is not a gap to schedule — it falls under t
 ### 13.4 References
 
 - qa `TODO_ACTIVE.md` D7-3 (13). ROADMAP.md "ÜRÜN GERÇEĞİ (6)". `tulipfleet-backend/services/routing/HereRoutingProvider.js:28`. `tulipfleet-enterprise-backend/lib/routing/factory.js` (here-tour gating). `src/services/dispatch/scoring/{geo.ts,scorers/spatialScorer.ts,scorers/temporalScorer.ts}`.
+
+### 13.5 Revision 2026-10-15 (b): Tour Planning UI carved out of the shared boundary — Phase 1.1 / Pre-Customer Activation
+
+**Scope of this revision — read carefully:** this amends ONLY the closing clause of §13.2 ("it falls under the same Phase 2/customer-triggered boundary already governing `HereTourPlanningProvider`"), and only for the **`/optimization/tour-planning` frontend page**. §13.1–§13.3 (scorers stay haversine, `computeMatrix` unimplemented) are **unchanged and still accurate** — this revision does not implement `computeMatrix`, does not touch `spatialScorer.ts`/`temporalScorer.ts`, and does not change the DSE scorer architecture. The two decisions (scorer accuracy vs. Tour Planning UI activation) are hereby explicitly un-bundled; they had been treated as one boundary by convenience, not by technical necessity — they gate different things (a synchronous ranking helper vs. a VRP planning screen) and can move on different schedules.
+
+**Decision:** Cem Bakir, conscious product decision (2026-10-15, same session as the §13 amendment above — overriding it within the hour, with full awareness of the original reasoning): the `/optimization/tour-planning` page moves from locked placeholder (`TourPlanningPlaceholder.tsx`, "will activate in Phase 1.1") to **live in Phase 1.1, pre-customer** — i.e. now, not gated on a paying customer. Reasoning given: at the platform's current maturity, a locked flagship menu item ("Smart Route Optimization 🔒") reads as an incomplete product to prospects/investors; showcasing it now is judged to outweigh the deferral's original cost-avoidance rationale, especially since HERE account cost exposure is understood to be controllable via sandbox/freemium quota and rate-limiting at the ops layer.
+
+**What actually changed (code, this revision):**
+- `src/layouts/optimization/TourPlanning.tsx` (new; replaces and deletes `TourPlanningPlaceholder.tsx`) — a real form (N pickup/drop-off stops via the existing `LocationSearchInput` HERE-geocode component, capacity/skill constraints, vehicle multi-select) wired to the **already-existing** `IRoutingProvider` contract: `POST /dispatcher/tasks/optimize` → `GET /dispatcher/tasks/optimize/poll/:id`, via the same `hooks/useTaskOptimization.ts` hooks the `/dispatcher/tasks/optimize` Kanban page already uses (hooks are generic fetch wrappers, not UI-coupled — reused as-is, zero changes to that file or to the DSE `SCORERS` chain).
+- `src/components/TourPlanningMap.tsx` (new) — Leaflet visualization of the plan: pickup/drop-off markers + a straight-line (haversine) dashed connector per task. **No route geometry is implied or shown** — neither provider (Mock nor `HereTourPlanningProvider`) returns route geometry from `submitVrp`/`pollVrp` (VRP job/solution, not `computeRoute`), so the UI stays honest regardless of which provider is active.
+- `src/routes.tsx`, `src/i18n/{en,tr,nl}.ts` — placeholder route swapped for the real page; sidenav label's lock emoji (`nav.smartRoute: "… 🔒 (Phase 1.1)"`) removed; new `tourPlanning.form.*`/`tourPlanning.result.*` i18n keys added (TR/EN/NL parity verified via `verify:i18n`, 705/705 keys).
+
+**What did NOT change (explicitly out of scope of this revision):**
+- `lib/routing/factory.js`'s `ROUTING_PROVIDER` env default (`"mock"`) — **not touched in code**. Which provider actually computes the VRP solution (Mock today, `HereTourPlanningProvider` once HERE is desired) remains an operations/deployment decision (an env var on the production enterprise-backend host), outside this repo-level code change and outside what this session can or did set. "Phase 1.1 / Pre-Customer Activation" describes the **UI's availability**, not a flip of the production routing provider — that remains a separate ops action for whoever operates the production environment, to be taken whenever they're ready to incur the real, recurring HERE API cost.
+- `/dispatcher/tasks/optimize` (Kanban/DSE scorer page) — untouched, still mock/haversine-scored as before.
+- `computeMatrix` — still unimplemented (§13.1–§13.3 stand).
+- The `/optimization/tour-planning` → `/dispatcher/tasks/optimize/approve` dispatch step was deliberately **not duplicated** into the new page; approving a plan to real vehicles still only happens from the existing Kanban flow (single approval path).
+
+### 13.6 References (13.5)
+
+- `src/layouts/optimization/TourPlanning.tsx`, `src/components/TourPlanningMap.tsx`, `src/hooks/useTaskOptimization.ts` (reused, unmodified), `src/routes.tsx`, `src/i18n/{en,tr,nl}.ts`. qa `TODO_ACTIVE.md` / `SESSION_NOTES.md` 2026-10-15 entries (Cem's override authorization + reasoning, verbatim in session log).

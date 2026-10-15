@@ -9,7 +9,7 @@ export const en = {
     tasksDispatch: "Tasks & Dispatch",
     exceptions: "Exception Management (Alerts)",
     aiOptimization: "AI & Optimization",
-    smartRoute: "Smart Route Optimization 🔒 (Phase 1.1)",
+    smartRoute: "Smart Route Optimization (Phase 1.1)",
     costToll: "Cost & Toll Inspection 🔒 (July 2026)",
     matrixMaster: "Matrix & Master Data",
     driverManagement: "Driver Management",
@@ -605,6 +605,29 @@ export const en = {
   tourPlanning: {
     title: "Smart Route Optimization (VRP)",
     body: "The HERE Tour Planning engine (FEAT-001) will activate in the Phase 1.1 sprint. Multi-vehicle distribution, time windows and capacity constraints will run here in advisory mode.",
+    mockBanner:
+      "Routes are computed by the active routing provider (currently Mock; HERE Tour Planning activates via the ROUTING_PROVIDER setting). Distance/duration are a straight-line estimate — no real route geometry is shown.",
+    form: {
+      intro: "Add one or more pickup/drop-off stops and pick the vehicles to plan a tour for.",
+      stopTitle: "Stop {n}",
+      removeStop: "Remove stop",
+      volumeM3: "Volume (m³)",
+      weightKg: "Weight (kg)",
+      addStop: "Add stop",
+      errorNoStops: "Add at least one stop with a pickup and a drop-off address.",
+      errorNoVehicles: "Select at least one vehicle.",
+      submit: "Plan route",
+    },
+    result: {
+      title: "Planning result",
+      newPlan: "New plan",
+      polling: "Waiting for the routing provider…",
+      distance: "Total distance",
+      duration: "Total duration",
+      vehicles: "Available vehicles",
+      distanceHint: "Straight-line estimate — not an actual driving route.",
+      approveHint: "To dispatch this plan to drivers, approve it from Tasks → New Task → Optimize.",
+    },
   },
   tollAnalytics: {
     title: "Cost & Toll Inspection (Toll)",

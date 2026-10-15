@@ -7,7 +7,7 @@ export const nl = {
     tasksDispatch: "Taken & toewijzing",
     exceptions: "Uitzonderingsbeheer (Meldingen)",
     aiOptimization: "AI & optimalisatie",
-    smartRoute: "Slimme route-optimalisatie 🔒 (Phase 1.1)",
+    smartRoute: "Slimme route-optimalisatie (Phase 1.1)",
     costToll: "Kosten & Vrachtwagenheffing-inspectie 🔒 (juli 2026)",
     matrixMaster: "Matrix & masterdata",
     driverManagement: "Chauffeursbeheer",
@@ -603,6 +603,29 @@ export const nl = {
   tourPlanning: {
     title: "Slimme route-optimalisatie (VRP)",
     body: "De HERE Tour Planning-motor (FEAT-001) wordt in de Phase 1.1-sprint geactiveerd. Multi-voertuigverdeling, tijdvensters en capaciteitsbeperkingen draaien hier in adviesmodus.",
+    mockBanner:
+      "Routes worden berekend door de actieve routing-provider (nu Mock; HERE Tour Planning activeert via de ROUTING_PROVIDER-instelling). Afstand/duur zijn een hemelsbrede schatting — er wordt geen echte routegeometrie getoond.",
+    form: {
+      intro: "Voeg een of meer ophaal-/afleverstops toe en kies de voertuigen om een rit voor te plannen.",
+      stopTitle: "Stop {n}",
+      removeStop: "Stop verwijderen",
+      volumeM3: "Volume (m³)",
+      weightKg: "Gewicht (kg)",
+      addStop: "Stop toevoegen",
+      errorNoStops: "Voeg minstens één stop toe met een ophaal- en afleveradres.",
+      errorNoVehicles: "Selecteer minstens één voertuig.",
+      submit: "Route plannen",
+    },
+    result: {
+      title: "Planningsresultaat",
+      newPlan: "Nieuw plan",
+      polling: "Wachten op de routing-provider…",
+      distance: "Totale afstand",
+      duration: "Totale duur",
+      vehicles: "Beschikbare voertuigen",
+      distanceHint: "Hemelsbrede schatting — geen daadwerkelijke rijroute.",
+      approveHint: "Om dit plan naar chauffeurs te sturen, keur het goed via Taken → Nieuwe taak → Optimaliseren.",
+    },
   },
   tollAnalytics: {
     title: "Kosten- en tolinspectie (Toll)",

@@ -7,7 +7,7 @@ export const tr = {
     tasksDispatch: "Görev & Sevk Yönetimi",
     exceptions: "İstisna Yönetimi (İkaz)",
     aiOptimization: "Yapay Zekâ & Optimizasyon",
-    smartRoute: "Akıllı Rota Optimizasyonu 🔒 (Phase 1.1)",
+    smartRoute: "Akıllı Rota Optimizasyonu (Phase 1.1)",
     costToll: "Maliyet & Vrachtwagenheffing Denetimi 🔒 (Temmuz 2026)",
     matrixMaster: "Matris & Master Data",
     driverManagement: "Sürücü Yönetimi",
@@ -603,6 +603,29 @@ export const tr = {
   tourPlanning: {
     title: "Akıllı Rota Optimizasyonu (VRP)",
     body: "HERE Tour Planning motoru (FEAT-001) Phase 1.1 sprint’inde etkinleşecek. Çoklu araç dağıtımı, zaman penceresi ve kapasite kısıtları bu ekranda yarı otonom çalışacak.",
+    mockBanner:
+      "Rotalar aktif routing sağlayıcısı ile hesaplanır (şu an Mock; HERE Tour Planning, ROUTING_PROVIDER ayarıyla etkinleşir). Mesafe/süre kuş uçuşu tahminidir — gerçek yol geometrisi gösterilmez.",
+    form: {
+      intro: "Bir veya daha fazla alınış/teslim durağı ekleyin ve rota planlanacak araçları seçin.",
+      stopTitle: "Durak {n}",
+      removeStop: "Durağı kaldır",
+      volumeM3: "Hacim (m³)",
+      weightKg: "Ağırlık (kg)",
+      addStop: "Durak ekle",
+      errorNoStops: "En az bir alınış ve teslim adresi olan durak ekleyin.",
+      errorNoVehicles: "En az bir araç seçin.",
+      submit: "Rotayı planla",
+    },
+    result: {
+      title: "Planlama sonucu",
+      newPlan: "Yeni plan",
+      polling: "Routing sağlayıcısı bekleniyor…",
+      distance: "Toplam mesafe",
+      duration: "Toplam süre",
+      vehicles: "Uygun araçlar",
+      distanceHint: "Kuş uçuşu tahmindir — gerçek sürüş rotası değildir.",
+      approveHint: "Bu planı sürücülere sevk etmek için Görevler → Yeni Görev → Optimize'dan onaylayın.",
+    },
   },
   tollAnalytics: {
     title: "Maliyet & Otoban Teftişi (Toll)",

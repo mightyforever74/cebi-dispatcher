@@ -37,11 +37,10 @@ const Exceptions = lazy(() => import("layouts/dispatcher/exceptions"));
 const Vehicles = lazy(() => import("layouts/dispatcher/vehicles"));
 const LiveFleetMap = lazy(() => import("layouts/live-fleet-map/LiveFleetMap"));
 
-// ── Optimizasyon — gated placeholder'lar (FEAT-001 / FEAT-008) ──
+// ── Optimizasyon — FEAT-001 (Tour Planning, Phase 1.1'den itibaren canlı,
+// bkz. ADR-0014 §13 2026-10-15 revizyonu) + FEAT-008 (Toll, zaten canlı) ──
 const TollAnalytics = lazy(() => import("layouts/optimization/TollAnalytics"));
-const TourPlanningPlaceholder = lazy(
-  () => import("layouts/optimization/TourPlanningPlaceholder")
-);
+const TourPlanning = lazy(() => import("layouts/optimization/TourPlanning"));
 
 // ── Sistem ──
 const Settings = lazy(() => import("layouts/pages/account/settings"));
@@ -97,7 +96,7 @@ export function createRoutes(t: TFunction) {
     noCollapse: true,
   },
 
-  // ═══════════ GRUP 2 — YAPAY ZEKÂ & OPTİMİZASYON (gated) ═══════════
+  // ═══════════ GRUP 2 — YAPAY ZEKÂ & OPTİMİZASYON ═══════════
   { type: "title", title: t("nav.aiOptimization"), key: "title-optimization" },
   {
     type: "collapse",
@@ -109,7 +108,7 @@ export function createRoutes(t: TFunction) {
       </Icon>
     ),
     route: "/optimization/tour-planning",
-    component: <TourPlanningPlaceholder />,
+    component: <TourPlanning />,
     noCollapse: true,
   },
   {

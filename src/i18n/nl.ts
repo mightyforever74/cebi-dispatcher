@@ -604,7 +604,7 @@ export const nl = {
     title: "Slimme route-optimalisatie (VRP)",
     body: "De HERE Tour Planning-motor (FEAT-001) wordt in de Phase 1.1-sprint geactiveerd. Multi-voertuigverdeling, tijdvensters en capaciteitsbeperkingen draaien hier in adviesmodus.",
     mockBanner:
-      "Routes worden berekend door de actieve routing-provider (nu Mock; HERE Tour Planning activeert via de ROUTING_PROVIDER-instelling). Afstand/duur zijn een hemelsbrede schatting — er wordt geen echte routegeometrie getoond.",
+      "Routes worden berekend door de provider die op de server actief is (ROUTING_PROVIDER-instelling) — Mock of HERE Tour Planning. Welke engine elk plan heeft verwerkt, wordt hieronder getoond zodra het klaar is.",
     form: {
       intro: "Voeg een of meer ophaal-/afleverstops toe en kies de voertuigen om een rit voor te plannen.",
       stopTitle: "Stop {n}",
@@ -623,7 +623,11 @@ export const nl = {
       distance: "Totale afstand",
       duration: "Totale duur",
       vehicles: "Beschikbare voertuigen",
-      distanceHint: "Hemelsbrede schatting — geen daadwerkelijke rijroute.",
+      solver: "Engine",
+      solverMock: "Mock (hemelsbrede schatting)",
+      solverHere: "HERE Tour Planning",
+      distanceHintMock: "Hemelsbrede schatting — geen daadwerkelijke rijroute.",
+      distanceHintHere: "Daadwerkelijke route berekend door HERE Tour Planning.",
       approveHint: "Om dit plan naar chauffeurs te sturen, keur het goed via Taken → Nieuwe taak → Optimaliseren.",
     },
   },

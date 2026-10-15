@@ -606,7 +606,7 @@ export const en = {
     title: "Smart Route Optimization (VRP)",
     body: "The HERE Tour Planning engine (FEAT-001) will activate in the Phase 1.1 sprint. Multi-vehicle distribution, time windows and capacity constraints will run here in advisory mode.",
     mockBanner:
-      "Routes are computed by the active routing provider (currently Mock; HERE Tour Planning activates via the ROUTING_PROVIDER setting). Distance/duration are a straight-line estimate — no real route geometry is shown.",
+      "Routes are computed by whichever routing provider is active on the server (ROUTING_PROVIDER setting) — Mock or HERE Tour Planning. The solver that handled each plan is shown below once it completes.",
     form: {
       intro: "Add one or more pickup/drop-off stops and pick the vehicles to plan a tour for.",
       stopTitle: "Stop {n}",
@@ -625,7 +625,11 @@ export const en = {
       distance: "Total distance",
       duration: "Total duration",
       vehicles: "Available vehicles",
-      distanceHint: "Straight-line estimate — not an actual driving route.",
+      solver: "Solver",
+      solverMock: "Mock (straight-line estimate)",
+      solverHere: "HERE Tour Planning",
+      distanceHintMock: "Straight-line estimate — not an actual driving route.",
+      distanceHintHere: "Actual route computed by HERE Tour Planning.",
       approveHint: "To dispatch this plan to drivers, approve it from Tasks → New Task → Optimize.",
     },
   },

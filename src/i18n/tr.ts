@@ -604,7 +604,7 @@ export const tr = {
     title: "Akıllı Rota Optimizasyonu (VRP)",
     body: "HERE Tour Planning motoru (FEAT-001) Phase 1.1 sprint’inde etkinleşecek. Çoklu araç dağıtımı, zaman penceresi ve kapasite kısıtları bu ekranda yarı otonom çalışacak.",
     mockBanner:
-      "Rotalar aktif routing sağlayıcısı ile hesaplanır (şu an Mock; HERE Tour Planning, ROUTING_PROVIDER ayarıyla etkinleşir). Mesafe/süre kuş uçuşu tahminidir — gerçek yol geometrisi gösterilmez.",
+      "Rotalar, sunucuda aktif olan routing sağlayıcısıyla (ROUTING_PROVIDER ayarı) hesaplanır — Mock veya HERE Tour Planning. Her plan tamamlandığında hangi motorun işlediği aşağıda gösterilir.",
     form: {
       intro: "Bir veya daha fazla alınış/teslim durağı ekleyin ve rota planlanacak araçları seçin.",
       stopTitle: "Durak {n}",
@@ -623,7 +623,11 @@ export const tr = {
       distance: "Toplam mesafe",
       duration: "Toplam süre",
       vehicles: "Uygun araçlar",
-      distanceHint: "Kuş uçuşu tahmindir — gerçek sürüş rotası değildir.",
+      solver: "Motor",
+      solverMock: "Mock (kuş uçuşu tahmin)",
+      solverHere: "HERE Tour Planning",
+      distanceHintMock: "Kuş uçuşu tahmindir — gerçek sürüş rotası değildir.",
+      distanceHintHere: "HERE Tour Planning tarafından hesaplanan gerçek rota.",
       approveHint: "Bu planı sürücülere sevk etmek için Görevler → Yeni Görev → Optimize'dan onaylayın.",
     },
   },

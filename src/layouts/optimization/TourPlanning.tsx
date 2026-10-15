@@ -214,6 +214,13 @@ function TourPlanning(): JSX.Element {
   }, [poll.data]);
 
   const summary = poll.data?.result?.summary;
+  const solver = poll.data?.result?.solver;
+  // FIX (2026-10-15, Cem canlı ROUTING_PROVIDER=here-tour denemesi): bu
+  // metin önceden sabit "currently Mock" diyordu — hangi sağlayıcının
+  // gerçekten çalıştığını yansıtmıyordu. Artık poll sonucundaki gerçek
+  // `solver` alanına göre (backend: MockRoutingProvider "mock-optimization-
+  // engine", HereTourPlanningProvider "here-tour-planning-v3") belirleniyor.
+  const isMockSolver = solver ? solver.includes("mock") : null;
   const availableVehicles: string[] = poll.data?.result?.available_vehicles ?? [];
   const vehicleLabel = useCallback(
     (id: string) => vehicles.find((v: Vehicle) => v.id === id)?.plate_no || id,
@@ -430,8 +437,20 @@ function TourPlanning(): JSX.Element {
                     </Grid>
                   </Grid>
 
+                  <MDTypography variant="caption" fontWeight="bold" display="block">
+                    {t("tourPlanning.result.solver")}:{" "}
+                    <MDTypography component="span" variant="caption" color="text">
+                      {isMockSolver === null
+                        ? "—"
+                        : isMockSolver
+                          ? t("tourPlanning.result.solverMock")
+                          : t("tourPlanning.result.solverHere")}
+                    </MDTypography>
+                  </MDTypography>
                   <MDTypography variant="caption" color="text" display="block">
-                    {t("tourPlanning.result.distanceHint")}
+                    {isMockSolver === false
+                      ? t("tourPlanning.result.distanceHintHere")
+                      : t("tourPlanning.result.distanceHintMock")}
                   </MDTypography>
                   <MDTypography variant="caption" color="text" display="block">
                     {t("tourPlanning.result.approveHint")}

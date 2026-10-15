@@ -1,5 +1,7 @@
 /**
- * TourPlanning — FEAT-001 "Smart Route Optimization" sayfası.
+ * TourPlanning — FEAT-001 "Quick Feasibility Check" sayfası (eski adı: "Smart
+ * Route Optimization" — isim, sayfanın gerçek işlevini (taahhütsüz rota
+ * mesafe/süre simülasyonu) daha dürüst yansıtması için 2026-10-15'te değişti).
  *
  * 2026-10-15, Cem onayı: önceki TourPlanningPlaceholder.tsx (kilitli,
  * "Phase 1.1 sprint'inde etkinleşecek" statik kartı) kaldırıldı — ADR-0014

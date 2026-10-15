@@ -51,10 +51,15 @@ const TILE_ATTRIBUTION =
 
 const fmtWeight = (w: string): string => w.replace("_plus_t", "+ t").replace(/_/g, "-");
 
-const CONN_LABEL: Record<Exclude<VehicleConnectivityStatus, "maintenance">, TranslationKey> = {
+// Record<VehicleConnectivityStatus, ...> (not Exclude<..., "maintenance">) to
+// match vehicleConnectivity()'s declared return type and VehicleDetailPanel's
+// own CONN_LABEL: "maintenance" is unreachable today but must stay indexable
+// without a cast if that ever changes.
+const CONN_LABEL: Record<VehicleConnectivityStatus, TranslationKey> = {
   online: "map.statusOnline",
   stale: "map.statusStale",
   offline: "map.statusOffline",
+  maintenance: "map.statusOffline",
 };
 
 type StatusFilter = "all" | "moving" | "stopped" | "ze";
@@ -477,6 +482,18 @@ function LiveFleetMap(): JSX.Element {
                         }}
                       />
                       {v.plate}
+                      {/* §6B a11y: the colored dot alone is not accessible (color-only
+                          signal) — pair it with the same text label the legend uses. */}
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: 600,
+                          color: connectivityColor(conn),
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {t(CONN_LABEL[conn])}
+                      </span>
                     </MDTypography>
                     <MDTypography variant="caption" fontWeight="bold" sx={{ color: chrome.text }}>
                       {v.speed_kmh == null ? (

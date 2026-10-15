@@ -52,7 +52,15 @@ export const landing = {
   /** Landing pazarlama vurgu rengi (turuncu-kirmizi). D1'de MUI `primary`e
    * BAGLANMADI — TulipFleet urun markasi (mor, asagidaki `brand`) zaten
    * tum ekranlarda kurulu; bu bir rebrand karari degildir (Cem onayi gerekir,
-   * bkz. docs/UI_D0_DISCOVERY.md §2 A4). Yalnizca kopru/referans amacli tasindi. */
+   * bkz. docs/UI_D0_DISCOVERY.md §2 A4). Yalnizca kopru/referans amacli tasindi.
+   *
+   * KARAR (2026-10-15, Cem): yukaridaki A4 karar noktasi KISMEN cozuldu.
+   * Ust navbar (DashboardNavbar, dark mode) artik bu `landing.*` degerlerini
+   * (navy/navyDeep/accent/emerald/offwhite) tuketiyor — bkz.
+   * examples/Navbars/DashboardNavbar/styles.ts. Kasitli olarak DAR tutuldu:
+   * `brand.primary`/MUI `palette.primary` (mor, tum ekranlarda canli) ve
+   * `status.*` (operasyonel durum sozlesmesi) bu karara DAHIL EDILMEDI —
+   * bunlar ayri, daha genis kapsamli bir rebrand karari gerektirir. */
   accent: "#ff5722",
   accentSoft: "#ff7043",
   accentDim: "rgba(255, 87, 34, 0.14)",

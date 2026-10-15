@@ -57,6 +57,13 @@
 [data-theme="dark"] {
   color-scheme: dark;
   --tf-glass-opacity: 0.62;
+
+  /* ---- Ust navbar camı (2026-10-15, Cem onayı — tokens.ts `landing`
+     A4 karar noktası, navbar'a dar kapsamlı): landing.navy @ 0.7 +
+     beyaz/10 kenarlık. Yalnızca dark mode; light tema landing'de
+     karşılığı olmadığı için dokunulmadı. ---- */
+  --tf-navbar-bg-dark: rgba(10, 15, 36, 0.7);
+  --tf-navbar-border-dark: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="light"] {
@@ -75,6 +82,10 @@
     --tf-glass-blur: 0px;
     --tf-glass-saturate: 100%;
     --tf-glass-opacity: 0.96;
+  }
+
+  [data-theme="dark"] {
+    --tf-navbar-bg-dark: rgba(10, 15, 36, 0.96);
   }
 }
 

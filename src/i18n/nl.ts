@@ -118,6 +118,7 @@ export const nl = {
     centerOnMap: "Centreer op de kaart",
     mqttTitle: "MQTT: {state}",
     ze: "ZE",
+    demoBadge: "DEMO",
     kmh: "km/h",
     speedValue: "{value} km/h",
     statusMoving: "Rijdend",

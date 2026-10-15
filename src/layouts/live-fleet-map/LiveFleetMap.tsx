@@ -318,6 +318,24 @@ function LiveFleetMap(): JSX.Element {
     );
   };
 
+  // ?clusterDemo=1 synthetic vehicles (expandClusterDemo, mapChrome.ts) must
+  // never look like real telemetry — same warning tone as `status.vehicle.stale`,
+  // no new color literal.
+  const demoChip = () => (
+    <Chip
+      label={t("map.demoBadge")}
+      size="small"
+      sx={{
+        fontSize: "9px",
+        height: "18px",
+        fontWeight: "bold",
+        bgcolor: status.vehicle.stale.bg,
+        color: status.vehicle.stale.fg,
+        border: `1px solid ${status.vehicle.stale.border}`,
+      }}
+    />
+  );
+
   const listBody = (): JSX.Element => {
     if (snapshot.phase === "loading" && !snapshot.bootstrapped) {
       return (
@@ -450,6 +468,7 @@ function LiveFleetMap(): JSX.Element {
                     </MDTypography>
                   </MDBox>
                   <MDBox display="flex" gap={0.5}>
+                    {v.isDemo && demoChip()}
                     <Chip
                       label={fmtWeight(v.vehicle_weight_class)}
                       size="small"

@@ -120,6 +120,7 @@ export const en = {
     centerOnMap: "Center on map",
     mqttTitle: "MQTT: {state}",
     ze: "ZE",
+    demoBadge: "DEMO",
     kmh: "km/h",
     speedValue: "{value} km/h",
     statusMoving: "Moving",

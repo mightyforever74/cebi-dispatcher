@@ -118,6 +118,7 @@ export const tr = {
     centerOnMap: "Haritada ortalayın",
     mqttTitle: "MQTT: {state}",
     ze: "ZE",
+    demoBadge: "DEMO",
     kmh: "km/s",
     speedValue: "{value} km/s",
     statusMoving: "Hareket",

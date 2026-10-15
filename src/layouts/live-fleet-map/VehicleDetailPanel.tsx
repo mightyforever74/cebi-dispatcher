@@ -3,7 +3,7 @@ import Icon from "@mui/material/Icon";
 import Paper from "@mui/material/Paper";
 import Chip from "@mui/material/Chip";
 import { alpha } from "@mui/material/styles";
-import { map as mapTokens, type VehicleConnectivityStatus } from "assets/theme/tokens";
+import { map as mapTokens, status, type VehicleConnectivityStatus } from "assets/theme/tokens";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import { formatRelative, useT, type TranslationKey } from "i18n";
@@ -131,6 +131,20 @@ function VehicleDetailPanel({
             border: `1px solid ${chrome.border}`,
           }}
         />
+        {vehicle.isDemo && (
+          <Chip
+            label={t("map.demoBadge")}
+            size="small"
+            sx={{
+              fontSize: "10px",
+              height: "20px",
+              fontWeight: "bold",
+              color: status.vehicle.stale.fg,
+              bgcolor: status.vehicle.stale.bg,
+              border: `1px solid ${status.vehicle.stale.border}`,
+            }}
+          />
+        )}
       </MDBox>
 
       {[

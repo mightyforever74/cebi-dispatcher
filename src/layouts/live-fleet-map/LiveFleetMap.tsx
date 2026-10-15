@@ -439,8 +439,14 @@ function LiveFleetMap(): JSX.Element {
                       {v.plate}
                     </MDTypography>
                     <MDTypography variant="caption" fontWeight="bold" sx={{ color: chrome.text }}>
-                      {v.speed_kmh}{" "}
-                      <span style={{ color: chrome.textFaint, fontSize: "10px" }}>{t("map.kmh")}</span>
+                      {v.speed_kmh == null ? (
+                        "—"
+                      ) : (
+                        <>
+                          {v.speed_kmh}{" "}
+                          <span style={{ color: chrome.textFaint, fontSize: "10px" }}>{t("map.kmh")}</span>
+                        </>
+                      )}
                     </MDTypography>
                   </MDBox>
                   <MDBox display="flex" gap={0.5}>

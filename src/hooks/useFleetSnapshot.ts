@@ -46,8 +46,18 @@ const CATEGORY_TO_WEIGHT: Record<string, VehicleTelemetry["vehicle_weight_class"
   van: "12_18t",
 };
 
+// `locations.speed` is a nullable numeric column (no reading yet is a real,
+// distinct state from "stationary at 0"). `Number(null) === 0` and
+// `Number(undefined) === NaN`, so both must be checked explicitly before
+// falling back to `|| 0`, which would silently turn "no data" into "0 km/h".
+function toNullableSpeed(raw: string | number | null | undefined): number | null {
+  if (raw == null || raw === "") return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 function rowToTelemetry(r: SnapshotRow): VehicleTelemetry {
-  const speed = Number(r.speed) || 0;
+  const speed = toNullableSpeed(r.speed);
   return {
     id: r.device_id,
     plate: r.plate_no,
@@ -58,7 +68,10 @@ function rowToTelemetry(r: SnapshotRow): VehicleTelemetry {
     longitude: Number(r.longitude),
     speed_kmh: speed,
     heading: Number(r.heading) || 0,
-    status: deriveStatus(speed),
+    // Movement status needs a concrete number; see the matching note in
+    // useVehicleStore.ts's applyLocationFrame for why this 0-fallback is
+    // scoped to `status` only and does not affect speed_kmh above.
+    status: deriveStatus(speed ?? 0),
     last_update: r.timestamp,
   };
 }
@@ -120,7 +133,7 @@ export function useFleetSnapshot(): {
             plate_no: r.plate_no,
             latitude: Number(r.latitude),
             longitude: Number(r.longitude),
-            speed: Number(r.speed) || 0,
+            speed: toNullableSpeed(r.speed),
             heading: r.heading != null ? Number(r.heading) : undefined,
             timestamp: r.timestamp,
             source: "rest",

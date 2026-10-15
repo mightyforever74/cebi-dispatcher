@@ -134,7 +134,10 @@ function VehicleDetailPanel({
       </MDBox>
 
       {[
-        { label: t("map.speed"), value: t("map.speedValue", { value: vehicle.speed_kmh }) },
+        {
+          label: t("map.speed"),
+          value: vehicle.speed_kmh == null ? "—" : t("map.speedValue", { value: vehicle.speed_kmh }),
+        },
         { label: t("map.weight"), value: fmtWeight(vehicle.vehicle_weight_class) },
         {
           label: t("map.position"),

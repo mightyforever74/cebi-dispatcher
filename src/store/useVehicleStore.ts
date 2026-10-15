@@ -32,7 +32,9 @@ export interface VehicleTelemetry {
   emission_class: string;
   latitude: number;
   longitude: number;
-  speed_kmh: number;
+  /** km/h from the latest telemetry sample. `null` means no reading is
+   * available yet (not a real 0) — render as "—", never coerce to 0. */
+  speed_kmh: number | null;
   heading: number;
   status: VehicleStatus;
   last_update: string;
@@ -51,7 +53,9 @@ export interface LocationFrame {
   plate_no?: string;
   latitude: number;
   longitude: number;
-  speed: number;
+  /** `null` when the source row had no speed reading — passed through as-is,
+   * never coerced to 0 (see VehicleTelemetry.speed_kmh). */
+  speed: number | null;
   heading?: number;
   timestamp: string;
   source: "rest" | "mqtt";
@@ -173,7 +177,10 @@ export const useVehicleStore = create<VehicleStoreState>((set) => ({
             longitude: frame.longitude,
             speed_kmh: frame.speed,
             heading: frame.heading ?? existing.heading,
-            status: deriveStatus(frame.speed),
+            // Movement status still needs a concrete number; a missing
+            // reading is treated as 0 for THIS derived field only — the
+            // raw speed_kmh above stays null so the UI can show "—".
+            status: deriveStatus(frame.speed ?? 0),
             last_update: frame.timestamp,
           },
         },

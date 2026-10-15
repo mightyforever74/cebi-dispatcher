@@ -15,7 +15,7 @@ Coded by www.creative-tim.com
 
 // @mui material components
 import { Theme } from "@mui/material/styles";
-import { density } from "assets/theme/tokens";
+import { density, landing } from "assets/theme/tokens";
 
 // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1): 64px sabit yükseklikte, edge-to-edge
 // sticky navbar (landing Header paritesi). `glass` token'ı (D1 tokens.ts + global.css
@@ -28,7 +28,7 @@ function navbar(theme: Theme | any, ownerState: any) {
   const { palette, boxShadows, functions, transitions, breakpoints } = theme;
   const { transparentNavbar, absolute, light, darkMode } = ownerState;
 
-  const { dark, white, text, transparent, background } = palette;
+  const { dark, white, text, transparent } = palette;
   const { navbarBoxShadow } = boxShadows;
   const { rgba: withAlpha, pxToRem } = functions;
 
@@ -38,10 +38,22 @@ function navbar(theme: Theme | any, ownerState: any) {
       transparentNavbar || absolute
         ? "none"
         : "saturate(var(--tf-glass-saturate, 140%)) blur(var(--tf-glass-blur, 16px))",
+    // 2026-10-15 (Cem onayı, tokens.ts `landing` A4 karar noktası): dark modda
+    // navbar artık MD2'nin generic `background.default` paletinden değil,
+    // landing'in navy camından besleniyor (`landing.navy` @ 0.7,
+    // --tf-navbar-bg-dark CSS var üzerinden — prefers-reduced-transparency
+    // fallback'i global.css'te 0.96'ya çıkıyor). Light tema dokunulmadı:
+    // landing'de karşılığı yok.
     backgroundColor:
       transparentNavbar || absolute
         ? `${transparent.main} !important`
-        : withAlpha(darkMode ? background.default : white.main, 0.8),
+        : darkMode
+        ? `var(--tf-navbar-bg-dark, ${withAlpha(landing.navy, 0.7)})`
+        : withAlpha(white.main, 0.8),
+    borderBottom:
+      darkMode && !(transparentNavbar || absolute)
+        ? `${pxToRem(1)} solid var(--tf-navbar-border-dark, rgba(255, 255, 255, 0.1))`
+        : "none",
 
     color: () => {
       let color;

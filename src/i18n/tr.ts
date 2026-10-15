@@ -143,6 +143,7 @@ export const tr = {
     retry: "Yeniden dene",
     loading: "Filo yükleniyor…",
     mockDataBanner: "⚠️ Canlı bağlantı koptu — gösterilen veriler MOCK / DEMO verisidir, gerçek filonuz değildir",
+    fallbackRouteLegend: "Tahmini kuş uçuşu bağlantı hattı (gerçek rota geometrisi yok)",
     region: "Canlı filo haritası",
     searchAria: "Plakaya göre ara",
     fitFleet: "Filoyu sığdır",

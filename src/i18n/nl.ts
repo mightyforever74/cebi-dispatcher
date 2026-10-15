@@ -143,6 +143,7 @@ export const nl = {
     retry: "Opnieuw",
     loading: "Wagenpark laden…",
     mockDataBanner: "⚠️ Live verbinding verbroken — getoonde gegevens zijn MOCK/DEMO-gegevens, niet uw echte wagenpark",
+    fallbackRouteLegend: "Geschatte rechte-lijnverbinding (geen echte routegeometrie)",
     region: "Live wagenparkkaart",
     searchAria: "Zoek op kenteken",
     fitFleet: "Wagenpark in beeld",

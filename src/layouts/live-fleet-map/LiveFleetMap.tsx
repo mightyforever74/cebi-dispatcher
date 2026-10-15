@@ -219,6 +219,15 @@ function LiveFleetMap(): JSX.Element {
   const routeVisibleFor = (deviceId: string): boolean =>
     isRouteVisible({ showAllRoutes, selectedRouteVehicleIds }, deviceId, selectedVehicleId);
 
+  // True when at least one currently-visible route has no backend geometry
+  // and is drawn as the dashed straight-line fallback below - gates the
+  // legend explanation so it only appears when that line is actually on screen.
+  const hasFallbackRouteOnScreen = filteredVehicles.some((v) => {
+    const r = activeRoutes[v.id];
+    if (!r || !routeVisibleFor(v.id)) return false;
+    return !(r.geometry && r.geometry.length > 1);
+  });
+
   const selectedVehicle = selectedVehicleId ? vehicles[selectedVehicleId] : null;
   const panelOpen = Boolean(selectedVehicle);
 
@@ -824,6 +833,28 @@ function LiveFleetMap(): JSX.Element {
                       {t(CONN_LABEL[s])}
                     </MDTypography>
                   ))}
+                  {hasFallbackRouteOnScreen && (
+                    <MDTypography
+                      variant="caption"
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        color: chrome.textMuted,
+                        mt: 0.5,
+                        pt: 0.5,
+                        borderTop: `1px solid ${chrome.border}`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "14px",
+                          borderTop: `2px dashed ${mapTokens.route}`,
+                        }}
+                      />{" "}
+                      {t("map.fallbackRouteLegend")}
+                    </MDTypography>
+                  )}
                 </MDBox>
               </Paper>
 

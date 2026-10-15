@@ -145,6 +145,7 @@ export const en = {
     retry: "Retry",
     loading: "Loading fleet…",
     mockDataBanner: "⚠️ Live connection lost — data shown is MOCK / DEMO data, not your real fleet",
+    fallbackRouteLegend: "Estimated straight-line connection (no real route geometry)",
     region: "Live fleet map",
     searchAria: "Search by plate",
     fitFleet: "Fit fleet in view",

@@ -7,7 +7,7 @@ export const tr = {
     tasksDispatch: "Görev & Sevk Yönetimi",
     exceptions: "İstisna Yönetimi (İkaz)",
     aiOptimization: "Yapay Zekâ & Optimizasyon",
-    smartRoute: "Akıllı Rota Optimizasyonu (Phase 1.1)",
+    smartRoute: "Hızlı Fizibilite Kontrolü",
     costToll: "Maliyet & Vrachtwagenheffing Denetimi 🔒 (Temmuz 2026)",
     matrixMaster: "Matris & Master Data",
     driverManagement: "Sürücü Yönetimi",
@@ -601,8 +601,8 @@ export const tr = {
     emailPlaceholder: "info@tulipfleet.com",
   },
   tourPlanning: {
-    title: "Akıllı Rota Optimizasyonu (VRP)",
-    body: "HERE Tour Planning motoru (FEAT-001) Phase 1.1 sprint’inde etkinleşecek. Çoklu araç dağıtımı, zaman penceresi ve kapasite kısıtları bu ekranda yarı otonom çalışacak.",
+    title: "Hızlı Fizibilite Kontrolü",
+    body: "Görev ataması yapmadan duraklar arası rota mesafesini, seyahat süresini ve fizibilitesini anlık simüle edin.",
     mockBanner:
       "Rotalar, sunucuda aktif olan routing sağlayıcısıyla (ROUTING_PROVIDER ayarı) hesaplanır — Mock veya HERE Tour Planning. Her plan tamamlandığında hangi motorun işlediği aşağıda gösterilir.",
     form: {

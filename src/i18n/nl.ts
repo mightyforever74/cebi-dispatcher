@@ -7,7 +7,7 @@ export const nl = {
     tasksDispatch: "Taken & toewijzing",
     exceptions: "Uitzonderingsbeheer (Meldingen)",
     aiOptimization: "AI & optimalisatie",
-    smartRoute: "Slimme route-optimalisatie (Phase 1.1)",
+    smartRoute: "Snelle Haalbaarheidscheck",
     costToll: "Kosten & Vrachtwagenheffing-inspectie 🔒 (juli 2026)",
     matrixMaster: "Matrix & masterdata",
     driverManagement: "Chauffeursbeheer",
@@ -601,8 +601,8 @@ export const nl = {
     emailPlaceholder: "info@tulipfleet.com",
   },
   tourPlanning: {
-    title: "Slimme route-optimalisatie (VRP)",
-    body: "De HERE Tour Planning-motor (FEAT-001) wordt in de Phase 1.1-sprint geactiveerd. Multi-voertuigverdeling, tijdvensters en capaciteitsbeperkingen draaien hier in adviesmodus.",
+    title: "Snelle Haalbaarheidscheck",
+    body: "Simuleer routewijzigingen, afstanden en reistijden direct zonder taken toe te wijzen.",
     mockBanner:
       "Routes worden berekend door de provider die op de server actief is (ROUTING_PROVIDER-instelling) — Mock of HERE Tour Planning. Welke engine elk plan heeft verwerkt, wordt hieronder getoond zodra het klaar is.",
     form: {

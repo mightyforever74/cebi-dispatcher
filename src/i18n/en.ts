@@ -9,7 +9,7 @@ export const en = {
     tasksDispatch: "Tasks & Dispatch",
     exceptions: "Exception Management (Alerts)",
     aiOptimization: "AI & Optimization",
-    smartRoute: "Smart Route Optimization (Phase 1.1)",
+    smartRoute: "Quick Feasibility Check",
     costToll: "Cost & Toll Inspection 🔒 (July 2026)",
     matrixMaster: "Matrix & Master Data",
     driverManagement: "Driver Management",
@@ -603,8 +603,8 @@ export const en = {
     emailPlaceholder: "info@tulipfleet.com",
   },
   tourPlanning: {
-    title: "Smart Route Optimization (VRP)",
-    body: "The HERE Tour Planning engine (FEAT-001) will activate in the Phase 1.1 sprint. Multi-vehicle distribution, time windows and capacity constraints will run here in advisory mode.",
+    title: "Quick Feasibility Check",
+    body: "Estimate route distance, travel duration, and feasibility across stops without dispatching tasks.",
     mockBanner:
       "Routes are computed by whichever routing provider is active on the server (ROUTING_PROVIDER setting) — Mock or HERE Tour Planning. The solver that handled each plan is shown below once it completes.",
     form: {

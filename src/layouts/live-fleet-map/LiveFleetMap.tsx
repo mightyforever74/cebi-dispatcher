@@ -51,10 +51,15 @@ const TILE_ATTRIBUTION =
 
 const fmtWeight = (w: string): string => w.replace("_plus_t", "+ t").replace(/_/g, "-");
 
-const CONN_LABEL: Record<Exclude<VehicleConnectivityStatus, "maintenance">, TranslationKey> = {
+// Record<VehicleConnectivityStatus, ...> (not Exclude<..., "maintenance">) to
+// match vehicleConnectivity()'s declared return type and VehicleDetailPanel's
+// own CONN_LABEL: "maintenance" is unreachable today but must stay indexable
+// without a cast if that ever changes.
+const CONN_LABEL: Record<VehicleConnectivityStatus, TranslationKey> = {
   online: "map.statusOnline",
   stale: "map.statusStale",
   offline: "map.statusOffline",
+  maintenance: "map.statusOffline",
 };
 
 type StatusFilter = "all" | "moving" | "stopped" | "ze";
@@ -219,6 +224,15 @@ function LiveFleetMap(): JSX.Element {
   const routeVisibleFor = (deviceId: string): boolean =>
     isRouteVisible({ showAllRoutes, selectedRouteVehicleIds }, deviceId, selectedVehicleId);
 
+  // True when at least one currently-visible route has no backend geometry
+  // and is drawn as the dashed straight-line fallback below - gates the
+  // legend explanation so it only appears when that line is actually on screen.
+  const hasFallbackRouteOnScreen = filteredVehicles.some((v) => {
+    const r = activeRoutes[v.id];
+    if (!r || !routeVisibleFor(v.id)) return false;
+    return !(r.geometry && r.geometry.length > 1);
+  });
+
   const selectedVehicle = selectedVehicleId ? vehicles[selectedVehicleId] : null;
   const panelOpen = Boolean(selectedVehicle);
 
@@ -235,6 +249,19 @@ function LiveFleetMap(): JSX.Element {
     );
     bumpViewport({ kind: "fitFleet", bounds });
   }, [filteredVehicles, bumpViewport]);
+
+  // §6B: a dispatcher opening the map for the first time should not have to
+  // discover the 'F' shortcut just to see their own fleet. Fires fitFleet()
+  // exactly once, the first time the roster yields at least one vehicle —
+  // hasAutoFitRef guards against re-fitting on every later filter/search
+  // change, which would fight the dispatcher's own pan/zoom. The manual 'F'
+  // shortcut (useMapKeyboard, above) keeps working afterwards regardless.
+  const hasAutoFitRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoFitRef.current || vehicleList.length === 0) return;
+    hasAutoFitRef.current = true;
+    fitFleet();
+  }, [vehicleList, fitFleet]);
 
   const closePanel = useCallback(() => {
     selectVehicle(null);
@@ -317,6 +344,24 @@ function LiveFleetMap(): JSX.Element {
       />
     );
   };
+
+  // ?clusterDemo=1 synthetic vehicles (expandClusterDemo, mapChrome.ts) must
+  // never look like real telemetry — same warning tone as `status.vehicle.stale`,
+  // no new color literal.
+  const demoChip = () => (
+    <Chip
+      label={t("map.demoBadge")}
+      size="small"
+      sx={{
+        fontSize: "9px",
+        height: "18px",
+        fontWeight: "bold",
+        bgcolor: status.vehicle.stale.bg,
+        color: status.vehicle.stale.fg,
+        border: `1px solid ${status.vehicle.stale.border}`,
+      }}
+    />
+  );
 
   const listBody = (): JSX.Element => {
     if (snapshot.phase === "loading" && !snapshot.bootstrapped) {
@@ -437,13 +482,32 @@ function LiveFleetMap(): JSX.Element {
                         }}
                       />
                       {v.plate}
+                      {/* §6B a11y: the colored dot alone is not accessible (color-only
+                          signal) — pair it with the same text label the legend uses. */}
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: 600,
+                          color: connectivityColor(conn),
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {t(CONN_LABEL[conn])}
+                      </span>
                     </MDTypography>
                     <MDTypography variant="caption" fontWeight="bold" sx={{ color: chrome.text }}>
-                      {v.speed_kmh}{" "}
-                      <span style={{ color: chrome.textFaint, fontSize: "10px" }}>{t("map.kmh")}</span>
+                      {v.speed_kmh == null ? (
+                        "—"
+                      ) : (
+                        <>
+                          {v.speed_kmh}{" "}
+                          <span style={{ color: chrome.textFaint, fontSize: "10px" }}>{t("map.kmh")}</span>
+                        </>
+                      )}
                     </MDTypography>
                   </MDBox>
                   <MDBox display="flex" gap={0.5}>
+                    {v.isDemo && demoChip()}
                     <Chip
                       label={fmtWeight(v.vehicle_weight_class)}
                       size="small"
@@ -490,8 +554,36 @@ function LiveFleetMap(): JSX.Element {
             overflow: "hidden",
             flexWrap: { xs: "nowrap", md: "wrap" },
             flexDirection: { xs: "column", md: "row" },
+            position: "relative",
           }}
         >
+          {snapshot.phase === "error" && (
+            <MDBox
+              role="alert"
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 1300,
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 2,
+                py: 1,
+                bgcolor: status.alert.critical.bg,
+                color: status.alert.critical.fg,
+                borderBottom: `1px solid ${status.alert.critical.border}`,
+              }}
+            >
+              <Icon fontSize="small" sx={{ color: status.alert.critical.fg }}>
+                warning
+              </Icon>
+              <MDTypography variant="caption" fontWeight="bold" sx={{ color: status.alert.critical.fg }}>
+                {t("map.mockDataBanner")}
+              </MDTypography>
+            </MDBox>
+          )}
           <Grid
             item
             xs={12}
@@ -771,6 +863,28 @@ function LiveFleetMap(): JSX.Element {
                       {t(CONN_LABEL[s])}
                     </MDTypography>
                   ))}
+                  {hasFallbackRouteOnScreen && (
+                    <MDTypography
+                      variant="caption"
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        color: chrome.textMuted,
+                        mt: 0.5,
+                        pt: 0.5,
+                        borderTop: `1px solid ${chrome.border}`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "14px",
+                          borderTop: `2px dashed ${mapTokens.route}`,
+                        }}
+                      />{" "}
+                      {t("map.fallbackRouteLegend")}
+                    </MDTypography>
+                  )}
                 </MDBox>
               </Paper>
 

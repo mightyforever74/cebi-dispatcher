@@ -126,6 +126,7 @@ const DEMO_SEED: VehicleTelemetry = {
   heading: 45,
   status: "moving",
   last_update: new Date().toISOString(),
+  isDemo: true,
 };
 
 /** Local ≥20-vehicle scene for clustering screenshots (`?clusterDemo=1`). */
@@ -141,6 +142,9 @@ export function expandClusterDemo(list: VehicleTelemetry[]): VehicleTelemetry[] 
       latitude: src.latitude + ((i % 5) - 2) * 0.06,
       longitude: src.longitude + (Math.floor(i / 5) - 2) * 0.08,
       last_update: new Date().toISOString(),
+      // Synthetic padding entry, even when `src` is a real vehicle being
+      // duplicated for a denser cluster-screenshot scene — always demo data.
+      isDemo: true,
     });
     i += 1;
   }

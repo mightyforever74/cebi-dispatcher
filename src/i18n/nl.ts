@@ -629,6 +629,20 @@ export const nl = {
       distanceHintMock: "Hemelsbrede schatting — geen daadwerkelijke rijroute.",
       distanceHintHere: "Daadwerkelijke route berekend door HERE Tour Planning.",
       approveHint: "Om dit plan naar chauffeurs te sturen, keur het goed via Taken → Nieuwe taak → Optimaliseren.",
+      eta: {
+        title: "Stopvolgorde en geschatte tijden",
+        vehicle: "Voertuig",
+        stop: "Stop",
+        type: "Type",
+        typePickup: "Ophalen",
+        typeDropoff: "Afleveren",
+        typeDepot: "Start",
+        address: "Adres",
+        arrival: "Aankomst",
+        departure: "Vertrek",
+        mockNote:
+          "Stopvolgorde en geschatte tijden worden alleen getoond bij een daadwerkelijk HERE Tour Planning-resultaat.",
+      },
     },
   },
   tollAnalytics: {

@@ -3,21 +3,33 @@
  * "ertelenmiş" kararının "Phase 1.1 / Müşteri Öncesi Aktifleştirme" olarak
  * revize edilmesi). `/optimization/tour-planning` sayfasının harita paneli.
  *
- * DÜRÜSTLÜK NOTU: `computeMatrix` hiçbir sağlayıcıda implemente değil
- * (ADR-0014 §13). Bu harita HERE'in gerçek yol geometrisini GÖSTERMEZ —
- * her görev için pickup→dropoff arası KUŞ UÇUŞU kesik çizgi çizer. Gerçek
- * sağlayıcı (ROUTING_PROVIDER=here-tour) devredeyken bile poll sonucu
- * (OptimizePollResult) yol geometrisi taşımaz, bu yüzden görsel her zaman
- * aynı dürüst "tahmini" çizim olarak kalır.
+ * REVİZYON (2026-10-15, aynı gün ikinci tur, Cem kararı): pickup→dropoff
+ * arası düz kesik çizgi KALDIRILDI. Gerekçe (Cem'in UX tartışması): "cetvelle
+ * çekilmiş çizgi" operatörün ürüne güvenini kırıyordu; teknik olarak doğru
+ * (kuş uçuşu olduğunu zaten açıkça söylüyorduk) ama insan algısında "bozuk
+ * rota" izlenimi yaratıyordu. ADR-0014 §13'ün kendisi (computeMatrix/gerçek
+ * yol geometrisi Phase 2/müşteri bütçeli — maliyet + mimari disiplin
+ * gerekçesiyle) DEĞİŞMEDİ, bilinçli olarak yeniden ERTELENDİ (bkz.
+ * TourPlanning.tsx başlık yorumu, "Kısa Vadeli Çözüm" kararı). Çözüm:
+ * çizgisiz, numaralı duraklar — "navigasyon simülatörü değil, operasyonel
+ * durak optimizasyon özeti" mesajı net.
+ *
+ * DÜRÜSTLÜK NOTU (güncellendi): harita artık hiçbir yol/bağlantı çizgisi
+ * göstermiyor (ne kuş uçuşu ne gerçek) — yalnızca ziyaret SIRASINA göre
+ * numaralanmış duraklar. Gerçek sağlayıcı (HERE Tour Planning) devredeyken
+ * numaralar `here_raw_solution.tours[].stops[]`'un GERÇEK optimize edilmiş
+ * ziyaret sırasını yansıtır; Mock'ta (ya da ham çözüm yoksa) numaralar yalnız
+ * durakların form'a girilme sırasını yansıtır — bu ayrım ETA tablosunda
+ * (TourPlanning.tsx) ayrıca açıkça belirtiliyor.
  *
  * LiveFleetMap.tsx'teki Basemap deseninden (dark/light CARTO tile + tokens)
  * BİREBİR alınmıştır; MQTT/telemetri/stale-guard gibi canlı-takip
  * karmaşıklığı YOK — bu sadece bir planlama/önizleme haritasıdır.
  */
-import { Fragment, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import L from "leaflet";
-import { MapContainer, Marker, Polyline, useMap } from "react-leaflet";
+import { MapContainer, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 import { map as mapTokens } from "assets/theme/tokens";
@@ -32,17 +44,34 @@ export interface TourPlanningStopPoint {
   dropoff: { lat: number; lng: number; address?: string };
 }
 
-function dotIcon(color: string): L.DivIcon {
-  return L.divIcon({
-    className: "",
-    html: `<span style="display:block;width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.5)"></span>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-  });
+/**
+ * Haritada (ve ETA tablosunda) tek bir numaralı durak. `tourIndex` birden
+ * fazla araç/tour varsa her birini ayrı renk/grupla ayırt etmek için.
+ */
+export interface MapRouteStop {
+  tourIndex: number;
+  order: number; // 1'den başlar, kendi tour'u İÇİNDE ziyaret sırası
+  lat: number;
+  lng: number;
+  kind: "pickup" | "dropoff" | "depot";
 }
 
-const PICKUP_ICON = dotIcon("#2e7d32"); // success — alınış
-const DROPOFF_ICON = dotIcon("#c62828"); // error — teslim
+// Araç başına sabit, birbirinden ayırt edilebilir renk paleti (çok-araçlı
+// plan nadir ama mümkün — tasarım sistemi tonlarından, keyfi hex değil).
+const TOUR_COLORS = ["#2e7d32", "#1565c0", "#c62828", "#ef6c00", "#6a1b9a", "#00838f"];
+
+function tourColor(tourIndex: number): string {
+  return TOUR_COLORS[tourIndex % TOUR_COLORS.length];
+}
+
+function numberedIcon(order: number, color: string): L.DivIcon {
+  return L.divIcon({
+    className: "",
+    html: `<span style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);color:#fff;font:700 12px/1 Manrope,sans-serif">${order}</span>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+}
 
 function Basemap({ darkMode }: { darkMode: boolean }): null {
   const leafletMap = useMap();
@@ -67,20 +96,13 @@ function Basemap({ darkMode }: { darkMode: boolean }): null {
   return null;
 }
 
-function FitToStops({ stops }: { stops: TourPlanningStopPoint[] }): null {
+function FitToStops({ points }: { points: MapRouteStop[] }): null {
   const leafletMap = useMap();
-  // Stop sayısı değişince sınırlara otur; her render'da değil (kullanıcı
-  // haritayı sürüklerken sıçramasın).
-  const count = stops.length;
+  const count = points.length;
 
   useEffect(() => {
     if (count === 0) return;
-    const bounds = L.latLngBounds(
-      stops.flatMap((s) => [
-        [s.pickup.lat, s.pickup.lng] as [number, number],
-        [s.dropoff.lat, s.dropoff.lng] as [number, number],
-      ])
-    );
+    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
     if (bounds.isValid()) {
       leafletMap.fitBounds(bounds, { padding: [32, 32], maxZoom: 14 });
     }
@@ -90,17 +112,37 @@ function FitToStops({ stops }: { stops: TourPlanningStopPoint[] }): null {
   return null;
 }
 
+/** `stops` (task bazlı pickup/dropoff) -> tek "tour" varmış gibi, form sırasıyla numaralanmış MapRouteStop[]. */
+function flattenTaskStops(stops: TourPlanningStopPoint[]): MapRouteStop[] {
+  const points: MapRouteStop[] = [];
+  let order = 0;
+  for (const s of stops) {
+    order += 1;
+    points.push({ tourIndex: 0, order, lat: s.pickup.lat, lng: s.pickup.lng, kind: "pickup" });
+    order += 1;
+    points.push({ tourIndex: 0, order, lat: s.dropoff.lat, lng: s.dropoff.lng, kind: "dropoff" });
+  }
+  return points;
+}
+
 export interface TourPlanningMapProps {
   stops: TourPlanningStopPoint[];
+  /** HERE'in gerçek ziyaret sırası (bkz. TourPlanning.tsx'teki hesaplama). Verilmezse `stops`'tan türetilir. */
+  routeStops?: MapRouteStop[];
   darkMode?: boolean;
   heightPx?: number;
 }
 
-function TourPlanningMap({ stops, darkMode = false, heightPx = 360 }: TourPlanningMapProps): JSX.Element {
+function TourPlanningMap({ stops, routeStops, darkMode = false, heightPx = 360 }: TourPlanningMapProps): JSX.Element {
+  const points = useMemo<MapRouteStop[]>(
+    () => (routeStops && routeStops.length > 0 ? routeStops : flattenTaskStops(stops)),
+    [routeStops, stops]
+  );
+
   const center = useMemo<[number, number]>(() => {
-    if (stops.length === 0) return DEFAULT_CENTER;
-    return [stops[0].pickup.lat, stops[0].pickup.lng];
-  }, [stops]);
+    if (points.length === 0) return DEFAULT_CENTER;
+    return [points[0].lat, points[0].lng];
+  }, [points]);
 
   return (
     <MapContainer
@@ -110,19 +152,13 @@ function TourPlanningMap({ stops, darkMode = false, heightPx = 360 }: TourPlanni
       scrollWheelZoom={false}
     >
       <Basemap darkMode={darkMode} />
-      <FitToStops stops={stops} />
-      {stops.map((s) => (
-        <Fragment key={s.id}>
-          <Marker position={[s.pickup.lat, s.pickup.lng]} icon={PICKUP_ICON} />
-          <Marker position={[s.dropoff.lat, s.dropoff.lng]} icon={DROPOFF_ICON} />
-          <Polyline
-            positions={[
-              [s.pickup.lat, s.pickup.lng],
-              [s.dropoff.lat, s.dropoff.lng],
-            ]}
-            pathOptions={{ color: mapTokens.route, weight: 2, dashArray: "6 6" }}
-          />
-        </Fragment>
+      <FitToStops points={points} />
+      {points.map((p) => (
+        <Marker
+          key={`${p.tourIndex}-${p.order}-${p.kind}`}
+          position={[p.lat, p.lng]}
+          icon={numberedIcon(p.order, tourColor(p.tourIndex))}
+        />
       ))}
     </MapContainer>
   );

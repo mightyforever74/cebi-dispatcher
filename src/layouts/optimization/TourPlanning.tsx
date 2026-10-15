@@ -29,10 +29,22 @@
  *     iki kopya UI değil).
  *
  * DÜRÜSTLÜK: computeMatrix implemente değil (ADR-0014 §13) — mesafe/süre
- * özeti (summary) her sağlayıcıda kuş uçuşu (haversine) kökenlidir, harita da
- * aynı şekilde pickup→dropoff düz kesik çizgi çizer (bkz. TourPlanningMap.tsx).
- * Gerçek sağlayıcı (HERE) devreye girdiğinde dahi poll sonucu yol geometrisi
- * TAŞIMAZ — bu UI her iki sağlayıcı için de aynı, abartısız şekilde çalışır.
+ * özeti (summary) her sağlayıcıda kuş uçuşu (haversine) kökenlidir. Gerçek
+ * sağlayıcı (HERE) devreye girdiğinde dahi poll sonucu gerçek yol geometrisi
+ * (polyline) TAŞIMAZ.
+ *
+ * KISA VADELİ ÇÖZÜM (2026-10-15, aynı gün ikinci tur, Cem kararı — tam
+ * tartışma commit mesajında): pickup→dropoff düz kesik çizgi, operatörde
+ * "rota hesaplanamamış" izlenimi yarattığı için haritadan TAMAMEN kaldırıldı
+ * (bkz. TourPlanningMap.tsx). Yerine: (1) ziyaret sırasına göre NUMARALANMIŞ
+ * duraklar (HERE'in gerçek `here_raw_solution.tours[].stops[]` sırası; Mock'ta
+ * form giriş sırası), (2) sol panelde durak sırası + HERE'in hesapladığı
+ * gerçek varış/çıkış saatlerini (`stop.time.arrival/departure`) gösteren bir
+ * ETA tablosu — bu veri zaten `response_payload`'da vardı, hiç ek HERE çağrısı
+ * gerektirmiyor. Gerçek yola oturan (road-snapped) çizgi (computeRoute/
+ * computeMatrix, bacak başına ek ücretli HERE Routing v8 çağrısı gerektirir)
+ * BİLİNÇLİ OLARAK ERTELENDİ — ADR-0014 §13'ün "Phase 2, müşteri bütçeli"
+ * kararıyla aynı, bu oturumda tekrar onaylandı, override EDİLMEDİ.
  */
 import { useCallback, useMemo, useState } from "react";
 
@@ -46,6 +58,11 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import Grid from "@mui/material/Grid";
 import Icon from "@mui/material/Icon";
 import IconButton from "@mui/material/IconButton";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 
 import DataState, { dataStateOf, type DataStateKind } from "components/DataState";
@@ -53,7 +70,7 @@ import LocationSearchInput, { LocationValue } from "components/LocationSearchInp
 import MDBox from "components/MDBox";
 import MDButton from "components/MDButton";
 import MDTypography from "components/MDTypography";
-import TourPlanningMap, { type TourPlanningStopPoint } from "components/TourPlanningMap";
+import TourPlanningMap, { type MapRouteStop, type TourPlanningStopPoint } from "components/TourPlanningMap";
 import { useMaterialUIController } from "context";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -63,9 +80,89 @@ import {
   usePollOptimization,
   type OptimizeTaskInput,
   type OptimizeResultTask,
+  type HereRawSolution,
 } from "hooks/useTaskOptimization";
 import { useT } from "i18n";
 import { HAZMAT_CLASS_OPTIONS, SKILL_OPTIONS } from "types/metadata";
+
+// FIX (2026-10-15, ETA tablosu): bkz. dosya başlığındaki "KISA VADELİ ÇÖZÜM"
+// notu. `tasks[i]` (OptimizePollResult.tasks) backend tarafında artık
+// GARANTİ EDİLMİŞ olarak HERE'in `job-${i}` activity jobId'siyle aynı sırada
+// (enterprise-backend routes/tasks.js task_id_sequence, 2026-10-15).
+const JOB_ID_PATTERN = /^job-(\d+)$/;
+
+interface EtaRow {
+  order: number;
+  kind: "pickup" | "dropoff" | "depot";
+  address: string;
+  lat: number;
+  lng: number;
+  arrivalIso: string;
+  departureIso: string;
+}
+
+interface TourRouteData {
+  tourIndex: number;
+  vehicleId: string;
+  rows: EtaRow[];
+}
+
+function formatCoord(lat: number, lng: number): string {
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+
+function formatTime(iso: string | undefined, locale: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * HERE'in ham VRP çözümünü (tours[].stops[]) ETA tablosu + harita pinleri
+ * için kullanılabilir bir şekle çevirir. `tasks` sırası job-N ile birebir
+ * eşleşmek ZORUNDA (bkz. yukarıdaki JOB_ID_PATTERN notu) — bu artık backend
+ * tarafında garanti ediliyor, burada yalnızca okunuyor.
+ */
+function buildTourRouteData(
+  hereSolution: HereRawSolution | undefined,
+  tasks: OptimizeResultTask[] | undefined
+): TourRouteData[] {
+  const tours = hereSolution?.tours;
+  if (!Array.isArray(tours) || tours.length === 0) return [];
+
+  return tours
+    .filter((tour) => Array.isArray(tour.stops) && tour.stops.length > 0)
+    .map((tour, tourIndex) => {
+      const rows: EtaRow[] = tour.stops.map((stop, idx) => {
+        const activity = stop.activities && stop.activities[0];
+        const jobMatch = activity ? JOB_ID_PATTERN.exec(activity.jobId) : null;
+        const task = jobMatch ? tasks?.[Number(jobMatch[1])] : undefined;
+
+        let kind: EtaRow["kind"] = "depot";
+        let address = formatCoord(stop.location.lat, stop.location.lng);
+        if (activity?.type === "pickup") {
+          kind = "pickup";
+          address = task?.pickup_location.address || formatCoord(stop.location.lat, stop.location.lng);
+        } else if (activity?.type === "delivery") {
+          kind = "dropoff";
+          address = task?.dropoff_location.address || formatCoord(stop.location.lat, stop.location.lng);
+        }
+
+        return {
+          order: idx + 1,
+          kind,
+          address,
+          lat: stop.location.lat,
+          lng: stop.location.lng,
+          arrivalIso: stop.time?.arrival,
+          departureIso: stop.time?.departure,
+        };
+      });
+
+      return { tourIndex, vehicleId: tour.typeId, rows };
+    });
+}
 
 const emptyLocation: LocationValue = { address: "", latitude: null, longitude: null };
 
@@ -111,7 +208,7 @@ function stopIsReady(s: StopDraft): boolean {
 }
 
 function TourPlanning(): JSX.Element {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [controller] = useMaterialUIController();
   const darkMode = Boolean(controller.darkMode);
 
@@ -212,6 +309,28 @@ function TourPlanning(): JSX.Element {
       dropoff: task.dropoff_location,
     }));
   }, [poll.data]);
+
+  // FIX (2026-10-15, ETA tablosu + numaralı pin'ler): bkz. dosya başlığındaki
+  // "KISA VADELİ ÇÖZÜM" notu. Mock'ta (veya eski/ham çözümü olmayan job'larda)
+  // boş dizi döner — harita ve panel bunu zaten (TourPlanningMap fallback'i +
+  // aşağıdaki mockNote) ele alıyor.
+  const tourRoutes: TourRouteData[] = useMemo(
+    () => buildTourRouteData(poll.data?.result?.here_raw_solution, poll.data?.result?.tasks),
+    [poll.data]
+  );
+  const mapRouteStops: MapRouteStop[] = useMemo(
+    () =>
+      tourRoutes.flatMap((tour) =>
+        tour.rows.map((row) => ({
+          tourIndex: tour.tourIndex,
+          order: row.order,
+          lat: row.lat,
+          lng: row.lng,
+          kind: row.kind,
+        }))
+      ),
+    [tourRoutes]
+  );
 
   const summary = poll.data?.result?.summary;
   const solver = poll.data?.result?.solver;
@@ -404,8 +523,55 @@ function TourPlanning(): JSX.Element {
               {resultState === "ready" && (
                 <>
                   <MDBox mb={2}>
-                    <TourPlanningMap stops={resultStops} darkMode={darkMode} />
+                    <TourPlanningMap stops={resultStops} routeStops={mapRouteStops} darkMode={darkMode} />
                   </MDBox>
+
+                  {tourRoutes.length > 0 ? (
+                    <MDBox mb={2}>
+                      <MDTypography variant="h6" component="h2" mb={1}>
+                        {t("tourPlanning.result.eta.title")}
+                      </MDTypography>
+                      {tourRoutes.map((tour) => (
+                        <MDBox key={tour.tourIndex} mb={tourRoutes.length > 1 ? 2 : 0}>
+                          {tourRoutes.length > 1 && (
+                            <MDTypography variant="caption" fontWeight="bold" display="block" mb={0.5}>
+                              {t("tourPlanning.result.eta.vehicle")}: {vehicleLabel(tour.vehicleId)}
+                            </MDTypography>
+                          )}
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>{t("tourPlanning.result.eta.stop")}</TableCell>
+                                <TableCell>{t("tourPlanning.result.eta.type")}</TableCell>
+                                <TableCell>{t("tourPlanning.result.eta.address")}</TableCell>
+                                <TableCell>{t("tourPlanning.result.eta.arrival")}</TableCell>
+                                <TableCell>{t("tourPlanning.result.eta.departure")}</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {tour.rows.map((row) => (
+                                <TableRow key={row.order}>
+                                  <TableCell>{row.order}</TableCell>
+                                  <TableCell>
+                                    {row.kind === "pickup" && t("tourPlanning.result.eta.typePickup")}
+                                    {row.kind === "dropoff" && t("tourPlanning.result.eta.typeDropoff")}
+                                    {row.kind === "depot" && t("tourPlanning.result.eta.typeDepot")}
+                                  </TableCell>
+                                  <TableCell>{row.address}</TableCell>
+                                  <TableCell>{formatTime(row.arrivalIso, locale)}</TableCell>
+                                  <TableCell>{formatTime(row.departureIso, locale)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </MDBox>
+                      ))}
+                    </MDBox>
+                  ) : (
+                    <MDTypography variant="caption" color="text" display="block" mb={2}>
+                      {t("tourPlanning.result.eta.mockNote")}
+                    </MDTypography>
+                  )}
 
                   <Grid container spacing={2} mb={2}>
                     <Grid item xs={12} md={4}>

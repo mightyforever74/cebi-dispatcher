@@ -70,11 +70,41 @@ export interface OptimizeResultTask {
   dropoff_location: { lat: number; lng: number; address?: string };
 }
 
+// FIX (2026-10-15, ETA tablosu): HERE Tour Planning'in ham VRP çözümü — yalnızca
+// `solver === "here-tour-planning-v3"` olduğunda doldurulur (Mock'ta hiç yok,
+// backend `normalizeHereSolution`'da yalnız HERE sağlayıcısı bunu yazıyor).
+// `tasks[i]` (OptimizePollResult.tasks) backend tarafında artık GARANTİ EDİLMİŞ
+// olarak HERE'in `job-${i}` activity jobId'siyle aynı sırada (bkz. enterprise-backend
+// routes/tasks.js task_id_sequence + HereTourPlanningProvider.normalizeHereSolution,
+// 2026-10-15) — yani burada `job-${i}` görülen her activity, `tasks[i]`'nin
+// pickup/dropoff adresine karşılık gelir.
+export interface HereStopActivity {
+  type: "departure" | "arrival" | "pickup" | "delivery" | string;
+  jobId: string; // "job-0", "job-1", ... veya "departure"/"arrival" (depo)
+}
+
+export interface HereTourStop {
+  location: { lat: number; lng: number };
+  time: { arrival: string; departure: string };
+  activities: HereStopActivity[];
+}
+
+export interface HereTour {
+  vehicleId: string;
+  typeId: string; // vehicle id (public.vehicles.id) — tourPlanning.tsx'teki vehicleLabel() ile plaka'ya çevrilir
+  stops: HereTourStop[];
+}
+
+export interface HereRawSolution {
+  tours?: HereTour[];
+}
+
 export interface OptimizePollResult {
   solver: string;
   summary: { total_distance_meters: number; total_duration_seconds: number };
   available_vehicles: string[];
   tasks?: OptimizeResultTask[]; // FIX (2026-07-18): opsiyonel - eski job'larda (bu koddan once tamamlanmis) olmayabilir
+  here_raw_solution?: HereRawSolution; // FIX (2026-10-15): yalnızca HERE sağlayıcısında dolu
 }
 
 export interface OptimizePollResponse {

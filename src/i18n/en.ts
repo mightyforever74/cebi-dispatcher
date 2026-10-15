@@ -631,6 +631,20 @@ export const en = {
       distanceHintMock: "Straight-line estimate — not an actual driving route.",
       distanceHintHere: "Actual route computed by HERE Tour Planning.",
       approveHint: "To dispatch this plan to drivers, approve it from Tasks → New Task → Optimize.",
+      eta: {
+        title: "Stop sequence and estimated times",
+        vehicle: "Vehicle",
+        stop: "Stop",
+        type: "Type",
+        typePickup: "Pickup",
+        typeDropoff: "Drop-off",
+        typeDepot: "Start",
+        address: "Address",
+        arrival: "Arrival",
+        departure: "Departure",
+        mockNote:
+          "Stop sequence and estimated times are only shown for an actual HERE Tour Planning result.",
+      },
     },
   },
   tollAnalytics: {

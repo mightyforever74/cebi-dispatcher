@@ -629,6 +629,20 @@ export const tr = {
       distanceHintMock: "Kuş uçuşu tahmindir — gerçek sürüş rotası değildir.",
       distanceHintHere: "HERE Tour Planning tarafından hesaplanan gerçek rota.",
       approveHint: "Bu planı sürücülere sevk etmek için Görevler → Yeni Görev → Optimize'dan onaylayın.",
+      eta: {
+        title: "Durak sırası ve tahmini saatler",
+        vehicle: "Araç",
+        stop: "Durak",
+        type: "Tür",
+        typePickup: "Alınış",
+        typeDropoff: "Teslim",
+        typeDepot: "Başlangıç",
+        address: "Adres",
+        arrival: "Varış",
+        departure: "Çıkış",
+        mockNote:
+          "Durak sırası ve tahmini saatler yalnızca gerçek HERE Tour Planning sonucunda gösterilir.",
+      },
     },
   },
   tollAnalytics: {

@@ -170,11 +170,24 @@ export const paletteLight = {
 // =========================================================================
 // 4) MD2 PRO TABAN PALET — DARK (src/assets/theme-dark/base/colors.ts'in
 //    D1 ONCESI literal degerleri; gorsel fark yaratmamak icin birebir kopyalandi)
+//
+// KARAR (2026-10-15, Cem): A4 karar noktasi GENISLETILDI — yalniz navbar
+// degil, tum dark-tema yuzey zemini (body/sidenav/kart) artik `landing`
+// navy merdiveninden besleniyor. Onceki MD2 degerleri (#1a2035/#1f283e/
+// #202940) landing'in paletiyle ayni "koyu lacivert" ailesindeydi ama
+// navbar'in yeni navy camiyla yan yana gorununce fark algilanamiyordu
+// (navbar tek basina farkli bir ton, geri kalan chrome eski MD2 tonunda).
+// `landing.navyElevated` zaten "(yeni, elevated yuzey)" yorumuyla tam bu
+// amac icin tasinmisti (D1, hic tuketilmemisti) — merdiven: navy (body) <
+// navyDeep (sidenav) < navyElevated (kart), navyInk (en koyu) harita
+// panelinde zaten kullanimda. `status.*`/`brand.primary` (mor) DAHIL
+// DEGIL — ayri, daha genis kapsamli bir karar. Light tema dokunulmadi:
+// landing'in karsiligi yok.
 // =========================================================================
 export const paletteDark = {
-  backgroundDefault: "#1a2035",
-  backgroundSidenav: "#1f283e",
-  backgroundCard: "#202940",
+  backgroundDefault: landing.navy,
+  backgroundSidenav: landing.navyDeep,
+  backgroundCard: landing.navyElevated,
   textMain: "#ffffffcc",
   textFocus: "#ffffffcc",
   textPrimary: "#ECEEF7",

@@ -18,7 +18,7 @@
 | **D4** | `ui-d4-data` | `StatusChip`, `DataTable`, `DataState`, `Notifications` banner/toast |
 | **D5** | `ui-d5-forms` → `424aef1` | i18n P2, `ConfirmDialogShell`, Optimize/Settings form, #185, ACTION 1200, Select padding |
 | **D6** | `ui-d6-closeout` | `[]` tuzak, breakpoint token, paket diyeti, skip-link, glass/leaflet motion |
-| **D7** | bu belge + `docs/screenshots/d7/` | Seri envanteri, metrik, arşiv (login matrisi; diğer ekranlar oturum yok) |
+| **D7** | bu belge + `docs/screenshots/d7/` | Seri envanteri, metrik, arşiv (**96/96 hücre tamamlandı — 15 Ekim**); D7-3 Lighthouse perf/a11y punch-list (1)-(13) ayrıca `tulipfleet-qa/TODO_ACTIVE.md` §9'da kapandı |
 
 ---
 
@@ -92,20 +92,30 @@ D1 JS ~486.87 kB, D2 484.46 kB, D5 531.87 kB — D3–D5 harita/form/i18n ekledi
 3. **Cloudflare Preview MQTT env** — preview’da MQTT yoksa rozet `polling` (bilinçli); CNAME env Cem.
 4. **CARTO Referer** — basemap anahtarı URL’de; referer kısıtı infra.
 5. **P3 terimler sözlüğü** — taak/görev, ikaz/uyarı donduruldu; P3’te tek dil kararı.
-6. **Oturumlu D7 arşivi** — 8 ekran × TR/EN/NL × dark/light × 1280/390; bu turda token süresi dolmuş.
+6. ~~Oturumlu D7 arşivi — 8 ekran × TR/EN/NL × dark/light × 1280/390~~ **TAMAMLANDI 15 Ekim** (§6).
 7. **≥%10 gzip** — code-split veya MD2/MUI yüzey küçültme (ayrı karar).
 
 ---
 
 ## 6. D7 görsel arşiv
 
-Dizin: `docs/screenshots/d7/`. JPEG q80, hedef ≤150 KB.
+Dizin: `docs/screenshots/d7/`. JPEG q80, hedef ≤150 KB — **gerçekleşen: en büyüğü 85 KB, ortalama 45 KB, toplam 96 dosya ~4,2 MB.**
 
 Ad: `{screen}-{lang}-{theme}-{width}.jpg`  
 `screen` ∈ login | map | tasks | drivers | vehicles | exceptions | optimize | settings  
 `lang` ∈ en | tr | nl · `theme` ∈ dark | light · `width` ∈ 1280 | 390
 
-Bu turda üretilenler: **login** (oturum gerekmez). Diğer 7 ekran `README.md` içinde “blocked: auth expired”.
+**TAMAMLANDI (15 Ekim 2026) — 96/96 hücre.** Önceki turda yalnız `login` (6/96)
+üretilmişti, token süresi dolduğu için diğer 7 ekran "blocked: auth expired" olarak
+kayıtlıydı. Bu turda gerçek prod build (`npm run build` + `serve -s build`) üzerinden,
+Playwright ile tüm matris tek seferde dolduruldu: `dispatcher-auth` localStorage'a
+biçimce geçerli (client-side `isAuthenticated` kontrolünü geçen) sahte bir token
+yazılarak `AuthGate` bypass edildi, `ENTERPRISE_API_URL`/`AUTH_API_URL` uçları
+`page.route()` ile gerçekçi sabit veri (3 araç/3 şoför/3 görev/2 istisna/2 canlı konum)
+döndürecek şekilde mock'landı (hiçbir ekran loading/error/empty state'inde kalmadı),
+`*.basemaps.cartocdn.com` (sandbox egress allowlist dışı) 1×1 PNG ile mock'landı. Veri
+mock/fixture'dır, gerçek prod verisi değil — amaç TR/EN/NL × dark/light × masaüstü/mobil
+render doğruluğunu görsel arşivlemekti. Detay + bilinen davranışlar: `docs/screenshots/d7/README.md`.
 
 ### Lighthouse baseline
 

@@ -144,6 +144,7 @@ export const en = {
     error: "Could not load fleet locations",
     retry: "Retry",
     loading: "Loading fleet…",
+    mockDataBanner: "⚠️ Live connection lost — data shown is MOCK / DEMO data, not your real fleet",
     region: "Live fleet map",
     searchAria: "Search by plate",
     fitFleet: "Fit fleet in view",

@@ -142,6 +142,7 @@ export const tr = {
     error: "Filo konumları yüklenemedi",
     retry: "Yeniden dene",
     loading: "Filo yükleniyor…",
+    mockDataBanner: "⚠️ Canlı bağlantı koptu — gösterilen veriler MOCK / DEMO verisidir, gerçek filonuz değildir",
     region: "Canlı filo haritası",
     searchAria: "Plakaya göre ara",
     fitFleet: "Filoyu sığdır",

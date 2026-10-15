@@ -515,8 +515,36 @@ function LiveFleetMap(): JSX.Element {
             overflow: "hidden",
             flexWrap: { xs: "nowrap", md: "wrap" },
             flexDirection: { xs: "column", md: "row" },
+            position: "relative",
           }}
         >
+          {snapshot.phase === "error" && (
+            <MDBox
+              role="alert"
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 1300,
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 2,
+                py: 1,
+                bgcolor: status.alert.critical.bg,
+                color: status.alert.critical.fg,
+                borderBottom: `1px solid ${status.alert.critical.border}`,
+              }}
+            >
+              <Icon fontSize="small" sx={{ color: status.alert.critical.fg }}>
+                warning
+              </Icon>
+              <MDTypography variant="caption" fontWeight="bold" sx={{ color: status.alert.critical.fg }}>
+                {t("map.mockDataBanner")}
+              </MDTypography>
+            </MDBox>
+          )}
           <Grid
             item
             xs={12}

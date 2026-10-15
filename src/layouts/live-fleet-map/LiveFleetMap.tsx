@@ -245,6 +245,19 @@ function LiveFleetMap(): JSX.Element {
     bumpViewport({ kind: "fitFleet", bounds });
   }, [filteredVehicles, bumpViewport]);
 
+  // §6B: a dispatcher opening the map for the first time should not have to
+  // discover the 'F' shortcut just to see their own fleet. Fires fitFleet()
+  // exactly once, the first time the roster yields at least one vehicle —
+  // hasAutoFitRef guards against re-fitting on every later filter/search
+  // change, which would fight the dispatcher's own pan/zoom. The manual 'F'
+  // shortcut (useMapKeyboard, above) keeps working afterwards regardless.
+  const hasAutoFitRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoFitRef.current || vehicleList.length === 0) return;
+    hasAutoFitRef.current = true;
+    fitFleet();
+  }, [vehicleList, fitFleet]);
+
   const closePanel = useCallback(() => {
     selectVehicle(null);
     setFollowing(false);

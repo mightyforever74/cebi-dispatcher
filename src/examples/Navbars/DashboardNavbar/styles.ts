@@ -15,7 +15,7 @@ Coded by www.creative-tim.com
 
 // @mui material components
 import { Theme } from "@mui/material/styles";
-import { density, landing } from "assets/theme/tokens";
+import { density, landing, shadow } from "assets/theme/tokens";
 
 // D2 "Kabuk" (docs/UI_D2_REPORT.md, Adım 1): 64px sabit yükseklikte, edge-to-edge
 // sticky navbar (landing Header paritesi). `glass` token'ı (D1 tokens.ts + global.css
@@ -26,47 +26,60 @@ const NAVBAR_HEIGHT_PX = density.navbar;
 
 function navbar(theme: Theme | any, ownerState: any) {
   const { palette, boxShadows, functions, transitions, breakpoints } = theme;
-  const { transparentNavbar, absolute, light, darkMode } = ownerState;
+  // 2026-10-15 (Cem): `transparentNavbar` (scroll-top-of-window toggle,
+  // context/index.tsx) deliberately NOT consumed below anymore. Root cause of
+  // the "navbar hareket halinde şeffaf" mismatch vs landing: `transparentNavbar`
+  // is `window.scrollY===0`-driven, but most dispatcher screens never scroll
+  // the window at all (e.g. live-fleet-map locks to 100dvh — LiveFleetMap.tsx:541),
+  // so it was PERMANENTLY stuck `true` there -> background/blur/shadow were
+  // permanently forced to "none", i.e. the glass styling below was dead code on
+  // exactly the screens it mattered most for. A scroll-conditional invisible
+  // navbar is also the wrong pattern for an ops dashboard regardless (nav/
+  // notifications/account must stay reachable at all times) — landing's hero
+  // page and this app are not the same kind of page. Fix: the glass chrome
+  // below is now always-on for the non-`absolute` case; `absolute` (the one
+  // account/BaseLayout hero usage) keeps its original fully-transparent
+  // behavior unchanged.
+  const { absolute, light, darkMode } = ownerState;
 
   const { dark, white, text, transparent } = palette;
   const { navbarBoxShadow } = boxShadows;
   const { rgba: withAlpha, pxToRem } = functions;
 
   return {
-    boxShadow: transparentNavbar || absolute ? "none" : navbarBoxShadow,
+    // `shadow.nav` (tokens.ts, landing-bridged) replaces the MD2 inset-highlight
+    // navbarBoxShadow in dark mode only — the floating-glass-panel depth cue
+    // landing's header has and this navbar was missing. Light mode keeps the
+    // original MD2 shadow (shadow.nav was tuned for landing's dark-only design).
+    boxShadow: absolute ? "none" : darkMode ? shadow.nav : navbarBoxShadow,
     backdropFilter:
-      transparentNavbar || absolute
+      absolute
         ? "none"
         : "saturate(var(--tf-glass-saturate, 140%)) blur(var(--tf-glass-blur, 16px))",
-    // 2026-10-15 (Cem onayı, tokens.ts `landing` A4 karar noktası): dark modda
-    // navbar artık MD2'nin generic `background.default` paletinden değil,
-    // landing'in navy camından besleniyor (`landing.navy` @ 0.7,
+    // dark modda navbar artık MD2'nin generic `background.default` paletinden
+    // değil, landing'in navy camından besleniyor (`landing.navy` @ 0.7,
     // --tf-navbar-bg-dark CSS var üzerinden — prefers-reduced-transparency
     // fallback'i global.css'te 0.96'ya çıkıyor). Light tema dokunulmadı:
     // landing'de karşılığı yok.
     backgroundColor:
-      transparentNavbar || absolute
+      absolute
         ? `${transparent.main} !important`
         : darkMode
         ? `var(--tf-navbar-bg-dark, ${withAlpha(landing.navy, 0.7)})`
         : withAlpha(white.main, 0.8),
     borderBottom:
-      darkMode && !(transparentNavbar || absolute)
+      darkMode && !absolute
         ? `${pxToRem(1)} solid var(--tf-navbar-border-dark, rgba(255, 255, 255, 0.1))`
         : "none",
 
     color: () => {
-      let color;
-
-      if (light) {
-        color = white.main;
-      } else if (transparentNavbar) {
-        color = text.main;
-      } else {
-        color = dark.main;
-      }
-
-      return color;
+      if (light) return white.main;
+      // Arka plan artık (absolute hariç) her zaman koyu cam — `dark.main`
+      // (paletteLight/paletteDark'ta AYNI sabit navy-gri değer) bu zeminde
+      // AA kontrastını geçemez. `text.main` tema-duyarlı; her iki temada da
+      // zaten okunurdu (önceki transparentNavbar=true dalı buydu).
+      if (darkMode) return text.main;
+      return dark.main;
     },
     // Landing Header paritesi: floating/rounded kart değil, viewport üstüne
     // hizalanmış düz bir çubuk (top:0, borderRadius:0, minHeight: 64px).

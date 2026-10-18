@@ -20,12 +20,15 @@ Bu dosya, `cebi-dispatcher` reposunun "doğum sertifikası"dır. Fork anındaki 
 
 Kaynak repoda tespit edilen, ancak şimdilik dokunulmayan temizlenmemiş teslim artefaktları birebir taşındı: `__cargoScorer.ts.tmp`, `__feat020_spec.md.tmp`, `fix-feat020-phase12.js`, `fix-roadmap.js` (kökte). Bunlar Customer Edition'ın işleyişini etkilemiyor, temizlik Faz 3/4'te planlanabilir.
 
-## Bağımsızlık durumu (fork anında — henüz uygulanmadı)
+## Bağımsızlık durumu
 
-`src/config/api.ts`'deki `AUTH_API_URL` / `ENTERPRISE_API_URL` / `SUPERVISOR_API_URL` hâlâ ana projenin domainlerine (`api.tulipfleet.com`, `enterprise-api.tulipfleet.com`) işaret ediyor. Bu repo gerçek bir ortamda build edilip test edilecekse, bu üç adresin **açıkça** `cebi-backend`'in kendi adresine çevrilmesi gerekir — ayrıca `ENTERPRISE_API_URL`/`SUPERVISOR_API_URL` ayrımı, `cebi-enterprise-backend` açılmadığı için (bkz. `cebi-backend/FORK_BASELINE.md`) tamamen `cebi-backend`'e birleştirilmeli; bu bir kod değişikliği gerektirir, henüz yapılmadı.
+**2026-10-18 (fork anında):** `src/config/api.ts`'deki `AUTH_API_URL` / `ENTERPRISE_API_URL` / `SUPERVISOR_API_URL`, üç ayrı backend varsayımıyla ana projenin domainlerine (`api.tulipfleet.com`, `enterprise-api.tulipfleet.com`) fallback yapıyordu.
+
+**2026-10-18 (Faz 4, commit `98d6b51`) — düzeltildi:** Üçü tek bir `CEBI_API_URL`'e konsolide edildi (ayrı enterprise servisi yok — Faz 3 kararı), ana projeye fallback kaldırıldı. `REACT_APP_CEBI_API_URL` tanımsızsa açık hata loglanır, sessizce ana projeye bağlanmaz (ADR-CE-03). Gerçek değer henüz yok — bkz. `cebi-backend/DEPLOYMENT_RUNBOOK.md` (sunucu/domain kararları açık).
 
 ## Değişiklik günlüğü
 
 | Tarih | Not |
 |---|---|
 | 2026-10-18 | Fork oluşturuldu, baseline sabitlendi. |
+| 2026-10-18 | Faz 4: üç-backend varsayımı tek `cebi-backend`'e konsolide edildi, ana proje fallback'leri kaldırıldı (commit `98d6b51`). |

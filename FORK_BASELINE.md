@@ -24,7 +24,7 @@ Kaynak repoda tespit edilen, ancak şimdilik dokunulmayan temizlenmemiş teslim 
 
 **2026-10-18 (fork anında):** `src/config/api.ts`'deki `AUTH_API_URL` / `ENTERPRISE_API_URL` / `SUPERVISOR_API_URL`, üç ayrı backend varsayımıyla ana projenin domainlerine (`api.tulipfleet.com`, `enterprise-api.tulipfleet.com`) fallback yapıyordu.
 
-**2026-10-18 (Faz 4, commit `98d6b51`) — düzeltildi:** Üçü tek bir `CEBI_API_URL`'e konsolide edildi (ayrı enterprise servisi yok — Faz 3 kararı), ana projeye fallback kaldırıldı. `REACT_APP_CEBI_API_URL` tanımsızsa açık hata loglanır, sessizce ana projeye bağlanmaz (ADR-CE-03). Gerçek değer henüz yok — bkz. `cebi-backend/DEPLOYMENT_RUNBOOK.md` (sunucu/domain kararları açık).
+**2026-10-18 (Faz 4, commit `98d6b51`) — düzeltildi:** Üçü tek bir `CEBI_API_URL`'e konsolide edildi (ayrı enterprise servisi yok — Faz 3 kararı), ana projeye fallback kaldırıldı. `REACT_APP_CEBI_API_URL` tanımsızsa açık hata loglanır, sessizce ana projeye bağlanmaz (ADR-CE-03). Gerçek değer henüz yok — sunucu `fleet-enterprise-01` olarak kararlaştırıldı, domain/subdomain adlandırması açık (bkz. `cebi-backend/FORK_BASELINE.md`).
 
 ## Değişiklik günlüğü
 

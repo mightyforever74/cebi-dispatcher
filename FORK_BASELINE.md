@@ -18,7 +18,7 @@ Bu dosya, `cebi-dispatcher` reposunun "doğum sertifikası"dır. Fork anındaki 
 
 ## Devralınan teknik borç (fork anında — henüz temizlenmedi)
 
-Kaynak repoda tespit edilen, ancak şimdilik dokunulmayan temizlenmemiş teslim artefaktları birebir taşındı: `__cargoScorer.ts.tmp`, `__feat020_spec.md.tmp`, `fix-feat020-phase12.js`, `fix-roadmap.js` (kökte). Bunlar Customer Edition'ın işleyişini etkilemiyor, temizlik Faz 3/4'te planlanabilir.
+**TEMİZLENDİ (2026-10-19):** kaynak repodan fork ile taşınan teslim artefaktları (`__cargoScorer.ts.tmp`, `__cargoScorer.test.ts.tmp`, `__feat020_spec.md.tmp`, `__roadmap_w24.txt.tmp`, `fix-feat020-phase12.js`, `fix-roadmap.js`, kökte) silindi. Doğrulama: gerçek karşılıkları (`src/services/dispatch/scoring/scorers/cargoScorer.ts`/`.test.ts`, `docs/functions/FEAT-020-...md`, `docs/ROADMAP.md`) zaten mevcuttu ve bu dosyalara hiçbir kod/konfig referans vermiyordu (repo genelinde grep ile doğrulandı) — silinenler sadece bir kerelik, önceden uygulanmış teslim scriptlerinin tamamlanmış yan ürünleriydi.
 
 ## Bağımsızlık durumu
 

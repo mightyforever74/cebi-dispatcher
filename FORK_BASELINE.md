@@ -26,9 +26,12 @@ Kaynak repoda tespit edilen, ancak şimdilik dokunulmayan temizlenmemiş teslim 
 
 **2026-10-18 (Faz 4, commit `98d6b51`) — düzeltildi:** Üçü tek bir `CEBI_API_URL`'e konsolide edildi (ayrı enterprise servisi yok — Faz 3 kararı), ana projeye fallback kaldırıldı. `REACT_APP_CEBI_API_URL` tanımsızsa açık hata loglanır, sessizce ana projeye bağlanmaz (ADR-CE-03). Gerçek değer henüz yok — sunucu `fleet-enterprise-01` olarak kararlaştırıldı, domain/subdomain adlandırması açık (bkz. `cebi-backend/FORK_BASELINE.md`).
 
+**2026-10-19 — dağıtım platformu kararı kapandı (Cem):** cebi-dispatcher, Cloudflare Pages üzerinde DEĞİL, `fleet-enterprise-01`'in kendi Caddy'si üzerinden servis edilecek — ADR-CE-03'ün "tek sunucuda taşınabilirlik/tam izolasyon" ilkesinin doğrudan uygulanması (bkz. `cebi-backend/docs/adr/ADR-CE-03-bagimsiz-calisma-zamani.md` §2 madde 7, v2). Buna göre eklendi: `Dockerfile` (iki aşamalı — `node:20-alpine` CRA build + `caddy:2-alpine` statik servis), `docker/Caddyfile` (container-içi SPA fallback, host Caddy'siyle aynı katmanı tekrar etmez), `docker-compose.cebi-dispatcher.yml` (izole network, `cebi-backend`/`cebi-db` ile hiçbir ortak kaynak yok, `127.0.0.1:3101:80` — backend'in `3100` desenini takip eder), `.dockerignore`. `REACT_APP_CEBI_API_URL` artık `https://cebi-api.tulipfleet.com` olarak Dockerfile'da ARG varsayılanı — gizli değer olmadığı için (zaten tarayıcıda görünür) ayrı bir compose `.env` dosyası GEREKMİYOR (2026-10-19 cebi-db olayından çıkan ders kasıtlı olarak burada tekrar üretilmedi, bkz. `cebi-backend/SESSION_NOTE.md` "OLAY" notu). Önerilen host domain'i: `cebi-dispatcher.tulipfleet.com` (Caddy site bloğu, Cloudflare Origin Certificate — `cebi-api.tulipfleet.com` deseniyle aynı; host'un `/etc/caddy/Caddyfile`'ına Cem tarafından elle eklenecek, bu repo dışında kalır). Henüz `fleet-enterprise-01`'de build/deploy edilmedi — bu bir sonraki adım.
+
 ## Değişiklik günlüğü
 
 | Tarih | Not |
 |---|---|
 | 2026-10-18 | Fork oluşturuldu, baseline sabitlendi. |
 | 2026-10-18 | Faz 4: üç-backend varsayımı tek `cebi-backend`'e konsolide edildi, ana proje fallback'leri kaldırıldı (commit `98d6b51`). |
+| 2026-10-19 | Dağıtım platformu kapalı karar: Cloudflare Pages değil, `fleet-enterprise-01` Caddy'si (ADR-CE-03 v2 §2 madde 7). `Dockerfile` + `docker/Caddyfile` + `docker-compose.cebi-dispatcher.yml` + `.dockerignore` eklendi. Önerilen domain: `cebi-dispatcher.tulipfleet.com`. Henüz sunucuda build/deploy edilmedi. |

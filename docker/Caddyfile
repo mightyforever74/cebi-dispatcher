@@ -1,0 +1,15 @@
+# cebi-dispatcher — container İÇİ statik dosya sunucusu.
+#
+# Bu, host'un /etc/caddy/Caddyfile'ı DEĞİL — host Caddy'si bu container'a
+# reverse_proxy yapar (bkz. ADR-CE-03 §2 madde 7 ve docker-compose.cebi-
+# dispatcher.yml). TLS, Cloudflare Origin Cert, gzip/zstd, güvenlik header'ları
+# hepsi HOST Caddy'sinde — burada TEKRAR edilmez (çift katman gereksiz).
+#
+# Bu dosyanın tek işi: CRA'nın ürettiği SPA için client-side routing fallback
+# (bulunamayan her path → index.html, react-router kendi içinde yönlendirir).
+
+:80 {
+	root * /usr/share/caddy
+	try_files {path} /index.html
+	file_server
+}

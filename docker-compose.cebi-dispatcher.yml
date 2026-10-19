@@ -1,0 +1,37 @@
+# TulipFleet Customer Edition (Cebi) — cebi-dispatcher, izole statik servis.
+#
+# ADR-CE-03 "Bağımsız Çalışma Zamanı" (v2, 2026-10-19): cebi-dispatcher
+# Cloudflare Pages'e değil, fleet-enterprise-01'in KENDİ Caddy'sine servis
+# edilir — bu dosya, `cebi-backend/docker-compose.cebi.yml`'in izolasyon
+# desenini (ayrı network, sadece 127.0.0.1'e bind, dış erişim host Caddy
+# üzerinden) birebir izler. cebi-backend/cebi-db container'larıyla HİÇBİR
+# ortak network/volume/env paylaşmaz (tam mantıksal izolasyon).
+#
+# ÖNEMLİ — 2026-10-19 cebi-db olayından (bkz. cebi-backend/SESSION_NOTE.md
+# "OLAY" notu) çıkan dersle KASITLI fark: bu dosyada docker compose'un kendi
+# `.env`-ikamesine bağlı HİÇBİR ${DEĞİŞKEN} yok. `REACT_APP_CEBI_API_URL`
+# build-time bir CRA değeri ve gizli değil (zaten tarayıcıda görünür) —
+# Dockerfile'da ARG varsayılanı olarak sabitlenmiştir. Farklı bir ortam
+# gerekirse `docker compose -f docker-compose.cebi-dispatcher.yml build
+# --build-arg REACT_APP_CEBI_API_URL=... cebi-dispatcher` ile override edilir,
+# sessizce-boşa-düşen bir `.env` dosyasına ihtiyaç YOKTUR.
+
+networks:
+  cebi-dispatcher-net:
+    name: cebi-dispatcher-net
+    driver: bridge
+
+services:
+  cebi-dispatcher:
+    build: .
+    container_name: cebi-dispatcher
+    restart: unless-stopped
+    networks:
+      - cebi-dispatcher-net
+    ports:
+      # Sadece loopback'e bind — cebi-backend'in 127.0.0.1:3100 deseniyle
+      # ve bu sunucudaki tulipfleet-enterprise-backend deseniyle tutarlı.
+      # Dış erişim host Caddy'si üzerinden (bkz. docs/adr/ADR-CE-03 §2
+      # madde 7 — Caddyfile site bloğu Cem tarafından host'ta elle eklenir,
+      # bu repo dışında kalır, standart: SESSION_NOTE/FORK_BASELINE/ADR).
+      - "127.0.0.1:3101:80"

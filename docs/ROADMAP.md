@@ -1,4 +1,6 @@
-# TulipFleet Enterprise — Roadmap
+# TulipFleet Enterprise, Roadmap
+
+> **Cebi notu (19 Ekim 2026):** Bu dosya ve `docs/adr/ADR-0001..0014`, fork anında (18 Ekim 2026) `tulipfleet-dispatcher`'dan devralındı. Ana (enterprise) projenin kendi production gerçekliğini anlatır, Cebi (`cebi-dispatcher`) için bağlayıcı DEĞİLDİR. Cebi'nin otoritesi: `FORK_BASELINE.md` + `cebi-backend/docs/adr/ADR-CE-*`.
 
 A high-level summary of the architectural and product decisions that govern the TulipFleet Enterprise Dispatcher. Each decision has a detailed Architecture Decision Record (ADR) in [`docs/adr/`](docs/adr/). This roadmap is the index and the executive view.
 

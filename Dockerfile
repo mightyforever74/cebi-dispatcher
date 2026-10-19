@@ -18,7 +18,12 @@
 
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package*.json ./
+# .npmrc (legacy-peer-deps=true) npm ci'DEN ÖNCE kopyalanmalı — react-scripts
+# 5.0.1'in peer dependency'leri (fork-ts-checker-webpack-plugin → typescript
+# ^3/^4) kök package.json'daki typescript@5.0.4 ile strict modda ERESOLVE
+# veriyor; .npmrc bu projede zaten var ve tam bunun için (2026-10-19'da
+# fleet-enterprise-01'deki ilk build'de bu dosya unutulup hata yakalandı).
+COPY package*.json .npmrc ./
 RUN npm ci
 COPY . .
 

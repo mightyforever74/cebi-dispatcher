@@ -27,13 +27,12 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { useActiveRoutes } from "hooks/useActiveRoutes";
 import { useFleetSnapshot } from "hooks/useFleetSnapshot";
 import { useMqttTelemetry } from "hooks/useMqttTelemetry";
-import { useT, type TranslationKey } from "i18n";
+import { formatRelative, useT, type TranslationKey } from "i18n";
 import { useRouteLayerStore, isRouteVisible } from "store/useRouteLayerStore";
 import { useVehicleStore } from "store/useVehicleStore";
 import "leaflet/dist/leaflet.css";
 
 import ConnectionBadge from "./ConnectionBadge";
-import VehicleDetailPanel from "./VehicleDetailPanel";
 import VehicleMarkers from "./VehicleMarkers";
 import {
   connectivityColor,
@@ -52,9 +51,9 @@ const TILE_ATTRIBUTION =
 const fmtWeight = (w: string): string => w.replace("_plus_t", "+ t").replace(/_/g, "-");
 
 // Record<VehicleConnectivityStatus, ...> (not Exclude<..., "maintenance">) to
-// match vehicleConnectivity()'s declared return type and VehicleDetailPanel's
-// own CONN_LABEL: "maintenance" is unreachable today but must stay indexable
-// without a cast if that ever changes.
+// match vehicleConnectivity()'s declared return type: "maintenance" is
+// unreachable today but must stay indexable without a cast if that ever
+// changes.
 const CONN_LABEL: Record<VehicleConnectivityStatus, TranslationKey> = {
   online: "map.statusOnline",
   stale: "map.statusStale",
@@ -522,6 +521,79 @@ function LiveFleetMap(): JSX.Element {
                     {emissionChip(v.emission_class)}
                   </MDBox>
                 </ListItemButton>
+
+                {/* Araç detayı artık haritanın üzerinde yüzen ayrı bir panel
+                    değil (Cem'in geri bildirimi, 21 Eki) — seçili araç
+                    kartının altında, sol nav bar içinde aşağı doğru açılıyor
+                    ("Route layers" panelindeki gibi). ListItemButton zaten
+                    gerçek bir <button>, içine ikinci bir <button>
+                    ("Center on map") NESTE EDİLEMEZ (geçersiz HTML) — bu
+                    yüzden bu blok ListItemButton'ın KARDEŞİ, üstteki kartla
+                    aynı ListItem çerçevesinin (border/bg) içinde. */}
+                {selectedVehicleId === v.id && (
+                  <MDBox sx={{ px: 1.5, pb: 1.5 }}>
+                    <Divider sx={{ my: 1, borderColor: chrome.border }} />
+                    {[
+                      {
+                        label: t("map.speed"),
+                        value: v.speed_kmh == null ? "—" : t("map.speedValue", { value: v.speed_kmh }),
+                      },
+                      { label: t("map.weight"), value: fmtWeight(v.vehicle_weight_class) },
+                      {
+                        label: t("map.position"),
+                        value: `${v.latitude.toFixed(4)}, ${v.longitude.toFixed(4)}`,
+                      },
+                      {
+                        label: t("map.lastUpdate"),
+                        value: formatRelative(v.last_update, now, lang),
+                      },
+                    ].map((row) => (
+                      <MDBox
+                        key={row.label}
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        mb={0.75}
+                      >
+                        <MDTypography variant="caption" sx={{ color: chrome.textMuted }}>
+                          {row.label}
+                        </MDTypography>
+                        <MDTypography
+                          variant="caption"
+                          fontWeight="bold"
+                          sx={{ fontFamily: "monospace", color: chrome.text }}
+                        >
+                          {row.value}
+                        </MDTypography>
+                      </MDBox>
+                    ))}
+                    <MDBox
+                      component="button"
+                      type="button"
+                      onClick={() => bumpViewport({ kind: "select", lat: v.latitude, lng: v.longitude })}
+                      sx={{
+                        width: "100%",
+                        border: "none",
+                        cursor: "pointer",
+                        borderRadius: "10px",
+                        py: 1,
+                        mt: 0.5,
+                        color: mapTokens.markerStroke,
+                        fontWeight: 600,
+                        fontSize: "12.5px",
+                        background: `linear-gradient(135deg, ${mapTokens.selected}, ${mapTokens.routeHover})`,
+                        transition: "transform 0.2s ease",
+                        "&:hover": { transform: "translateY(-1px)" },
+                        "@media (prefers-reduced-motion: reduce)": {
+                          transition: "none",
+                          "&:hover": { transform: "none" },
+                        },
+                      }}
+                    >
+                      {t("map.centerOnMap")}
+                    </MDBox>
+                  </MDBox>
+                )}
             </ListItem>
           );
         })}
@@ -757,7 +829,7 @@ function LiveFleetMap(): JSX.Element {
                   followLat={followLat}
                   followLng={followLng}
                   following={following}
-                  panelOpen={panelOpen}
+                  panelOpen={false}
                   miniSidenav={Boolean(controller.miniSidenav)}
                 />
 
@@ -812,24 +884,7 @@ function LiveFleetMap(): JSX.Element {
                 })}
               </MapContainer>
 
-              {selectedVehicle && (
-                <VehicleDetailPanel
-                  vehicle={selectedVehicle}
-                  chrome={chrome}
-                  now={now}
-                  lang={lang}
-                  onClose={closePanel}
-                  onCenter={() =>
-                    bumpViewport({
-                      kind: "select",
-                      lat: selectedVehicle.latitude,
-                      lng: selectedVehicle.longitude,
-                    })
-                  }
-                />
-              )}
-
-              <MapControlWidget offsetRight={panelOpen ? mapTokens.panelWidthPx + 16 : 16} />
+              <MapControlWidget offsetRight={16} />
 
               <Paper
                 elevation={0}

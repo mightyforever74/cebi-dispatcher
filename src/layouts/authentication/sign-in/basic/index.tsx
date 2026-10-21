@@ -35,7 +35,7 @@ function Basic(): JSX.Element {
   const [rememberMe, setRememberMe] = useState<boolean>(false);
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
-  const [email, setEmail] = useState<string>("demo@tulipfleet.com");
+  const [email, setEmail] = useState<string>("info@tulipfleet.com");
   const [password, setPassword] = useState<string>("Demo123!");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);

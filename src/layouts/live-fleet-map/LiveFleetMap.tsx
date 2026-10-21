@@ -29,7 +29,7 @@ import { useFleetSnapshot } from "hooks/useFleetSnapshot";
 import { useMqttTelemetry } from "hooks/useMqttTelemetry";
 import { formatRelative, useT, type TranslationKey } from "i18n";
 import { useRouteLayerStore, isRouteVisible } from "store/useRouteLayerStore";
-import { useVehicleStore } from "store/useVehicleStore";
+import { useVehicleStore, type VehicleStatus } from "store/useVehicleStore";
 import "leaflet/dist/leaflet.css";
 
 import ConnectionBadge from "./ConnectionBadge";
@@ -59,6 +59,12 @@ const CONN_LABEL: Record<VehicleConnectivityStatus, TranslationKey> = {
   stale: "map.statusStale",
   offline: "map.statusOffline",
   maintenance: "map.statusOffline",
+};
+
+const MOVEMENT_LABEL: Record<VehicleStatus, TranslationKey> = {
+  moving: "map.statusMoving",
+  idle: "map.statusIdle",
+  stopped: "map.statusStopped",
 };
 
 type StatusFilter = "all" | "moving" | "stopped" | "ze";
@@ -449,6 +455,7 @@ function LiveFleetMap(): JSX.Element {
               onMouseEnter={() => setHoveredVehicle(v.id)}
               onMouseLeave={() => setHoveredVehicle(null)}
               sx={{
+                display: "block",
                 mb: 1,
                 borderRadius: "10px",
                 border: "1px solid",
@@ -533,6 +540,44 @@ function LiveFleetMap(): JSX.Element {
                 {selectedVehicleId === v.id && (
                   <MDBox sx={{ px: 1.5, pb: 1.5 }}>
                     <Divider sx={{ my: 1, borderColor: chrome.border }} />
+                    <MDBox display="flex" gap={0.5} mb={1.5} flexWrap="wrap">
+                      <Chip
+                        label={t(CONN_LABEL[conn])}
+                        size="small"
+                        sx={{
+                          fontSize: "10px",
+                          height: "20px",
+                          color: connectivityColor(conn),
+                          bgcolor: alpha(connectivityColor(conn), 0.12),
+                          border: `1px solid ${connectivityColor(conn)}`,
+                        }}
+                      />
+                      <Chip
+                        label={t(MOVEMENT_LABEL[v.status])}
+                        size="small"
+                        sx={{
+                          fontSize: "10px",
+                          height: "20px",
+                          color: chrome.textMuted,
+                          bgcolor: chrome.chipBg,
+                          border: `1px solid ${chrome.border}`,
+                        }}
+                      />
+                      {v.isDemo && (
+                        <Chip
+                          label={t("map.demoBadge")}
+                          size="small"
+                          sx={{
+                            fontSize: "10px",
+                            height: "20px",
+                            fontWeight: "bold",
+                            color: status.vehicle.stale.fg,
+                            bgcolor: status.vehicle.stale.bg,
+                            border: `1px solid ${status.vehicle.stale.border}`,
+                          }}
+                        />
+                      )}
+                    </MDBox>
                     {[
                       {
                         label: t("map.speed"),

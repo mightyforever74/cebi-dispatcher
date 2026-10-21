@@ -481,7 +481,7 @@ export const map = {
   clusterMinVehicles: 20,
   /** Sehir olcegi — bu zoom ve ustunde kume kapanir. */
   clusterDisableZoom: 14,
-  panelWidthPx: 280,
+  panelWidthPx: 220,
   tiles: {
     dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2n9e_1_5c749a815246c8c8b2b608b7",
     light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2n9e_1_5c749a815246c8c8b2b608b7",
